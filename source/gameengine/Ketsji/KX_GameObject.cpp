@@ -527,6 +527,11 @@ void KX_GameObject::SetTimes(short layer, float start, float end)
 	GetActionManager()->SetTimes(layer, start, end);
 }
 
+void KX_GameObject::SetActionSpeed(short layer, float speed)
+{
+	GetActionManager()->SetActionSpeed(layer, speed);
+}
+
 void KX_GameObject::ProcessReplica()
 {
 	SCA_IObject::ProcessReplica();
@@ -2006,6 +2011,7 @@ PyMethodDef KX_GameObject::Methods[] = {
 	KX_PYMETHODTABLE(KX_GameObject, getActionFrame),
 	KX_PYMETHODTABLE(KX_GameObject, getActionName),
 	KX_PYMETHODTABLE(KX_GameObject, setActionFrame),
+	KX_PYMETHODTABLE(KX_GameObject, setActionSpeed),
 	KX_PYMETHODTABLE(KX_GameObject, isPlayingAction),
 	
 	// dict style access for props
@@ -4130,6 +4136,23 @@ KX_PYMETHODDEF_DOC(KX_GameObject, setActionFrame,
 	layer_check(layer, "setActionFrame");
 
 	SetActionFrame(layer, frame);
+
+	Py_RETURN_NONE;
+}
+
+KX_PYMETHODDEF_DOC(KX_GameObject, setActionSpeed,
+	"setActionSpeed(speed, layer=0)\n"
+	"Set the playback speed of the action playing in the supplied layer\n")
+{
+	short layer = 0;
+	float speed;
+
+	if (!PyArg_ParseTuple(args, "f|h:setActionSpeed", &speed, &layer))
+		return NULL;
+
+	layer_check(layer, "setActionSpeed");
+
+	SetActionSpeed(layer, speed);
 
 	Py_RETURN_NONE;
 }

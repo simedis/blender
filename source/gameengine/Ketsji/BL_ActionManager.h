@@ -105,6 +105,11 @@ public:
 	void SetTimes(short layer, float start, float end);
 
 	/**
+	 * Sets the playback speed of the action on the given layer
+	 */
+	 void SetActionSpeed(short layer, float speed);
+
+	/**
 	 * Stop playing the action on the given layer
 	 */
 	void StopAction(short layer);

@@ -1020,6 +1020,15 @@ base class --- :class:`SCA_IObject`
       :arg frame: The frame to set the action to
       :type frame: float
 
+   .. method:: setActionSpeed(speed, layer=0)
+
+      Set the playback speed of the action playing in the supplied layer.
+
+      :arg speed: The speed you want the action to have.
+      :type speed: float
+      :arg layer: The layer where you want to set the speed
+      :type layer: integer
+
    .. method:: isPlayingAction(layer=0)
 
       Checks to see if there is an action playing in the given layer.

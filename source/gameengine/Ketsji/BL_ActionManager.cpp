@@ -94,6 +94,13 @@ void BL_ActionManager::SetTimes(short layer, float start, float end)
 	if (action) action->SetTimes(start, end);
 }
 
+void BL_ActionManager::SetActionSpeed(short layer, float speed)
+{
+	BL_Action *action = GetAction(layer);
+
+	if (action) action->SetSpeed(speed);
+}
+
 bool BL_ActionManager::PlayAction(const char* name,
 								float start,
 								float end,

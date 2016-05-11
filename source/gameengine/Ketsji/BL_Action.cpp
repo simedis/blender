@@ -324,6 +324,15 @@ void BL_Action::SetTimes(float start, float end)
 	m_endframe = end;
 }
 
+void BL_Action::SetSpeed(float speed)
+{
+	if (m_speed != speed)
+	{
+		m_speed = speed;
+		m_calc_localtime = false;
+	}
+}
+
 void BL_Action::SetLocalTime(float curtime)
 {
 	float dt = (curtime-m_starttime)*(float)KX_KetsjiEngine::GetAnimFrameRate()*m_speed;
