@@ -32,14 +32,15 @@
 #include "RAS_OpenGLOffScreen.h"
 #include "RAS_ICanvas.h"
 
+#include "GPU_framebuffer.h"
+
 RAS_OpenGLOffScreen::RAS_OpenGLOffScreen(RAS_ICanvas *canvas)
-    :m_canvas(canvas), m_depthrb(0), m_colorrb(0), 	m_depthtx(0), m_colortx(0),
-     m_fbo(0), m_blitfbo(0), m_blitrbo(0), m_blittex(0), m_target(RAS_OFS_RENDER_BUFFER), m_bound(false)
+	:m_width(0),
+	m_height(0),
+	m_samples(0),
+	m_color(0),
+	m_offScreen(NULL)
 {
-	m_width = 0;
-	m_height = 0;
-	m_samples = 0;
-	m_color = 0;
 }
 
 RAS_OpenGLOffScreen::~RAS_OpenGLOffScreen()
@@ -49,6 +50,14 @@ RAS_OpenGLOffScreen::~RAS_OpenGLOffScreen()
 
 bool RAS_OpenGLOffScreen::Create(int width, int height, int samples, RAS_OFS_RENDER_TARGET target)
 {
+	m_offScreen = GPU_offscreen_create(width, height, samples, NULL);
+	m_width = width;
+	m_height = height;
+	m_samples = samples;
+	m_color = GPU_offscreen_color_texture(m_offScreen);
+	return true;
+
+#if 0
 	GLenum status;
 	GLuint glo[2], fbo;
 	GLint max_samples;
@@ -217,10 +226,14 @@ bool RAS_OpenGLOffScreen::Create(int width, int height, int samples, RAS_OFS_REN
 L_ERROR:
 	Destroy();
 	return false;
+#endif
 }
 
 void RAS_OpenGLOffScreen::Destroy()
 {
+	GPU_offscreen_free(m_offScreen);
+
+#if 0
 	GLuint globj;
 	Unbind();
 	if (m_fbo) {
@@ -287,10 +300,13 @@ void RAS_OpenGLOffScreen::Destroy()
 	m_samples = 0;
 	m_color = 0;
 	m_target = RAS_OFS_RENDER_BUFFER;
+#endif
 }
 
 void RAS_OpenGLOffScreen::Bind(RAS_OFS_BIND_MODE mode)
 {
+	GPU_offscreen_bind(m_offScreen, false);
+#if 0
 	if (m_fbo) {
 		if (mode == RAS_OFS_BIND_RENDER) {
 			glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_fbo);
@@ -309,10 +325,13 @@ void RAS_OpenGLOffScreen::Bind(RAS_OFS_BIND_MODE mode)
 		}
 		m_bound = true;
 	}
+#endif
 }
 
 void RAS_OpenGLOffScreen::Unbind()
 {
+	GPU_offscreen_unbind(m_offScreen, false);
+#if 0
 	if (!m_bound)
 		return;
 
@@ -321,20 +340,21 @@ void RAS_OpenGLOffScreen::Unbind()
 	glReadBuffer(GL_BACK);
 	glDrawBuffer(GL_BACK);
 	m_bound = false;
+#endif
 }
 
 void RAS_OpenGLOffScreen::MipMap()
 {
-	if (m_color) {
-		glBindTexture(GL_TEXTURE_2D, m_color);
+	/*if (m_offScreen) {
+		glBindTexture(GL_TEXTURE_2D, GPU_offscreen_color_texture(m_offScreen));
 		glGenerateMipmap(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, 0);
-	}
+	}*/
 }
 
 void RAS_OpenGLOffScreen::Blit()
 {
-	if (m_bound && m_blitfbo) {
+	/*if (m_bound && m_blitfbo) {
 		// set the draw target to the secondary FBO, the read target is still the multisample FBO
 		glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER, m_blitfbo);
 
@@ -343,5 +363,25 @@ void RAS_OpenGLOffScreen::Blit()
 
 		// make sure the next glReadPixels will read from the secondary buffer
 		glBindFramebufferEXT(GL_READ_FRAMEBUFFER, m_blitfbo);
-	}
+	}*/
+}
+
+int RAS_OpenGLOffScreen::GetWidth() const
+{
+	return m_width;
+}
+
+int RAS_OpenGLOffScreen::GetHeight() const
+{
+	return m_height;
+}
+
+int RAS_OpenGLOffScreen::GetSamples() const
+{
+	return m_samples;
+}
+
+int RAS_OpenGLOffScreen::GetColor() const
+{
+	return m_color;
 }

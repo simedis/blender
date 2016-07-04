@@ -29,29 +29,23 @@
 #define __RAS_OPENGLOFFSCREEN__
 
 #include "RAS_IOffScreen.h"
-#include "GPU_extensions.h"
 
-class RAS_ICanvas;
+struct GPUOffScreen;
 
 class RAS_OpenGLOffScreen : public RAS_IOffScreen
 {
-	RAS_ICanvas *m_canvas;
-	// these are GL objects
-	unsigned int m_depthrb;
-	unsigned int m_colorrb;
-	unsigned int m_depthtx;
-	unsigned int m_colortx;
-	unsigned int m_fbo;
-	unsigned int m_blitfbo;
-	unsigned int m_blitrbo;
-	unsigned int m_blittex;
-	RAS_OFS_RENDER_TARGET m_target;
-	bool m_bound;
+private:
+	int m_width;
+	int m_height;
+	int m_samples;
+	int m_color;		// if used, holds the texture object, 0 if not used
+
+	GPUOffScreen *m_offScreen;
 
 
 public:
 	RAS_OpenGLOffScreen(RAS_ICanvas *canvas);
-	~RAS_OpenGLOffScreen();
+	virtual ~RAS_OpenGLOffScreen();
 
 	bool Create(int width, int height, int samples, RAS_OFS_RENDER_TARGET target);
 	void Destroy();
@@ -59,6 +53,11 @@ public:
 	void Blit();
 	void Unbind();
 	void MipMap();
+
+	virtual int GetWidth() const;
+	virtual int GetHeight() const;
+	virtual int GetSamples() const;
+	virtual int GetColor() const;
 };
 
 #endif  /* __RAS_OPENGLOFFSCREEN__ */

@@ -52,12 +52,9 @@ public:
 		RAS_OFS_RENDER_TEXTURE,			// use texture as render target
 	};
 
-	int	    m_width;
-	int     m_height;
-	int	    m_samples;
-	int	    m_color;		// if used, holds the texture object, 0 if not used
-
-	virtual ~RAS_IOffScreen() {}
+	virtual ~RAS_IOffScreen()
+	{
+	}
 
 	virtual bool Create(int width, int height, int samples, RAS_OFS_RENDER_TARGET target) = 0;
 	virtual void Destroy() = 0;
@@ -66,10 +63,10 @@ public:
 	virtual void Unbind() = 0;
 	virtual void MipMap() = 0;
 
-	virtual int GetWidth() { return m_width; }
-	virtual int GetHeight() { return m_height; }
-	virtual int GetSamples() { return m_samples; }
-	virtual int GetColor() { return m_color; }
+	virtual int GetWidth() const = 0;
+	virtual int GetHeight() const = 0;
+	virtual int GetSamples() const = 0;
+	virtual int GetColor() const = 0;
 };
 
 #ifdef WITH_PYTHON
