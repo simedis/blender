@@ -234,6 +234,7 @@ if(APPLE)
 else()
 	option(WITH_GAMEENGINE_DECKLINK "Support BlackMagicDesign DeckLink cards in the Game Engine" ON)
 endif()
+option(WITH_GAMEENGINE_ENET "Enable Network capabilities for the Game Engine" OFF)
 option(WITH_PLAYER        "Build Player" OFF)
 option(WITH_OPENCOLORIO   "Enable OpenColorIO color management" ${_init_OPENCOLORIO})
 
@@ -631,8 +632,13 @@ if(NOT WITH_BLENDER AND NOT WITH_PLAYER AND NOT WITH_CYCLES_STANDALONE)
 	)
 endif()
 
-if(NOT WITH_GAMEENGINE AND WITH_PLAYER)
-	message(FATAL_ERROR "WITH_PLAYER requires WITH_GAMEENGINE")
+if(NOT WITH_GAMEENGINE)
+	if(WITH_PLAYER)
+		message(FATAL_ERROR "WITH_PLAYER requires WITH_GAMEENGINE")
+	endif()
+	if(WITH_GAMEENGINE_ENET)
+		message(FATAL_ERROR "WITH_GAMEENGINE_ENET requires WITH_GAMEENGINE")
+	endif()
 endif()
 
 if(NOT WITH_AUDASPACE)
@@ -691,6 +697,7 @@ if(NOT WITH_BOOST)
 
 	set_and_warn(WITH_OPENAL         OFF)  # depends on AUDASPACE
 	set_and_warn(WITH_GAMEENGINE     OFF)  # depends on AUDASPACE
+	set_and_warn(WITH_GAMEENGINE_ENET OFF)  # depends on GAMEENGINE
 	set_and_warn(WITH_PLAYER         OFF)  # depends on GAMEENGINE
 elseif(WITH_CYCLES OR WITH_OPENIMAGEIO OR WITH_AUDASPACE OR WITH_INTERNATIONAL OR
        WITH_OPENVDB OR WITH_OPENCOLORIO OR WITH_MOD_BOOLEAN)
@@ -3206,6 +3213,7 @@ if(FIRST_RUN)
 
 	info_cfg_text("Build Options:")
 	info_cfg_option(WITH_GAMEENGINE)
+	info_cfg_option(WITH_GAMEENGINE_ENET)
 	info_cfg_option(WITH_PLAYER)
 	info_cfg_option(WITH_BULLET)
 	info_cfg_option(WITH_IK_SOLVER)

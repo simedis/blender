@@ -57,7 +57,7 @@ endif()
 
 if(WITH_GAMEENGINE)
 	add_subdirectory(recastnavigation)
-	if(WITH_ENET)
+	if(WITH_GAMEENGINE_ENET)
 		add_subdirectory(enet)
 	endif()
 endif()
