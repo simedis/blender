@@ -223,6 +223,9 @@ void RAS_OpenGLLight::BindShadowBuffer(RAS_ICanvas *canvas, KX_Camera *cam, MT_T
 	if (GPU_lamp_shadow_buffer_type(lamp) == LA_SHADMAP_VARIANCE) {
 		m_rasterizer->SetShadowMode(RAS_IRasterizer::RAS_SHADOW_VARIANCE);
 	}
+	else if (GPU_lamp_shadow_filter_type(lamp) == LA_SHADOW_FILTER_PCF_PENUMBRA) {
+		m_rasterizer->SetShadowMode(RAS_IRasterizer::RAS_SHADOW_PENUMBRA);
+	}
 	else {
 		m_rasterizer->SetShadowMode(RAS_IRasterizer::RAS_SHADOW_SIMPLE);
 	}

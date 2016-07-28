@@ -156,9 +156,10 @@ typedef struct Lamp {
 #define LA_STATIC_SHADOW (1 << 19)
 
 /* shadow_filter */
-#define LA_SHADOW_FILTER_NONE		0
-#define LA_SHADOW_FILTER_PCF		1
-#define LA_SHADOW_FILTER_PCF_BAIL	2
+#define LA_SHADOW_FILTER_NONE			0
+#define LA_SHADOW_FILTER_PCF			1
+#define LA_SHADOW_FILTER_PCF_BAIL		2
+#define LA_SHADOW_FILTER_PCF_PENUMBRA	3
 
 /* layer_shadow */
 #define LA_LAYER_SHADOW_BOTH	0
@@ -218,6 +219,7 @@ typedef struct Lamp {
 /* shadowmap_type */
 #define LA_SHADMAP_SIMPLE	0
 #define LA_SHADMAP_VARIANCE	1
+#define LA_SHADMAP_PENUMBRA	2
 
 #endif /* __DNA_LAMP_TYPES_H__ */
 

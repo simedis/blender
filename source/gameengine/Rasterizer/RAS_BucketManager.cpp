@@ -204,43 +204,64 @@ void RAS_BucketManager::Renderbuckets(const MT_Transform& cameratrans, RAS_IRast
 	switch (rasty->GetDrawingMode()) {
 		case RAS_IRasterizer::RAS_SHADOW:
 		{
-			const bool isVarianceShadow = rasty->GetShadowMode() == RAS_IRasterizer::RAS_SHADOW_VARIANCE;
+			RAS_IRasterizer::OverrideShaderType shadowShader = RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE;
+			RAS_IRasterizer::OverrideShaderType shadowInstancingShader = RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE;
+			switch (rasty->GetShadowMode()) {
+				case RAS_IRasterizer::RAS_SHADOW_SIMPLE:
+				{
+					shadowShader = RAS_IRasterizer::RAS_OVERRIDE_SHADER_BASIC;
+					shadowInstancingShader = RAS_IRasterizer::RAS_OVERRIDE_SHADER_BASIC_INSTANCING;
+					break;
+				}
+				case RAS_IRasterizer::RAS_SHADOW_VARIANCE:
+				{
+					shadowShader = RAS_IRasterizer::RAS_OVERRIDE_SHADER_SHADOW_VARIANCE;
+					shadowInstancingShader = RAS_IRasterizer::RAS_OVERRIDE_SHADER_SHADOW_VARIANCE_INSTANCING;
+					break;
+				}
+				case RAS_IRasterizer::RAS_SHADOW_PENUMBRA:
+				{
+					shadowShader = RAS_IRasterizer::RAS_OVERRIDE_SHADER_SHADOW_PENUMBRA;
+					shadowInstancingShader = RAS_IRasterizer::RAS_OVERRIDE_SHADER_SHADOW_PENUMBRA_INSTANCING;
+					break;
+				}
+				case RAS_IRasterizer::RAS_SHADOW_NONE:
+				{
+					break; // Should never happen.
+				}
+			}
 
 			rasty->SetDepthMask(RAS_IRasterizer::RAS_DEPTHMASK_ENABLED);
 
 			if (GetNumActiveMeshSlots(SOLID_SHADOW_BUCKET) != 0) {
-				rasty->SetOverrideShader(isVarianceShadow ?
-				                         RAS_IRasterizer::RAS_OVERRIDE_SHADER_SHADOW_VARIANCE :
-				                         RAS_IRasterizer::RAS_OVERRIDE_SHADER_BASIC);
+				rasty->SetOverrideShader(shadowShader);
 			}
 			RenderBasicBuckets(cameratrans, rasty, SOLID_SHADOW_BUCKET);
 
 			if (GetNumActiveMeshSlots(SOLID_SHADOW_INSTANCING_BUCKET) != 0) {
-				rasty->SetOverrideShader(isVarianceShadow ?
-				                         RAS_IRasterizer::RAS_OVERRIDE_SHADER_SHADOW_VARIANCE_INSTANCING :
-				                         RAS_IRasterizer::RAS_OVERRIDE_SHADER_BASIC_INSTANCING);
+				rasty->SetOverrideShader(shadowInstancingShader);
 			}
 			RenderBasicBuckets(cameratrans, rasty, SOLID_SHADOW_INSTANCING_BUCKET);
 
-			if (isVarianceShadow) {
+			if (rasty->GetShadowMode() == RAS_IRasterizer::RAS_SHADOW_SIMPLE) {
+				rasty->SetOverrideShader(RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE);
+
+				RenderBasicBuckets(cameratrans, rasty, ALPHA_SHADOW_INSTANCING_BUCKET);
+				RenderSortedBuckets(cameratrans, rasty, ALPHA_SHADOW_BUCKET);
+			}
+			else {
 				if (GetNumActiveMeshSlots(ALPHA_SHADOW_INSTANCING_BUCKET) != 0) {
-					rasty->SetOverrideShader(RAS_IRasterizer::RAS_OVERRIDE_SHADER_SHADOW_VARIANCE_INSTANCING);
+					rasty->SetOverrideShader(shadowInstancingShader);
 				}
 				RenderBasicBuckets(cameratrans, rasty, ALPHA_SHADOW_INSTANCING_BUCKET);
 
 				if (GetNumActiveMeshSlots(ALPHA_SHADOW_BUCKET) != 0) {
-					rasty->SetOverrideShader(RAS_IRasterizer::RAS_OVERRIDE_SHADER_SHADOW_VARIANCE);
+					rasty->SetOverrideShader(shadowShader);
 				}
 
 				RenderSortedBuckets(cameratrans, rasty, ALPHA_SHADOW_BUCKET);
 
 				rasty->SetOverrideShader(RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE);
-			}
-			else {
-				rasty->SetOverrideShader(RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE);
-
-				RenderBasicBuckets(cameratrans, rasty, ALPHA_SHADOW_INSTANCING_BUCKET);
-				RenderSortedBuckets(cameratrans, rasty, ALPHA_SHADOW_BUCKET);
 			}
 
 			break;

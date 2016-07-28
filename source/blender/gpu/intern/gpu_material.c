@@ -1006,6 +1006,14 @@ static void shade_one_light(GPUShadeInput *shi, GPUShadeResult *shr, GPULamp *la
 								 GPU_dynamic_uniform((float *)lamp->dynpersmat, GPU_DYNAMIC_LAMP_DYNPERSMAT, lamp->ob),
 								 GPU_uniform(&samp), GPU_uniform(&samplesize), GPU_uniform(&lamp->bias), inp, &shadfac);
 					}
+					else if (lamp->la->shadow_filter == LA_SHADOW_FILTER_PCF_PENUMBRA) {
+						GPU_link(mat, "test_shadowbuf_pcf_penumbra",
+								 GPU_builtin(GPU_VIEW_POSITION),
+								 GPU_dynamic_texture(lamp->tex, GPU_DYNAMIC_SAMPLER_2DSHADOW, lamp->ob),
+								 GPU_dynamic_texture(lamp->depthtex, GPU_DYNAMIC_SAMPLER_2DIMAGE, lamp->ob),
+								 GPU_dynamic_uniform((float *)lamp->dynpersmat, GPU_DYNAMIC_LAMP_DYNPERSMAT, lamp->ob),
+								 GPU_uniform(&samp), GPU_uniform(&samplesize), GPU_uniform(&lamp->bias), inp, &shadfac);
+					}
 				}
 				else {
 					GPU_link(mat, "test_shadowbuf",
@@ -2642,11 +2650,24 @@ GPULamp *GPU_lamp_from_blender(Scene *scene, Object *ob, Object *par)
 				gpu_lamp_shadow_free(lamp);
 				return lamp;
 			}
-			
+
+			if (lamp->la->shadow_filter == LA_SHADOW_FILTER_PCF_PENUMBRA) {
+				lamp->depthtex = GPU_texture_create_2D(lamp->size, lamp->size, NULL, GPU_HDR_NONE, NULL);
+				if (!lamp->depthtex) {
+					gpu_lamp_shadow_free(lamp);
+					return lamp;
+				}
+
+				if (!GPU_framebuffer_texture_attach(lamp->fb, lamp->depthtex, 0, NULL)) {
+					gpu_lamp_shadow_free(lamp);
+					return lamp;
+				}
+			}
+
 			if (!GPU_framebuffer_check_valid(lamp->fb, NULL)) {
 				gpu_lamp_shadow_free(lamp);
 				return lamp;				
-			}						
+			}
 		}
 
 		GPU_framebuffer_restore();
@@ -2731,7 +2752,12 @@ void GPU_lamp_shadow_buffer_bind(GPULamp *lamp, float viewmat[4][4], int *winsiz
 
 	/* opengl */
 	glDisable(GL_SCISSOR_TEST);
-	GPU_texture_bind_as_framebuffer(lamp->tex);
+	if (lamp->la->shadow_filter == LA_SHADOW_FILTER_PCF_PENUMBRA) {
+		GPU_texture_bind_as_framebuffer(lamp->depthtex);
+	}
+	else {
+		GPU_texture_bind_as_framebuffer(lamp->tex);
+	}
 
 	/* set matrices */
 	copy_m4_m4(viewmat, lamp->viewmat);
@@ -2754,6 +2780,11 @@ void GPU_lamp_shadow_buffer_unbind(GPULamp *lamp)
 int GPU_lamp_shadow_buffer_type(GPULamp *lamp)
 {
 	return lamp->la->shadowmap_type;
+}
+
+int GPU_lamp_shadow_filter_type(GPULamp *lamp)
+{
+	return lamp->la->shadow_filter;
 }
 
 int GPU_lamp_shadow_bind_code(GPULamp *lamp)

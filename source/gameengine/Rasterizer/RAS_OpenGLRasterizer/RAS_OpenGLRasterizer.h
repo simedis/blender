@@ -223,6 +223,8 @@ protected:
 	/// Return GPUShader coresponding to the override shader enumeration.
 	GPUShader *GetOverrideGPUShader(OverrideShaderType type);
 
+	GPUShader *GetOverrideGPUShader(OverrideShaderType type) const;
+
 public:
 	double GetTime();
 	RAS_OpenGLRasterizer();

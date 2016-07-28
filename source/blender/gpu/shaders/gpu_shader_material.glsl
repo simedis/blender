@@ -2407,6 +2407,40 @@ void test_shadowbuf_pcf(
 	}
 }
 
+void test_shadowbuf_pcf_penumbra(
+        vec3 rco, sampler2DShadow shadowmap, sampler2D depthmap, mat4 shadowpersmat, float samples, float samplesize, float shadowbias, float inp,
+        out float result)
+{
+	if (inp <= 0.0) {
+		result = 0.0;
+	}
+	else {
+		vec4 co = shadowpersmat * vec4(rco, 1.0);
+
+		float deltadepth = abs(texture2DProj(depthmap, co).x - co.z / co.w);
+
+		//float bias = (1.5 - inp*inp)*shadowbias;
+		co.z -= shadowbias * co.w;
+
+		if (co.w > 0.0 && co.x > 0.0 && co.x / co.w < 1.0 && co.y > 0.0 && co.y / co.w < 1.0) {
+			float step = samplesize / samples;
+			float halfsample = samplesize / 2.0 - step * 0.5 * 0.95;
+
+			result = 0.0;
+			for (float y = -halfsample; y <= halfsample; y += step) {
+				for (float x = -halfsample; x <= halfsample; x += step) {
+					result += shadow2DProj(shadowmap, vec4(co.xy + vec2(x, y) * 0.1 * deltadepth * deltadepth, co.z, co.w)).x;
+				}
+			}
+			result /= (samples * samples);
+		}
+		else {
+			result = 1.0;
+		}
+// 		result = deltadepth;
+	}
+}
+
 void test_shadowbuf_vsm(
         vec3 rco, sampler2D shadowmap, mat4 shadowpersmat, float shadowbias, float bleedbias, float inp,
         out float result)

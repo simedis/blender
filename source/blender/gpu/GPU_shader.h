@@ -104,6 +104,8 @@ typedef enum GPUBuiltinShader {
 	GPU_SHADER_DRAW_FRAME_BUFFER             = 6,
 	GPU_SHADER_STEREO_STIPPLE       = 7,
 	GPU_SHADER_STEREO_ANAGLYPH      = 8,
+	GPU_SHADER_PENUMBRA             = 9,
+	GPU_SHADER_PENUMBRA_INSTANCING  = 10,
 } GPUBuiltinShader;
 
 GPUShader *GPU_shader_get_builtin_shader(GPUBuiltinShader shader);

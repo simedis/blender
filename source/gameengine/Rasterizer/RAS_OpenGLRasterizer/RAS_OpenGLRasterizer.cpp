@@ -1792,6 +1792,16 @@ GPUShader *RAS_OpenGLRasterizer::GetOverrideGPUShader(OverrideShaderType type)
 			shader = GPU_shader_get_builtin_shader(GPU_SHADER_VSM_STORE_INSTANCING);
 			break;
 		}
+		case RAS_OVERRIDE_SHADER_SHADOW_PENUMBRA:
+		{
+			shader = GPU_shader_get_builtin_shader(GPU_SHADER_PENUMBRA);
+²			break;
+		}
+		case RAS_OVERRIDE_SHADER_SHADOW_PENUMBRA_INSTANCING:
+		{
+			shader = GPU_shader_get_builtin_shader(GPU_SHADER_PENUMBRA_INSTANCING);
+			break;
+		}
 	}
 
 	return shader;

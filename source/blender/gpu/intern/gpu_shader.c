@@ -53,8 +53,8 @@ extern char datatoc_gpu_shader_frame_buffer_vert_glsl[];
 extern char datatoc_gpu_shader_fire_frag_glsl[];
 extern char datatoc_gpu_shader_smoke_vert_glsl[];
 extern char datatoc_gpu_shader_smoke_frag_glsl[];
-extern char datatoc_gpu_shader_vsm_store_vert_glsl[];
-extern char datatoc_gpu_shader_vsm_store_frag_glsl[];
+extern char datatoc_gpu_shader_basic_shadow_vert_glsl[];
+extern char datatoc_gpu_shader_basic_shadow_frag_glsl[];
 extern char datatoc_gpu_shader_sep_gaussian_blur_vert_glsl[];
 extern char datatoc_gpu_shader_sep_gaussian_blur_frag_glsl[];
 extern char datatoc_gpu_shader_fx_vert_glsl[];
@@ -78,6 +78,8 @@ static struct GPUShadersGlobal {
 		GPUShader *draw_frame_buffer;
 		GPUShader *stereo_stipple;
 		GPUShader *stereo_anaglyph;
+		GPUShader *penumbra;
+		GPUShader *penumbra_instancing;
 		/* cache for shader fx. Those can exist in combinations so store them here */
 		GPUShader *fx_shaders[MAX_FX_SHADERS * 2];
 	} shaders;
@@ -714,15 +716,15 @@ GPUShader *GPU_shader_get_builtin_shader(GPUBuiltinShader shader)
 		case GPU_SHADER_VSM_STORE:
 			if (!GG.shaders.vsm_store)
 				GG.shaders.vsm_store = GPU_shader_create(
-				        datatoc_gpu_shader_vsm_store_vert_glsl, datatoc_gpu_shader_vsm_store_frag_glsl,
-				        NULL, NULL, NULL, 0, 0, 0);
+				        datatoc_gpu_shader_basic_shadow_vert_glsl, datatoc_gpu_shader_basic_shadow_frag_glsl,
+				        NULL, NULL, "#define USE_VSM;\n", 0, 0, 0);
 			retval = GG.shaders.vsm_store;
 			break;
 		case GPU_SHADER_VSM_STORE_INSTANCING:
 			if (!GG.shaders.vsm_store_instancing)
 				GG.shaders.vsm_store_instancing = GPU_shader_create(
-					datatoc_gpu_shader_vsm_store_vert_glsl, datatoc_gpu_shader_vsm_store_frag_glsl,
-					NULL, NULL, "#define USE_INSTANCING;\n", 0, 0, 0);
+					datatoc_gpu_shader_basic_shadow_vert_glsl, datatoc_gpu_shader_basic_shadow_frag_glsl,
+					NULL, NULL, "#define USE_INSTANCING;\n#define USE_VSM;\n", 0, 0, 0);
 			retval = GG.shaders.vsm_store_instancing;
 			break;
 		case GPU_SHADER_SEP_GAUSSIAN_BLUR:
@@ -774,6 +776,20 @@ GPUShader *GPU_shader_get_builtin_shader(GPUBuiltinShader shader)
 					datatoc_gpu_shader_frame_buffer_vert_glsl, datatoc_gpu_shader_frame_buffer_frag_glsl,
 					NULL, NULL, "#define ANAGLYPH;\n", 0, 0, 0);
 			retval = GG.shaders.stereo_anaglyph;
+			break;
+		case GPU_SHADER_PENUMBRA:
+			if (!GG.shaders.penumbra)
+				GG.shaders.penumbra = GPU_shader_create(
+				        datatoc_gpu_shader_basic_shadow_vert_glsl, datatoc_gpu_shader_basic_shadow_frag_glsl,
+				        NULL, NULL, "#define USE_PENUMBRA;\n", 0, 0, 0);
+			retval = GG.shaders.penumbra;
+			break;
+		case GPU_SHADER_PENUMBRA_INSTANCING:
+			if (!GG.shaders.penumbra_instancing)
+				GG.shaders.penumbra_instancing = GPU_shader_create(
+					datatoc_gpu_shader_basic_shadow_vert_glsl, datatoc_gpu_shader_basic_shadow_frag_glsl,
+					NULL, NULL, "#define USE_INSTANCING;\n#define USE_PENUMBRA;\n", 0, 0, 0);
+			retval = GG.shaders.penumbra_instancing;
 			break;
 	}
 
@@ -871,6 +887,11 @@ void GPU_shader_free_builtin_shaders(void)
 		GG.shaders.vsm_store = NULL;
 	}
 
+	if (GG.shaders.vsm_store_instancing) {
+		GPU_shader_free(GG.shaders.vsm_store_instancing);
+		GG.shaders.vsm_store_instancing = NULL;
+	}
+
 	if (GG.shaders.sep_gaussian_blur) {
 		GPU_shader_free(GG.shaders.sep_gaussian_blur);
 		GG.shaders.sep_gaussian_blur = NULL;
@@ -899,6 +920,21 @@ void GPU_shader_free_builtin_shaders(void)
 	if (GG.shaders.stereo_anaglyph) {
 		GPU_shader_free(GG.shaders.stereo_anaglyph);
 		GG.shaders.stereo_anaglyph = NULL;
+	}
+
+	if (GG.shaders.instancing) {
+		GPU_shader_free(GG.shaders.instancing);
+		GG.shaders.instancing = NULL;
+	}
+
+	if (GG.shaders.penumbra) {
+		GPU_shader_free(GG.shaders.penumbra);
+		GG.shaders.penumbra = NULL;
+	}
+
+	if (GG.shaders.penumbra_instancing) {
+		GPU_shader_free(GG.shaders.penumbra_instancing);
+		GG.shaders.penumbra_instancing = NULL;
 	}
 
 	for (i = 0; i < 2 * MAX_FX_SHADERS; ++i) {
