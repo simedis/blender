@@ -32,8 +32,13 @@
 #include "glew-mx.h"
 
 #include "RAS_IStorage.h"
-
 #include "RAS_OpenGLRasterizer.h"
+
+extern "C" {
+	// To avoid include BKE_DerivedMesh.h
+	typedef int(*DMSetMaterial)(int mat_nr, void *attribs);
+	#include "GPU_buffers.h"
+}
 
 class VBO : public RAS_IStorageInfo
 {
@@ -59,8 +64,9 @@ private:
 	GLuint m_stride;
 	GLuint m_indices;
 	GLenum m_mode;
-	GLuint m_ibo;
-	GLuint m_vbo_id;
+
+	GPUBuffer *m_ibo;
+	GPUBuffer *m_vbo;
 	/// The VAO id allocated by OpenGL.
 	GLuint m_vao;
 	/// Set to true when the VBO can use VAO (the GPU support VAO and there's no geometry instancing).
