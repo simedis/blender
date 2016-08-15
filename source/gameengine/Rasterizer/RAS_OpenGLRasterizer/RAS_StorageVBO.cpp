@@ -73,16 +73,16 @@ VBO::~VBO()
 
 void VBO::UpdateData()
 {
-	RAS_TexVert *vdata = (RAS_TexVert*)GPU_buffer_lock_stream(m_vbo, GPUBindingType::GPU_BINDING_ARRAY);
+	RAS_TexVert *vdata = (RAS_TexVert*)GPU_buffer_lock_stream(m_vbo, GPU_BINDING_ARRAY);
 	memcpy(vdata, m_data->m_vertex.data(), m_stride * m_size);
-	GPU_buffer_unlock(m_vbo, GPUBindingType::GPU_BINDING_ARRAY);
+	GPU_buffer_unlock(m_vbo, GPU_BINDING_ARRAY);
 }
 
 void VBO::UpdateIndices()
 {
-	unsigned int *data = (unsigned int*)GPU_buffer_lock(m_ibo, GPUBindingType::GPU_BINDING_INDEX);
+	unsigned int *data = (unsigned int*)GPU_buffer_lock(m_ibo, GPU_BINDING_INDEX);
 	memcpy(data, m_data->m_index.data(), sizeof(GLuint) * m_data->m_index.size());
-	GPU_buffer_unlock(m_ibo, GPUBindingType::GPU_BINDING_INDEX);
+	GPU_buffer_unlock(m_ibo, GPU_BINDING_INDEX);
 }
 
 void VBO::SetMeshModified(RAS_IRasterizer::DrawType drawType, bool modified)
@@ -107,8 +107,8 @@ void VBO::Bind(int texco_num, RAS_IRasterizer::TexCoGen *texco, int attrib_num, 
 	int unit;
 
 	// Bind buffers
-	GPU_buffer_bind(m_vbo, GPUBindingType::GPU_BINDING_ARRAY);
-	GPU_buffer_bind(m_ibo, GPUBindingType::GPU_BINDING_INDEX);
+	GPU_buffer_bind(m_vbo, GPU_BINDING_ARRAY);
+	GPU_buffer_bind(m_ibo, GPU_BINDING_INDEX);
 
 	// Vertexes
 	glEnableClientState(GL_VERTEX_ARRAY);
@@ -230,8 +230,8 @@ void VBO::Unbind(int texco_num, RAS_IRasterizer::TexCoGen *texco, int attrib_num
 		}
 	}
 
-	GPU_buffer_unbind(m_vbo, GPUBindingType::GPU_BINDING_ARRAY);
-	GPU_buffer_unbind(m_ibo, GPUBindingType::GPU_BINDING_INDEX);
+	GPU_buffer_unbind(m_vbo, GPU_BINDING_ARRAY);
+	GPU_buffer_unbind(m_ibo, GPU_BINDING_INDEX);
 }
 
 void VBO::Draw()
