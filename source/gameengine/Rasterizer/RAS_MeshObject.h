@@ -67,7 +67,7 @@ private:
 	STR_String m_name;
 	static STR_String s_emptyname;
 
-	std::vector<RAS_Polygon *> m_Polygons;
+	std::vector<RAS_Polygon *> m_polygons;
 
 	/* polygon sorting */
 	struct polygonSlot;
@@ -77,7 +77,6 @@ private:
 	void UpdateAabb();
 
 protected:
-	std::vector<int> m_cacheWeightIndex;
 	std::list<RAS_MeshMaterial> m_materials;
 	Mesh *m_mesh;
 
