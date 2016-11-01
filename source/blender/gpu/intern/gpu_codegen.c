@@ -524,6 +524,10 @@ static int codegen_print_uniforms_functions(DynStr *ds, ListBase *nodes)
 	GPUInput *input;
 	const char *name;
 	int builtins = 0;
+	// String containing the uniform block declaration.
+	DynStr *unfds = BLI_dynstr_new();
+
+	BLI_dynstr_appendf(unfds, "uniform unfblock {\n");
 
 	/* print uniforms */
 	for (node = nodes->first; node; node = node->next) {
@@ -557,7 +561,7 @@ static int codegen_print_uniforms_functions(DynStr *ds, ListBase *nodes)
 			else if (input->source == GPU_SOURCE_VEC_UNIFORM) {
 				if (input->dynamicvec) {
 					/* only create uniforms for dynamic vectors */
-					BLI_dynstr_appendf(ds, "uniform %s unf%d;\n",
+					BLI_dynstr_appendf(unfds, "\tuniform %s unf%d;\n",
 						GPU_DATATYPE_STR[input->type], input->id);
 				}
 				else {
@@ -587,7 +591,12 @@ static int codegen_print_uniforms_functions(DynStr *ds, ListBase *nodes)
 		}
 	}
 
-	BLI_dynstr_append(ds, "\n");
+	BLI_dynstr_appendf(unfds, "};\n");
+	char *unfstr = BLI_dynstr_get_cstring(unfds);
+	printf("%s\n", unfstr);
+	BLI_dynstr_appendf(ds, unfstr, "\n");
+
+	BLI_dynstr_free(unfds);
 
 	return builtins;
 }
