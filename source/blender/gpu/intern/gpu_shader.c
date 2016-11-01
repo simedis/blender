@@ -538,6 +538,11 @@ int GPU_shader_get_uniform(GPUShader *shader, const char *name)
 	return glGetUniformLocation(shader->program, name);
 }
 
+int GPU_shader_get_uniform_block(GPUShader *shader, const char *name)
+{
+	return glGetUniformBlockIndex(shader->program, name);
+}
+
 void *GPU_shader_get_interface(GPUShader *shader)
 {
 	return shader->uniform_interface;
@@ -594,6 +599,11 @@ void GPU_shader_uniform_float(GPUShader *UNUSED(shader), int location, float val
 		return;
 
 	GPU_CHECK_ERRORS_AROUND(glUniform1f(location, value));
+}
+
+void GPU_shader_uniform_block_binding(GPUShader *shader, int blockindex, int blockbinding)
+{
+	glUniformBlockBinding(shader->program, blockindex, blockbinding);
 }
 
 void GPU_shader_geometry_stage_primitive_io(GPUShader *shader, int input, int output, int number)

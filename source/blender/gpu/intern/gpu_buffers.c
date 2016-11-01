@@ -879,7 +879,8 @@ void GPU_color_switch(int mode)
 static int gpu_binding_type_gl[] =
 {
 	GL_ARRAY_BUFFER,
-	GL_ELEMENT_ARRAY_BUFFER
+	GL_ELEMENT_ARRAY_BUFFER,
+	GL_UNIFORM_BUFFER
 };
 
 void *GPU_buffer_lock(GPUBuffer *buffer, GPUBindingType binding)
@@ -931,6 +932,11 @@ void GPU_buffer_unbind(GPUBuffer *UNUSED(buffer), GPUBindingType binding)
 {
 	int bindtypegl = gpu_binding_type_gl[binding];
 	glBindBuffer(bindtypegl, 0);
+}
+
+void GPU_buffer_base_bind(GPUBuffer *buffer, int index)
+{
+	glBindBufferBase(GL_UNIFORM_BUFFER, index, buffer->id);
 }
 
 /* used for drawing edges */

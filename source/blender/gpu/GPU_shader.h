@@ -77,6 +77,7 @@ int GPU_shader_program(GPUShader *shader);
 void *GPU_shader_get_interface(GPUShader *shader);
 void GPU_shader_set_interface(GPUShader *shader, void *interface);
 int GPU_shader_get_uniform(GPUShader *shader, const char *name);
+int GPU_shader_get_uniform_block(GPUShader *shader, const char *name);
 void GPU_shader_uniform_vector(GPUShader *shader, int location, int length,
 	int arraysize, const float *value);
 void GPU_shader_uniform_vector_int(GPUShader *shader, int location, int length,
@@ -85,6 +86,7 @@ void GPU_shader_uniform_vector_int(GPUShader *shader, int location, int length,
 void GPU_shader_uniform_texture(GPUShader *shader, int location, struct GPUTexture *tex);
 void GPU_shader_uniform_int(GPUShader *shader, int location, int value);
 void GPU_shader_uniform_float(GPUShader *shader, int location, float value);
+void GPU_shader_uniform_block_binding(GPUShader *shader, int blockindex, int blockbinding);
 void GPU_shader_geometry_stage_primitive_io(GPUShader *shader, int input, int output, int number);
 
 int GPU_shader_get_attribute(GPUShader *shader, const char *name);

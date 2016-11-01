@@ -176,6 +176,7 @@ typedef enum {
 typedef enum {
 	GPU_BINDING_ARRAY = 0,
 	GPU_BINDING_INDEX = 1,
+	GPU_BINDING_UNIFORM = 2,
 } GPUBindingType;
 
 typedef enum {
@@ -200,6 +201,8 @@ void GPU_interleaved_attrib_setup(GPUBuffer *buffer, GPUAttrib data[], int numda
 
 void GPU_buffer_bind(GPUBuffer *buffer, GPUBindingType binding);
 void GPU_buffer_unbind(GPUBuffer *buffer, GPUBindingType binding);
+
+void GPU_buffer_base_bind(GPUBuffer *buffer, int index);
 
 /* can't lock more than one buffer at once */
 void *GPU_buffer_lock(GPUBuffer *buffer, GPUBindingType binding);

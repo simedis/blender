@@ -48,6 +48,9 @@
 #include "GPU_shader.h"
 #include "GPU_texture.h"
 
+#include "BKE_DerivedMesh.h"
+#include "GPU_buffers.h"
+
 #include "BLI_sys_types.h" /* for intptr_t support */
 
 #include "gpu_codegen.h"
@@ -1080,6 +1083,9 @@ void GPU_pass_update_uniforms(GPUPass *pass)
 	GPUInput *input;
 	GPUShader *shader = pass->shader;
 	ListBase *inputs = &pass->inputs;
+	GPUBuffer *buffer;
+	int memsize = 0;
+	int blockIndex;
 
 	if (!shader)
 		return;
@@ -1087,10 +1093,31 @@ void GPU_pass_update_uniforms(GPUPass *pass)
 	/* pass dynamic inputs to opengl, others were removed */
 	for (input = inputs->first; input; input = input->next) {
 		if (!(input->ima || input->tex || input->prv || input->texptr)) {
-			GPU_shader_uniform_vector(shader, input->shaderloc, input->type, 1,
-				input->dynamicvec);
+			memsize += input->type * sizeof(float);
 		}
 	}
+
+	buffer = GPU_buffer_alloc(memsize);
+	float *memmap = (float *)GPU_buffer_lock_stream(buffer, GPU_BINDING_UNIFORM);
+
+	/* pass dynamic inputs to opengl, others were removed */
+	for (input = inputs->first; input; input = input->next) {
+		if (!(input->ima || input->tex || input->prv || input->texptr)) {
+			for (unsigned short i = 0; i < input->type; ++i) {
+				*memmap = input->dynamicvec[i];
+				++memmap;
+			}
+		}
+	}
+
+	GPU_buffer_unlock(buffer, GPU_BINDING_UNIFORM);
+
+	blockIndex = GPU_shader_get_uniform_block(shader, "unfblock");
+	GPU_shader_uniform_block_binding(shader, blockIndex, 0);
+
+	GPU_buffer_bind(buffer, GPU_BINDING_UNIFORM);
+	GPU_buffer_base_bind(buffer, 0);
+	GPU_buffer_unbind(buffer, GPU_BINDING_UNIFORM);
 }
 
 void GPU_pass_unbind(GPUPass *pass)
