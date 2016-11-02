@@ -44,6 +44,7 @@
 #include "RAS_MeshObject.h"
 #include "RAS_MeshUser.h"
 #include "RAS_BoundingBoxManager.h"
+#include "RAS_BatchGroup.h"
 #include "RAS_Deformer.h"
 #include "RAS_IDisplayArray.h"
 #include "RAS_Polygon.h"
@@ -790,6 +791,11 @@ void KX_GameObject::RemoveMeshes()
 	//note: meshes can be shared, and are deleted by KX_BlenderSceneConverter
 
 	m_meshes.clear();
+}
+
+RAS_MeshUser *KX_GameObject::GetMeshUser() const
+{
+	return m_meshUser;
 }
 
 void KX_GameObject::SetLodManager(KX_LodManager *lodManager)
@@ -1921,6 +1927,7 @@ PyMethodDef KX_GameObject::Methods[] = {
 	{"getPhysicsId", (PyCFunction)KX_GameObject::sPyGetPhysicsId,METH_NOARGS},
 	{"getPropertyNames", (PyCFunction)KX_GameObject::sPyGetPropertyNames,METH_NOARGS},
 	{"replaceMesh",(PyCFunction) KX_GameObject::sPyReplaceMesh, METH_VARARGS},
+	{"merge",(PyCFunction) KX_GameObject::sPyMerge, METH_VARARGS},
 	{"endObject",(PyCFunction) KX_GameObject::sPyEndObject, METH_NOARGS},
 	{"reinstancePhysicsMesh", (PyCFunction)KX_GameObject::sPyReinstancePhysicsMesh,METH_VARARGS},
 	{"replacePhysicsShape", (PyCFunction)KX_GameObject::sPyReplacePhysicsShape, METH_O},
@@ -2021,6 +2028,33 @@ PyObject *KX_GameObject::PyReplaceMesh(PyObject *args)
 		return NULL;
 	
 	GetScene()->ReplaceMesh(this, new_mesh, (bool)use_gfx, (bool)use_phys);
+	Py_RETURN_NONE;
+}
+
+PyObject *KX_GameObject::PyMerge(PyObject *args)
+{
+	SCA_LogicManager *logicmgr = GetScene()->GetLogicManager();
+
+	PyObject *value;
+
+	if (!PyArg_ParseTuple(args,"O:merge", &value))
+		return NULL;
+
+	RAS_BatchGroup *batchGroup = new RAS_BatchGroup();
+
+	for (unsigned short i = 0; i < PyList_GET_SIZE(value); ++i) {
+		PyObject *pyobj = PyList_GET_ITEM(value, i);
+		KX_GameObject *gameobj;
+
+		if (!ConvertPythonToGameObject(logicmgr, pyobj, &gameobj, false, "")) {
+			return NULL;
+		}
+
+		const MT_Matrix4x4 mat = MT_Matrix4x4::Identity();
+
+		batchGroup->Merge(gameobj->GetMeshUser(), mat);
+	}
+
 	Py_RETURN_NONE;
 }
 

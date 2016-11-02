@@ -128,6 +128,8 @@ public:
 	bool UseDisplayList() const;
 	bool UseVao() const;
 
+	bool UseBatching() const;
+
 	/// Update render infos.
 	void UpdateActiveMeshSlots(RAS_IRasterizer *rasty);
 	/// Set the mesh object as unmodified flag.
@@ -152,6 +154,7 @@ public:
 	void UnbindUpwardNode(const RAS_RenderNodeArguments& args);
 	void RunDownwardNode(const RAS_RenderNodeArguments& args);
 	void RunInstancingNode(const RAS_RenderNodeArguments& args);
+	void RunBatchingNode(const RAS_RenderNodeArguments& args);
 
 	/// Replace the material bucket of this display array bucket by the one given.
 	void ChangeMaterialBucket(RAS_MaterialBucket *bucket);

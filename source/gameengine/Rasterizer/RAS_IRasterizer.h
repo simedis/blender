@@ -461,6 +461,13 @@ public:
 	 */
 	virtual void IndexPrimitivesInstancing(RAS_DisplayArrayBucket *arrayBucket) = 0;
 
+	/**
+	 * Renders all primitives from mesh slots contained in this display array
+	 * bucket with a single batched display array.
+	 */
+	virtual void IndexPrimitivesBatching(RAS_DisplayArrayBucket *arrayBucket, const std::vector<unsigned int>& indices,
+										 const std::vector<unsigned int>& counts) = 0;
+
 	/// Render text mesh slot using BLF functions.
 	virtual void IndexPrimitivesText(RAS_MeshSlot *ms) = 0;
  

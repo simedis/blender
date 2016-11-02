@@ -53,7 +53,8 @@ RAS_MeshSlot::RAS_MeshSlot()
 	m_mesh(NULL),
 	m_pDeformer(NULL),
 	m_pDerivedMesh(NULL),
-	m_meshUser(NULL)
+	m_meshUser(NULL),
+	m_batchIndex(-1)
 {
 }
 
@@ -74,6 +75,7 @@ RAS_MeshSlot::RAS_MeshSlot(const RAS_MeshSlot& slot)
 	m_pDeformer = NULL;
 	m_pDerivedMesh = NULL;
 	m_meshUser = NULL;
+	m_batchIndex = -1;
 	m_mesh = slot.m_mesh;
 	m_meshMaterial = slot.m_meshMaterial;
 	m_bucket = slot.m_bucket;
@@ -161,6 +163,16 @@ void RAS_MeshSlot::SetDeformer(RAS_Deformer *deformer)
 void RAS_MeshSlot::SetMeshUser(RAS_MeshUser *user)
 {
 	m_meshUser = user;
+}
+
+void RAS_MeshSlot::SetDisplayArrayBucket(RAS_DisplayArrayBucket *arrayBucket)
+{
+	if (m_displayArrayBucket) {
+		m_displayArrayBucket->Release();
+	}
+
+	m_displayArrayBucket = arrayBucket;
+	m_displayArray = m_displayArrayBucket->GetDisplayArray();
 }
 
 void RAS_MeshSlot::GenerateTree(RAS_DisplayArrayUpwardNode *root, RAS_UpwardTreeLeafs *leafs)

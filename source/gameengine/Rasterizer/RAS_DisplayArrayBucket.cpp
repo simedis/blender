@@ -30,7 +30,7 @@
  */
 
 #include "RAS_DisplayArrayBucket.h"
-#include "RAS_DisplayArray.h"
+#include "RAS_DisplayArrayBatching.h"
 #include "RAS_MaterialBucket.h"
 #include "RAS_IPolygonMaterial.h"
 #include "RAS_MeshObject.h"
@@ -185,6 +185,11 @@ bool RAS_DisplayArrayBucket::UseDisplayList() const
 bool RAS_DisplayArrayBucket::UseVao() const
 {
 	return m_useVao;
+}
+
+bool RAS_DisplayArrayBucket::UseBatching() const
+{
+	return (m_displayArray && m_displayArray->GetType() == RAS_IDisplayArray::BATCHING);
 }
 
 void RAS_DisplayArrayBucket::UpdateActiveMeshSlots(RAS_IRasterizer *rasty)
@@ -348,7 +353,7 @@ void RAS_DisplayArrayBucket::RunInstancingNode(const RAS_RenderNodeArguments& ar
 			[&pnorm](RAS_MeshSlot *slot) { return RAS_BucketManager::SortedMeshSlot(slot, pnorm); });
 
 		std::sort(sortedMeshSlots.begin(), sortedMeshSlots.end(), RAS_BucketManager::backtofront());
-		std::vector<RAS_MeshSlot *> meshSlots(nummeshslots);
+		RAS_MeshSlotList meshSlots(nummeshslots);
 		for (unsigned int i = 0; i < nummeshslots; ++i) {
 			meshSlots[i] = sortedMeshSlots[i].m_ms;
 		}
@@ -399,6 +404,47 @@ void RAS_DisplayArrayBucket::RunInstancingNode(const RAS_RenderNodeArguments& ar
 	else {
 		rasty->DesactivateOverrideShaderInstancing();
 	}
+
+	rasty->UnbindPrimitives(this);
+}
+
+void RAS_DisplayArrayBucket::RunBatchingNode(const RAS_RenderNodeArguments& args)
+{
+	unsigned int nummeshslots = m_activeMeshSlots.size();
+
+	std::vector<unsigned int> counts;
+	std::vector<unsigned int> indices;
+
+	RAS_IDisplayArrayBatching *arrayBatching = dynamic_cast<RAS_IDisplayArrayBatching *>(m_displayArray);
+
+	/* If the material use the transparency we must sort all mesh slots depending on the distance.
+	 * This code share the code used in RAS_BucketManager to do the sort.
+	 */
+	if (alpha) {
+		std::vector<RAS_BucketManager::sortedmeshslot> sortedMeshSlots(nummeshslots);
+
+		const MT_Vector3 pnorm(cameratrans.getBasis()[2]);
+		unsigned int i = 0;
+		for (RAS_MeshSlotList::iterator it = m_activeMeshSlots.begin(), end = m_activeMeshSlots.end(); it != end; ++it) {
+			sortedMeshSlots[i++].set(*it, m_bucket, pnorm);
+		}
+		std::sort(sortedMeshSlots.begin(), sortedMeshSlots.end(), RAS_BucketManager::backtofront());
+		RAS_MeshSlotList meshSlots(nummeshslots);
+		for (unsigned int i = 0; i < nummeshslots; ++i) {
+			meshSlots[i] = sortedMeshSlots[i].m_ms;
+		}
+	}
+	else {
+		for (RAS_MeshSlotList::iterator it = m_activeMeshSlots.begin(), end = m_activeMeshSlots.end(); it != end; ++it) {
+			const short index = (*it)->m_batchIndex;
+			indices.push_back(arrayBatching->GetArrayIndice(index));
+			counts.push_back(arrayBatching->GetArrayCount(index));
+		}
+	}
+
+	rasty->BindPrimitives(this);
+
+	rasty->IndexPrimitivesBatching(this, indices, counts);
 
 	rasty->UnbindPrimitives(this);
 }

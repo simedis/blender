@@ -1256,6 +1256,11 @@ void RAS_OpenGLRasterizer::IndexPrimitivesInstancing(RAS_DisplayArrayBucket *arr
 	m_storage->IndexPrimitivesInstancing(arrayBucket);
 }
 
+void RAS_OpenGLRasterizer::IndexPrimitivesBatching(RAS_DisplayArrayBucket *arrayBucket, const std::vector<unsigned int>& indices,
+												   const std::vector<unsigned int>& counts)
+{
+	m_storage->IndexPrimitivesBatching(arrayBucket, indices, counts);
+}
 
 // Code for hooking into Blender's mesh drawing for derived meshes.
 // If/when we use more of Blender's drawing code, we may be able to

@@ -788,6 +788,9 @@ public:
 		return m_meshes.size(); 
 	}
 
+	/// Return the mesh user of this game object.
+	RAS_MeshUser *GetMeshUser() const;
+	
 	/**
 	 * Was this object marked visible? (only for the explicit
 	 * visibility system).
@@ -969,6 +972,7 @@ public:
 	KX_PYMETHOD_NOARGS(KX_GameObject,GetPhysicsId);
 	KX_PYMETHOD_NOARGS(KX_GameObject,GetPropertyNames);
 	KX_PYMETHOD_VARARGS(KX_GameObject,ReplaceMesh);
+	KX_PYMETHOD_VARARGS(KX_GameObject, Merge);
 	KX_PYMETHOD_NOARGS(KX_GameObject,EndObject);
 	KX_PYMETHOD_DOC(KX_GameObject,rayCastTo);
 	KX_PYMETHOD_DOC(KX_GameObject,rayCast);
