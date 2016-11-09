@@ -32,7 +32,7 @@
 class RAS_IDisplayArrayBatching : public virtual RAS_IDisplayArray
 {
 protected:
-	std::vector<unsigned int> m_indicesArray;
+	std::vector<void *> m_offsets;
 	std::vector<unsigned int> m_counts;
 
 public:
@@ -45,17 +45,17 @@ public:
 	 */
 	static RAS_IDisplayArrayBatching *ConstructArray(PrimitiveType type, const RAS_TexVertFormat &format);
 
-	inline unsigned int GetArrayIndice(const unsigned short index)
+	inline void *GetPartIndexOffset(const unsigned short index)
 	{
-		return m_indicesArray[index];
+		return m_offsets[index];
 	}
 
-	inline unsigned int GetArrayCount(const unsigned short index)
+	inline unsigned int GetPartIndexCount(const unsigned short index)
 	{
 		return m_counts[index];
 	}
 
-	virtual void Merge(RAS_IDisplayArray *iarray, const MT_Matrix4x4& mat) = 0;
+	virtual unsigned int Merge(RAS_IDisplayArray *iarray, const MT_Matrix4x4& mat) = 0;
 
 	virtual Type GetType() const;
 };

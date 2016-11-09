@@ -2040,7 +2040,15 @@ PyObject *KX_GameObject::PyMerge(PyObject *args)
 	if (!PyArg_ParseTuple(args,"O:merge", &value))
 		return NULL;
 
+	if (!PyList_Check(value)) {
+		return NULL;
+	}
+
 	RAS_BatchGroup *batchGroup = new RAS_BatchGroup();
+
+	const MT_Matrix4x4 mat = MT_Matrix4x4::Identity();
+
+	batchGroup->Merge(m_meshUser, mat);
 
 	for (unsigned short i = 0; i < PyList_GET_SIZE(value); ++i) {
 		PyObject *pyobj = PyList_GET_ITEM(value, i);
@@ -2049,8 +2057,6 @@ PyObject *KX_GameObject::PyMerge(PyObject *args)
 		if (!ConvertPythonToGameObject(logicmgr, pyobj, &gameobj, false, "")) {
 			return NULL;
 		}
-
-		const MT_Matrix4x4 mat = MT_Matrix4x4::Identity();
 
 		batchGroup->Merge(gameobj->GetMeshUser(), mat);
 	}

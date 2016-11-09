@@ -75,8 +75,7 @@ public:
 	void SetDeformer(RAS_Deformer *deformer);
 	void SetMeshUser(RAS_MeshUser *user);
 	/** Set the display array bucket and display array of this mesh slot.
-	 * \param arrayBucket The new display array bucket, its reference count
-	 * must be already incremented.
+	 * \param arrayBucket The new display array bucket, its reference count must be already incremented.
 	 */
 	void SetDisplayArrayBucket(RAS_DisplayArrayBucket *arrayBucket);
 

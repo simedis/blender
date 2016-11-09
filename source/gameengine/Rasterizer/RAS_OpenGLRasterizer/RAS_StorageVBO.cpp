@@ -286,9 +286,9 @@ void VBO::DrawInstancing(unsigned int numinstance)
 	glDrawElementsInstancedARB(m_mode, m_indices, GL_UNSIGNED_INT, 0, numinstance);
 }
 
-void VBO::DrawBatching(const std::vector<unsigned int>& indices, const std::vector<unsigned int>& counts)
+void VBO::DrawBatching(const std::vector<void *>& indices, const std::vector<int>& counts)
 {
-	glMultiDrawElements(m_mode, counts.data(), GL_UNSIGNED_INT, indices.data(), counts.size());
+	glMultiDrawElements(m_mode, counts.data(), GL_UNSIGNED_INT, (void **)indices.data(), counts.size());
 }
 
 RAS_StorageVBO::RAS_StorageVBO(RAS_OpenGLRasterizer::StorageAttribs *storageAttribs)
@@ -339,8 +339,8 @@ void RAS_StorageVBO::IndexPrimitivesInstancing(RAS_DisplayArrayBucket *arrayBuck
 	vbo->DrawInstancing(arrayBucket->GetNumActiveMeshSlots());
 }
 
-void RAS_StorageVBO::IndexPrimitivesBatching(RAS_DisplayArrayBucket *arrayBucket, const std::vector<unsigned int>& indices,
-											 const std::vector<unsigned int>& counts)
+void RAS_StorageVBO::IndexPrimitivesBatching(RAS_DisplayArrayBucket *arrayBucket, const std::vector<void *>& indices,
+											 const std::vector<int>& counts)
 {
 	VBO *vbo = GetVBO(arrayBucket);
 

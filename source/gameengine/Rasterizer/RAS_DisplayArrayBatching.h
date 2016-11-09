@@ -29,6 +29,7 @@
 
 #include "RAS_DisplayArray.h"
 #include "RAS_IDisplayArrayBatching.h"
+#include "CM_Message.h"
 
 /// An array with data used for OpenGL drawing
 template <class Vertex>
@@ -37,7 +38,6 @@ class RAS_DisplayArrayBatching : public RAS_DisplayArray<Vertex>, public RAS_IDi
 protected:
 	using RAS_DisplayArray<Vertex>::m_vertexes;
 	using RAS_DisplayArray<Vertex>::m_indices;
-// 	using RAS_IDisplayArray::m_indices;
 
 public:
 	RAS_DisplayArrayBatching(RAS_IDisplayArray::PrimitiveType type, const RAS_TexVertFormat& format)
@@ -56,7 +56,7 @@ public:
 	 * batching array.
 	 * \param mat The transformation to apply on each vertex in the merging.
 	 */
-	virtual void Merge(RAS_IDisplayArray *iarray, const MT_Matrix4x4& mat)
+	virtual unsigned int Merge(RAS_IDisplayArray *iarray, const MT_Matrix4x4& mat)
 	{
 		RAS_DisplayArray<Vertex> *array = dynamic_cast<RAS_DisplayArray<Vertex> *>(iarray);
 		const unsigned int vertexcount = iarray->GetVertexCount();
@@ -66,11 +66,13 @@ public:
 		const unsigned int startindex = m_indices.size();
 
 		// Add the array start index and count.
-		m_indicesArray.push_back(startindex);
+		m_offsets.push_back((void *)(startindex * sizeof(unsigned int)));
 		m_counts.push_back(indexcount);
 
 		m_vertexes.reserve(startvertex + vertexcount);
 		m_indices.reserve(startindex + indexcount);
+
+		CM_Debug("Add part : " << (m_offsets.size() - 1) << ", start index: " << startindex << ", index count: " << indexcount << ", start vertex: " << startvertex << ", vertex count: " << vertexcount);
 
 		// Normal and tangent matrix.
 		MT_Matrix4x4 nmat = mat.inverse().transposed();
@@ -84,10 +86,12 @@ public:
 		}
 
 		for (std::vector<unsigned int>::iterator it = array->m_indices.begin(), end = array->m_indices.end(); it != end; ++it) {
-			m_indices.push_back(startindex + *it);
+			m_indices.push_back(startvertex + *it);
 		}
 
 		RAS_DisplayArray<Vertex>::UpdateCache();
+
+		return (m_offsets.size() - 1);
 	}
 };
 

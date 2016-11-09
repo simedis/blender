@@ -30,6 +30,8 @@
 #include "RAS_MeshUser.h"
 #include "RAS_MeshSlot.h"
 
+#include "CM_Message.h"
+
 RAS_BatchGroup::RAS_BatchGroup()
 {
 }
@@ -58,11 +60,13 @@ bool RAS_BatchGroup::Merge(RAS_BatchGroup::Batch& batch, RAS_MeshSlot *slot, con
 	m_originalDisplayArrayBucketList[slot] = origArrayBucket->AddRef();
 
 	// Merge display array.
-	array->Merge(origArray, mat);
+	const unsigned int index = array->Merge(origArray, mat);
+	slot->m_batchIndex = index;
 
 	arrayBucket->DestructStorageInfo();
 
 	slot->SetDisplayArrayBucket(arrayBucket);
+	arrayBucket->AddRef();
 
 	return true;
 }
@@ -97,6 +101,10 @@ bool RAS_BatchGroup::Merge(RAS_MeshUser *meshUser, const MT_Matrix4x4& mat)
 			batch.m_displayArray = RAS_IDisplayArrayBatching::ConstructArray(origarray->GetPrimitiveType(), origarray->GetFormat());
 			batch.m_displayArrayBucket = new RAS_DisplayArrayBucket(meshSlot->m_bucket, batch.m_displayArray,
 																	meshSlot->m_mesh, meshSlot->m_meshMaterial);
+			CM_Debug("Created batching array: " << batch.m_displayArray << ", for material: " << material);
+		}
+		else {
+			CM_Debug("Reuse batching array: " << batch.m_displayArray << ", for material: " << material);
 		}
 
 		if (!Merge(batch, meshSlot, mat)) {
