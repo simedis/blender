@@ -35,6 +35,8 @@ class RAS_IDisplayArrayBatching;
 class RAS_BatchGroup
 {
 private:
+	short m_users;
+
 	std::map<RAS_MeshSlot *, RAS_DisplayArrayBucket *> m_originalDisplayArrayBucketList;
 
 	struct Batch
@@ -45,15 +47,18 @@ private:
 
 	std::map<RAS_IPolyMaterial *, Batch> m_batchs;
 
-	bool Merge(Batch& batch, RAS_MeshSlot *slot, const MT_Matrix4x4& mat);
-	bool Split(RAS_MeshSlot *slot);
+	bool MergeMeshSlot(Batch& batch, RAS_MeshSlot *slot, const MT_Matrix4x4& mat);
+	bool SplitMeshSlot(RAS_MeshSlot *slot);
 
 public:
 	RAS_BatchGroup();
 	virtual ~RAS_BatchGroup();
 
-	bool Merge(RAS_MeshUser *meshUser, const MT_Matrix4x4& mat);
-	bool Split(RAS_MeshUser *meshUser);
+	RAS_BatchGroup *AddRef();
+	RAS_BatchGroup *Release();
+
+	bool MergeMeshUser(RAS_MeshUser *meshUser, const MT_Matrix4x4& mat);
+	bool SplitMeshUser(RAS_MeshUser *meshUser);
 };
 
 

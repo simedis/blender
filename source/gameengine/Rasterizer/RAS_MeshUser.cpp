@@ -29,13 +29,15 @@
 #include "RAS_MeshUser.h"
 #include "RAS_DisplayArrayBucket.h"
 #include "RAS_BoundingBox.h"
+#include "RAS_BatchGroup.h"
 
 RAS_MeshUser::RAS_MeshUser(void *clientobj)
 	:m_frontFace(true),
 	m_color(MT_Vector4(0.0f, 0.0f, 0.0f, 0.0f)),
 	m_matrix(NULL),
 	m_boundingBox(NULL),
-	m_clientObject(clientobj)
+	m_clientObject(clientobj),
+	m_batchGroup(NULL)
 {
 }
 
@@ -45,6 +47,10 @@ RAS_MeshUser::~RAS_MeshUser()
 
 	if (m_boundingBox) {
 		m_boundingBox->RemoveUser();
+	}
+
+	if (m_batchGroup) {
+		m_batchGroup->Release();
 	}
 }
 
@@ -83,6 +89,11 @@ RAS_MeshSlotList& RAS_MeshUser::GetMeshSlots()
 	return m_meshSlots;
 }
 
+RAS_BatchGroup *RAS_MeshUser::GetBatchGroup() const
+{
+	return m_batchGroup;
+}
+
 void RAS_MeshUser::SetFrontFace(bool frontFace)
 {
 	m_frontFace = frontFace;
@@ -109,6 +120,11 @@ void RAS_MeshUser::SetBoundingBox(RAS_BoundingBox *boundingBox)
 	if (m_boundingBox) {
 		m_boundingBox->AddUser();
 	}
+}
+
+void RAS_MeshUser::SetBatchGroup(RAS_BatchGroup *batchGroup)
+{
+	m_batchGroup = batchGroup->AddRef();
 }
 
 void RAS_MeshUser::ActivateMeshSlots()

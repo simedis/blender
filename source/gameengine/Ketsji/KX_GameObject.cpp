@@ -44,7 +44,6 @@
 #include "RAS_MeshObject.h"
 #include "RAS_MeshUser.h"
 #include "RAS_BoundingBoxManager.h"
-#include "RAS_BatchGroup.h"
 #include "RAS_Deformer.h"
 #include "RAS_IDisplayArray.h"
 #include "RAS_Polygon.h"
@@ -68,6 +67,7 @@
 #include "KX_LodLevel.h"
 #include "KX_LodManager.h"
 #include "KX_BoundingBox.h"
+#include "KX_BatchGroup.h"
 #include "KX_CollisionContactPoints.h"
 
 #include "BKE_object.h"
@@ -1927,7 +1927,6 @@ PyMethodDef KX_GameObject::Methods[] = {
 	{"getPhysicsId", (PyCFunction)KX_GameObject::sPyGetPhysicsId,METH_NOARGS},
 	{"getPropertyNames", (PyCFunction)KX_GameObject::sPyGetPropertyNames,METH_NOARGS},
 	{"replaceMesh",(PyCFunction) KX_GameObject::sPyReplaceMesh, METH_VARARGS},
-	{"merge",(PyCFunction) KX_GameObject::sPyMerge, METH_VARARGS},
 	{"endObject",(PyCFunction) KX_GameObject::sPyEndObject, METH_NOARGS},
 	{"reinstancePhysicsMesh", (PyCFunction)KX_GameObject::sPyReinstancePhysicsMesh,METH_VARARGS},
 	{"replacePhysicsShape", (PyCFunction)KX_GameObject::sPyReplacePhysicsShape, METH_O},
@@ -2028,39 +2027,6 @@ PyObject *KX_GameObject::PyReplaceMesh(PyObject *args)
 		return NULL;
 	
 	GetScene()->ReplaceMesh(this, new_mesh, (bool)use_gfx, (bool)use_phys);
-	Py_RETURN_NONE;
-}
-
-PyObject *KX_GameObject::PyMerge(PyObject *args)
-{
-	SCA_LogicManager *logicmgr = GetScene()->GetLogicManager();
-
-	PyObject *value;
-
-	if (!PyArg_ParseTuple(args,"O:merge", &value))
-		return NULL;
-
-	if (!PyList_Check(value)) {
-		return NULL;
-	}
-
-	RAS_BatchGroup *batchGroup = new RAS_BatchGroup();
-
-	const MT_Matrix4x4 mat = MT_Matrix4x4::Identity();
-
-	batchGroup->Merge(m_meshUser, mat);
-
-	for (unsigned short i = 0; i < PyList_GET_SIZE(value); ++i) {
-		PyObject *pyobj = PyList_GET_ITEM(value, i);
-		KX_GameObject *gameobj;
-
-		if (!ConvertPythonToGameObject(logicmgr, pyobj, &gameobj, false, "")) {
-			return NULL;
-		}
-
-		batchGroup->Merge(gameobj->GetMeshUser(), mat);
-	}
-
 	Py_RETURN_NONE;
 }
 
@@ -3114,6 +3080,22 @@ PyObject *KX_GameObject::pyattr_get_meshes(void *self_v, const KX_PYATTRIBUTE_DE
 	}
 	
 	return meshes;
+}
+
+PyObject *KX_GameObject::pyattr_get_batchGroup(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+{
+	KX_GameObject *self = static_cast<KX_GameObject *>(self_v);
+	RAS_MeshUser *meshUser = self->GetMeshUser();
+	if (!meshUser) {
+		Py_RETURN_NONE;
+	}
+
+	KX_BatchGroup *batchGroup = (KX_BatchGroup *)meshUser->GetBatchGroup();
+	if (!batchGroup) {
+		Py_RETURN_NONE;
+	}
+
+	return batchGroup->GetProxy();
 }
 
 PyObject *KX_GameObject::pyattr_get_obcolor(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)

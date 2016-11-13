@@ -33,7 +33,9 @@
 #include "CM_Message.h"
 
 RAS_BatchGroup::RAS_BatchGroup()
+	:m_users(0)
 {
+	CM_Debug("New batch group");
 }
 
 RAS_BatchGroup::~RAS_BatchGroup()
@@ -42,9 +44,27 @@ RAS_BatchGroup::~RAS_BatchGroup()
 		Batch& batch = it->second;
 		batch.m_displayArrayBucket->Release();
 	}
+
+	CM_Debug("Delete batch group");
 }
 
-bool RAS_BatchGroup::Merge(RAS_BatchGroup::Batch& batch, RAS_MeshSlot *slot, const MT_Matrix4x4& mat)
+RAS_BatchGroup *RAS_BatchGroup::AddRef()
+{
+	++m_users;
+	return this;
+}
+
+RAS_BatchGroup *RAS_BatchGroup::Release()
+{
+	--m_users;
+	if (m_users == 0) {
+		delete this;
+		return NULL;
+	}
+	return this;
+}
+
+bool RAS_BatchGroup::MergeMeshSlot(RAS_BatchGroup::Batch& batch, RAS_MeshSlot *slot, const MT_Matrix4x4& mat)
 {
 	RAS_DisplayArrayBucket *origArrayBucket = slot->m_displayArrayBucket;
 	RAS_IDisplayArray *origArray = origArrayBucket->GetDisplayArray();
@@ -53,6 +73,7 @@ bool RAS_BatchGroup::Merge(RAS_BatchGroup::Batch& batch, RAS_MeshSlot *slot, con
 
 	// Don't merge if the vertex format or pimitive type is not the same.
 	if (origArray->GetFormat() != array->GetFormat() || origArray->GetPrimitiveType() != array->GetPrimitiveType()) {
+		CM_Error("failed merge ")
 		return false;
 	}
 
@@ -71,7 +92,7 @@ bool RAS_BatchGroup::Merge(RAS_BatchGroup::Batch& batch, RAS_MeshSlot *slot, con
 	return true;
 }
 
-bool RAS_BatchGroup::Split(RAS_MeshSlot *slot)
+bool RAS_BatchGroup::SplitMeshSlot(RAS_MeshSlot *slot)
 {
 	RAS_DisplayArrayBucket *origArrayBucket = m_originalDisplayArrayBucketList[slot];
 
@@ -87,7 +108,7 @@ bool RAS_BatchGroup::Split(RAS_MeshSlot *slot)
 	return true;
 }
 
-bool RAS_BatchGroup::Merge(RAS_MeshUser *meshUser, const MT_Matrix4x4& mat)
+bool RAS_BatchGroup::MergeMeshUser(RAS_MeshUser *meshUser, const MT_Matrix4x4& mat)
 {
 	const RAS_MeshSlotList& meshSlots = meshUser->GetMeshSlots();
 	for (RAS_MeshSlotList::const_iterator it = meshSlots.begin(), end = meshSlots.end(); it != end; ++it) {
@@ -107,20 +128,22 @@ bool RAS_BatchGroup::Merge(RAS_MeshUser *meshUser, const MT_Matrix4x4& mat)
 			CM_Debug("Reuse batching array: " << batch.m_displayArray << ", for material: " << material);
 		}
 
-		if (!Merge(batch, meshSlot, mat)) {
+		if (!MergeMeshSlot(batch, meshSlot, mat)) {
 			return false;
 		}
 	}
 
+	meshUser->SetBatchGroup(this);
+
 	return true;
 }
 
-bool RAS_BatchGroup::Split(RAS_MeshUser *meshUser)
+bool RAS_BatchGroup::SplitMeshUser(RAS_MeshUser *meshUser)
 {
 	const RAS_MeshSlotList& meshSlots = meshUser->GetMeshSlots();
 	for (RAS_MeshSlotList::const_iterator it = meshSlots.begin(), end = meshSlots.end(); it != end; ++it) {
 		RAS_MeshSlot *meshSlot = *it;
-		if (!Split(meshSlot)) {
+		if (!SplitMeshSlot(meshSlot)) {
 			return false;
 		}
 	}
