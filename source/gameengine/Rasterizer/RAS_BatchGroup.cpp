@@ -48,14 +48,16 @@ RAS_BatchGroup::~RAS_BatchGroup()
 	CM_Debug("Delete batch group");
 }
 
-RAS_BatchGroup *RAS_BatchGroup::AddRef()
+RAS_BatchGroup *RAS_BatchGroup::AddMeshUser(RAS_MeshUser *UNUSED(meshUser))
 {
 	++m_users;
 	return this;
 }
 
-RAS_BatchGroup *RAS_BatchGroup::Release()
+RAS_BatchGroup *RAS_BatchGroup::RemoveMeshUser(RAS_MeshUser *meshUser)
 {
+	SplitMeshUser(meshUser);
+
 	--m_users;
 	if (m_users == 0) {
 		delete this;

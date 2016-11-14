@@ -54,8 +54,8 @@ public:
 	RAS_BatchGroup();
 	virtual ~RAS_BatchGroup();
 
-	RAS_BatchGroup *AddRef();
-	RAS_BatchGroup *Release();
+	RAS_BatchGroup *AddMeshUser(RAS_MeshUser *meshUser);
+	RAS_BatchGroup *RemoveMeshUser(RAS_MeshUser *meshUser);
 
 	bool MergeMeshUser(RAS_MeshUser *meshUser, const MT_Matrix4x4& mat);
 	bool SplitMeshUser(RAS_MeshUser *meshUser);
