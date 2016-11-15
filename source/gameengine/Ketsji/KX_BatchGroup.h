@@ -48,6 +48,7 @@ public:
 	CListValue *GetObjects() const;
 
 	void MergeObjects(const std::vector<KX_GameObject *>& objects);
+	void SplitObjects(const std::vector<KX_GameObject *>& objects);
 
 #ifdef WITH_PYTHON
 

@@ -37,12 +37,14 @@ class RAS_BatchGroup
 private:
 	short m_users;
 
-	std::map<RAS_MeshSlot *, RAS_DisplayArrayBucket *> m_originalDisplayArrayBucketList;
-
 	struct Batch
 	{
 		RAS_DisplayArrayBucket *m_displayArrayBucket;
 		RAS_IDisplayArrayBatching *m_displayArray;
+
+		std::map<RAS_MeshSlot *, RAS_DisplayArrayBucket *> m_originalDisplayArrayBucketList;
+		/// All the mesh slots sorted by batch index.
+		RAS_MeshSlotList m_meshSlots;
 	};
 
 	std::map<RAS_IPolyMaterial *, Batch> m_batchs;

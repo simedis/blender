@@ -32,6 +32,8 @@
 
 #include "CM_Message.h"
 
+#include <algorithm>
+
 RAS_BatchGroup::RAS_BatchGroup()
 	:m_users(0)
 {
@@ -80,11 +82,12 @@ bool RAS_BatchGroup::MergeMeshSlot(RAS_BatchGroup::Batch& batch, RAS_MeshSlot *s
 	}
 
 	// Store original display array bucket.
-	m_originalDisplayArrayBucketList[slot] = origArrayBucket->AddRef();
+	batch.m_originalDisplayArrayBucketList[slot] = origArrayBucket->AddRef();
+	batch.m_meshSlots.push_back(slot);
 
 	// Merge display array.
 	const unsigned int index = array->Merge(origArray, mat);
-	slot->m_batchIndex = index;
+	slot->m_batchPartIndex = index;
 
 	arrayBucket->DestructStorageInfo();
 
@@ -96,16 +99,35 @@ bool RAS_BatchGroup::MergeMeshSlot(RAS_BatchGroup::Batch& batch, RAS_MeshSlot *s
 
 bool RAS_BatchGroup::SplitMeshSlot(RAS_MeshSlot *slot)
 {
-	RAS_DisplayArrayBucket *origArrayBucket = m_originalDisplayArrayBucketList[slot];
+	RAS_IPolyMaterial *material = slot->m_bucket->GetPolyMaterial();
+
+	std::map<RAS_IPolyMaterial *, Batch>::iterator bit = m_batchs.find(material);
+	if (bit == m_batchs.end()) {
+		return false;
+	}
+
+	Batch& batch = bit->second;
+
+	RAS_DisplayArrayBucket *origArrayBucket = batch.m_originalDisplayArrayBucketList[slot];
 
 	if (!origArrayBucket) {
 		return false;
 	}
 
-	slot->SetDisplayArrayBucket(origArrayBucket);
+	slot->SetDisplayArrayBucket(origArrayBucket->AddRef());
 	origArrayBucket->Release();
 
-	m_originalDisplayArrayBucketList.erase(slot);
+	batch.m_displayArray->Split(slot->m_batchPartIndex);
+
+	batch.m_displayArrayBucket->DestructStorageInfo();
+
+	batch.m_originalDisplayArrayBucketList.erase(slot);
+
+	RAS_MeshSlotList::iterator mit = batch.m_meshSlots.erase(std::find(batch.m_meshSlots.begin(), batch.m_meshSlots.end(), slot));
+	for (RAS_MeshSlotList::iterator it = mit, end = batch.m_meshSlots.end(); it != end; ++it) {
+		RAS_MeshSlot *meshSlot = *it;
+		--meshSlot->m_batchPartIndex;
+	}
 
 	return true;
 }

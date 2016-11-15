@@ -65,12 +65,30 @@ void KX_BatchGroup::MergeObjects(const std::vector<KX_GameObject *>& objects)
 
 		if (!meshUser) {
 			CM_Warning("object \"" << gameobj->GetName() << "\" doesn't contain a mesh");
+			continue;
 		}
 
 		const MT_Transform trans(gameobj->NodeGetWorldPosition(), gameobj->NodeGetWorldOrientation());
 
 		if (MergeMeshUser(meshUser, trans.toMatrix())) {
 			m_objects->Add(gameobj);
+		}
+	}
+}
+
+void KX_BatchGroup::SplitObjects(const std::vector<KX_GameObject *>& objects)
+{
+	for (std::vector<KX_GameObject *>::const_iterator it = objects.begin(), end = objects.end(); it != end; ++it) {
+		KX_GameObject *gameobj = *it;
+		RAS_MeshUser *meshUser = gameobj->GetMeshUser();
+
+		if (!meshUser) {
+			CM_Warning("object \"" << gameobj->GetName() << "\" doesn't contain a mesh");
+			continue;
+		}
+
+		if (SplitMeshUser(meshUser)) {
+			m_objects->RemoveValue(gameobj);
 		}
 	}
 }
@@ -204,6 +222,8 @@ KX_PYMETHODDEF_DOC(KX_BatchGroup, split, "split(objects)")
 
 		objects.push_back(gameobj);
 	}
+
+	SplitObjects(objects);
 
 	Py_RETURN_NONE;;
 }

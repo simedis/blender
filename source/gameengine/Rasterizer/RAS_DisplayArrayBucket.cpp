@@ -432,14 +432,14 @@ void RAS_DisplayArrayBucket::RunBatchingNode(const RAS_RenderNodeArguments& args
 		std::sort(sortedMeshSlots.begin(), sortedMeshSlots.end(), RAS_BucketManager::backtofront());
 		RAS_MeshSlotList meshSlots(nummeshslots);
 		for (unsigned int i = 0; i < nummeshslots; ++i) {
-			const short index = sortedMeshSlots[i].m_ms->m_batchIndex;
+			const short index = sortedMeshSlots[i].m_ms->m_batchPartIndex;
 			indices.push_back(arrayBatching->GetPartIndexOffset(index));
 			counts.push_back(arrayBatching->GetPartIndexCount(index));
 		}
 	}
 	else {
 		for (RAS_MeshSlotList::iterator it = m_activeMeshSlots.begin(), end = m_activeMeshSlots.end(); it != end; ++it) {
-			const short index = (*it)->m_batchIndex;
+			const short index = (*it)->m_batchPartIndex;
 			indices.push_back(arrayBatching->GetPartIndexOffset(index));
 			counts.push_back(arrayBatching->GetPartIndexCount(index));
 		}

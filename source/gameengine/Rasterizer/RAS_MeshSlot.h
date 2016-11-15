@@ -63,7 +63,7 @@ public:
 	RAS_MeshUser *m_meshUser;
 
 	/// Batch index used for batching render.
-	short m_batchIndex;
+	short m_batchPartIndex;
 
 	RAS_MeshSlot();
 	RAS_MeshSlot(const RAS_MeshSlot& slot);

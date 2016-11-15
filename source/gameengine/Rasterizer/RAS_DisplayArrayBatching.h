@@ -66,13 +66,18 @@ public:
 		const unsigned int startindex = m_indices.size();
 
 		// Add the array start index and count.
-		m_offsets.push_back((void *)(startindex * sizeof(unsigned int)));
-		m_counts.push_back(indexcount);
+		Part part;
+		part.m_startVertex = startvertex;
+		part.m_vertexCount = vertexcount;
+		part.m_startIndex = startindex;
+		part.m_indexCount = indexcount;
+		part.m_indexOffset = (void *)(part.m_startIndex * sizeof(unsigned int));
+		m_parts.push_back(part);
 
 		m_vertexes.reserve(startvertex + vertexcount);
 		m_indices.reserve(startindex + indexcount);
 
-		CM_Debug("Add part : " << (m_offsets.size() - 1) << ", start index: " << startindex << ", index count: " << indexcount << ", start vertex: " << startvertex << ", vertex count: " << vertexcount);
+		CM_Debug("Add part : " << (m_parts.size() - 1) << ", start index: " << startindex << ", index count: " << indexcount << ", start vertex: " << startvertex << ", vertex count: " << vertexcount);
 
 		// Normal and tangent matrix.
 		MT_Matrix4x4 nmat = mat.inverse().transposed();
@@ -91,7 +96,41 @@ public:
 
 		RAS_DisplayArray<Vertex>::UpdateCache();
 
-		return (m_offsets.size() - 1);
+		return (m_parts.size() - 1);
+	}
+
+	virtual void Split(unsigned int partIndex)
+	{
+		const Part &part = m_parts[partIndex];
+
+		const unsigned int startindex = part.m_startIndex;
+		const unsigned int startvertex = part.m_startVertex;
+
+		const unsigned int indexcount = part.m_indexCount;
+		const unsigned int vertexcount = part.m_vertexCount;
+
+		const unsigned int endvertex = startvertex + vertexcount;
+
+		CM_Debug("Move indices from " << startindex << " to " << m_indices.size() - indexcount << ", shift of " << indexcount);
+		for (unsigned int i = startindex, size = m_indices.size() - indexcount; i < size; ++i) {
+			m_indices[i] = m_indices[i + indexcount] - vertexcount;
+		}
+
+		m_indices.erase(m_indices.end() - indexcount, m_indices.end());
+
+		CM_Debug("Remove vertexes : start vertex: " << startvertex << ", end vertex: " << endvertex);
+		m_vertexes.erase(m_vertexes.begin() + startvertex, m_vertexes.begin() + endvertex);
+
+		for (unsigned i = partIndex + 1, size = m_parts.size(); i < size; ++i) {
+			Part& nextPart = m_parts[i];
+			nextPart.m_startVertex -= vertexcount;
+			nextPart.m_startIndex -= indexcount;
+			nextPart.m_indexOffset = (void *)(nextPart.m_startIndex * sizeof(unsigned int));
+		}
+
+		m_parts.erase(m_parts.begin() + partIndex);
+
+		UpdateCache();
 	}
 };
 
