@@ -56,6 +56,7 @@ public:
 
 	KX_PYMETHOD_DOC(KX_BatchGroup, merge);
 	KX_PYMETHOD_DOC(KX_BatchGroup, split);
+	KX_PYMETHOD_DOC(KX_BatchGroup, destruct);
 
 #endif
 };

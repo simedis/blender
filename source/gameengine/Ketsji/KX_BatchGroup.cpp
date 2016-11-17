@@ -36,13 +36,11 @@ KX_BatchGroup::KX_BatchGroup()
 	CM_FunctionDebug(this);
 	m_objects = new CListValue();
 	m_objects->SetReleaseOnDestruct(false);
-	std::cout << m_objects << std::endl;
 }
 
 KX_BatchGroup::~KX_BatchGroup()
 {
 	CM_FunctionDebug(this);
-	std::cout << m_objects->GetRefCount() << std::endl;
 	m_objects->Release();
 }
 
@@ -156,6 +154,7 @@ PyTypeObject KX_BatchGroup::Type = {
 PyMethodDef KX_BatchGroup::Methods[] = {
 	KX_PYMETHODTABLE(KX_BatchGroup, merge),
 	KX_PYMETHODTABLE(KX_BatchGroup, split),
+	KX_PYMETHODTABLE(KX_BatchGroup, destruct),
 	{NULL, NULL} // Sentinel
 };
 
@@ -224,6 +223,13 @@ KX_PYMETHODDEF_DOC(KX_BatchGroup, split, "split(objects)")
 	}
 
 	SplitObjects(objects);
+
+	Py_RETURN_NONE;;
+}
+
+KX_PYMETHODDEF_DOC(KX_BatchGroup, destruct, "destruct()")
+{
+	Destruct();
 
 	Py_RETURN_NONE;;
 }

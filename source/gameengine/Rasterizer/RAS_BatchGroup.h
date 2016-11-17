@@ -35,18 +35,24 @@ class RAS_IDisplayArrayBatching;
 class RAS_BatchGroup
 {
 private:
+	/// The reference counter.
 	short m_users;
 
+	/// A batch contained the merged display array for all the display array used for a given material.
 	struct Batch
 	{
+		/// The display array bucket owning the merged display array.
 		RAS_DisplayArrayBucket *m_displayArrayBucket;
+		/// The merged display array.
 		RAS_IDisplayArrayBatching *m_displayArray;
 
+		/// The original display array bucket per mesh slots.
 		std::map<RAS_MeshSlot *, RAS_DisplayArrayBucket *> m_originalDisplayArrayBucketList;
 		/// All the mesh slots sorted by batch index.
 		RAS_MeshSlotList m_meshSlots;
 	};
 
+	/// The batch per material.
 	std::map<RAS_IPolyMaterial *, Batch> m_batchs;
 
 	bool MergeMeshSlot(Batch& batch, RAS_MeshSlot *slot, const MT_Matrix4x4& mat);
@@ -56,11 +62,24 @@ public:
 	RAS_BatchGroup();
 	virtual ~RAS_BatchGroup();
 
-	RAS_BatchGroup *AddMeshUser(RAS_MeshUser *meshUser);
-	RAS_BatchGroup *RemoveMeshUser(RAS_MeshUser *meshUser);
+	/// Notice the batch group that it is used by one more mesh user.
+	RAS_BatchGroup *AddMeshUser();
+	/// Notice the batch group that it is unused by one less mesh user.
+	RAS_BatchGroup *RemoveMeshUser();
 
+	/** Merge the display array of the mesh slots contained in the mesh user.
+	 * \param meshUser The mesh user to merge mesh slots from.
+	 * \param mat The object matrix to use in display array merging. It's not the matrix from
+	 * the mesh user because this one can be not updated.
+	 */
 	bool MergeMeshUser(RAS_MeshUser *meshUser, const MT_Matrix4x4& mat);
 	bool SplitMeshUser(RAS_MeshUser *meshUser);
+
+	/** Restore the display array (bucket) of all the mesh slots using this batch group.
+	 * The side effect is to make the batch group unused and then deleted from reference
+	 * counting.
+	 */
+	void Destruct();
 };
 
 

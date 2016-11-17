@@ -50,7 +50,8 @@ RAS_MeshUser::~RAS_MeshUser()
 	}
 
 	if (m_batchGroup) {
-		m_batchGroup->RemoveMeshUser(this);
+		// Has the side effect to deference the batch group.
+		m_batchGroup->SplitMeshUser(this);
 	}
 }
 
@@ -122,9 +123,19 @@ void RAS_MeshUser::SetBoundingBox(RAS_BoundingBox *boundingBox)
 	}
 }
 
+
+
 void RAS_MeshUser::SetBatchGroup(RAS_BatchGroup *batchGroup)
 {
-	m_batchGroup = batchGroup->AddMeshUser(this);
+	if (m_batchGroup) {
+		m_batchGroup->RemoveMeshUser();
+	}
+
+	m_batchGroup = batchGroup;
+
+	if (m_batchGroup) {
+		m_batchGroup->AddMeshUser();
+	}
 }
 
 void RAS_MeshUser::ActivateMeshSlots()

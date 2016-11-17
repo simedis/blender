@@ -26,6 +26,7 @@
 
 #include "RAS_BatchGroup.h"
 #include "RAS_IDisplayArrayBatching.h"
+#include "RAS_IPolygonMaterial.h"
 #include "RAS_MaterialBucket.h"
 #include "RAS_MeshUser.h"
 #include "RAS_MeshSlot.h"
@@ -50,16 +51,14 @@ RAS_BatchGroup::~RAS_BatchGroup()
 	CM_Debug("Delete batch group");
 }
 
-RAS_BatchGroup *RAS_BatchGroup::AddMeshUser(RAS_MeshUser *UNUSED(meshUser))
+RAS_BatchGroup *RAS_BatchGroup::AddMeshUser()
 {
 	++m_users;
 	return this;
 }
 
-RAS_BatchGroup *RAS_BatchGroup::RemoveMeshUser(RAS_MeshUser *meshUser)
+RAS_BatchGroup *RAS_BatchGroup::RemoveMeshUser()
 {
-	SplitMeshUser(meshUser);
-
 	--m_users;
 	if (m_users == 0) {
 		delete this;
@@ -77,7 +76,7 @@ bool RAS_BatchGroup::MergeMeshSlot(RAS_BatchGroup::Batch& batch, RAS_MeshSlot *s
 
 	// Don't merge if the vertex format or pimitive type is not the same.
 	if (origArray->GetFormat() != array->GetFormat() || origArray->GetPrimitiveType() != array->GetPrimitiveType()) {
-		CM_Error("failed merge ")
+		CM_Error("failed merge mesh because of incompatible format.")
 		return false;
 	}
 
@@ -103,6 +102,7 @@ bool RAS_BatchGroup::SplitMeshSlot(RAS_MeshSlot *slot)
 
 	std::map<RAS_IPolyMaterial *, Batch>::iterator bit = m_batchs.find(material);
 	if (bit == m_batchs.end()) {
+		CM_Error("could not found corresponding material \"" << material->GetName() << "\"");
 		return false;
 	}
 
@@ -122,6 +122,8 @@ bool RAS_BatchGroup::SplitMeshSlot(RAS_MeshSlot *slot)
 	batch.m_displayArrayBucket->DestructStorageInfo();
 
 	batch.m_originalDisplayArrayBucketList.erase(slot);
+
+	slot->m_batchPartIndex = -1;
 
 	RAS_MeshSlotList::iterator mit = batch.m_meshSlots.erase(std::find(batch.m_meshSlots.begin(), batch.m_meshSlots.end(), slot));
 	for (RAS_MeshSlotList::iterator it = mit, end = batch.m_meshSlots.end(); it != end; ++it) {
@@ -172,5 +174,38 @@ bool RAS_BatchGroup::SplitMeshUser(RAS_MeshUser *meshUser)
 		}
 	}
 
+	// Deference batch groups by setting it to NULL.
+	meshUser->SetBatchGroup(NULL);
+
 	return true;
+}
+
+void RAS_BatchGroup::Destruct()
+{
+	/* Add an user to be sure the batch group will not be deleted. Indeed all
+	 * the mesh user will deference the batch group and then in the last iteration
+	 * the batch will be deleted before leave the function. This caused to break
+	 * the loop which needs to access m_batchs end iterator.
+	 */
+	AddMeshUser();
+
+	for (std::map<RAS_IPolyMaterial *, Batch>::iterator bit = m_batchs.begin(), bend = m_batchs.end(); bit != bend; ++bit) {
+		Batch& batch = bit->second;
+		const RAS_MeshSlotList& meshSlots = batch.m_meshSlots;
+		for (std::vector<RAS_MeshSlot *>::const_iterator mit = meshSlots.begin(), mend = meshSlots.end(); mit != mend; ++mit) {
+			RAS_MeshSlot *slot = *mit;
+			RAS_DisplayArrayBucket *origArrayBucket = batch.m_originalDisplayArrayBucketList[slot];
+
+			slot->SetDisplayArrayBucket(origArrayBucket->AddRef());
+			origArrayBucket->Release();
+
+			slot->m_meshUser->SetBatchGroup(NULL);
+
+			slot->m_batchPartIndex = -1;
+		}
+	}
+
+	m_batchs.clear();
+
+	RemoveMeshUser();
 }
