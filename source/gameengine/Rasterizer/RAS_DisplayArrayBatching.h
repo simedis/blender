@@ -51,6 +51,16 @@ public:
 	{
 	}
 
+	virtual RAS_IDisplayArray *GetReplica()
+	{
+		/* A batch display array must never be replicated.
+		 * Display arrays are replicated when a deformer is used for a mesh slot
+		 * but batch display array are not used in the case of deformer.
+		 */
+		BLI_assert(false);
+		return NULL;
+	}
+
 	/** Merge array in the batching array.
 	 * \param iarray The array to merge, must be of the same vertex format than the
 	 * batching array.

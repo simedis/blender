@@ -37,6 +37,7 @@ class KX_BatchGroup : public CValue, public RAS_BatchGroup
 {
 	Py_Header
 private:
+	/// The objects currently merged in the batch group.
 	CListValue *m_objects;
 
 public:
@@ -47,7 +48,14 @@ public:
 
 	CListValue *GetObjects() const;
 
+	/** Merge a list of objects using their mesh user and transformation.
+	 * \param objects The list of objects to merge.
+	 */
 	void MergeObjects(const std::vector<KX_GameObject *>& objects);
+
+	/** Split a list of objects.
+	 * \param objects The object to split, remove.
+	 */
 	void SplitObjects(const std::vector<KX_GameObject *>& objects);
 
 #ifdef WITH_PYTHON

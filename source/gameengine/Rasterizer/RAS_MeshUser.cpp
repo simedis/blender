@@ -123,8 +123,6 @@ void RAS_MeshUser::SetBoundingBox(RAS_BoundingBox *boundingBox)
 	}
 }
 
-
-
 void RAS_MeshUser::SetBatchGroup(RAS_BatchGroup *batchGroup)
 {
 	if (m_batchGroup) {

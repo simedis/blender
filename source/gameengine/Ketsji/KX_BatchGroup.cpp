@@ -35,6 +35,7 @@ KX_BatchGroup::KX_BatchGroup()
 {
 	CM_FunctionDebug(this);
 	m_objects = new CListValue();
+	// The objects are not owned by the batching group, so not released on list releasing.
 	m_objects->SetReleaseOnDestruct(false);
 }
 
@@ -102,6 +103,7 @@ static PyObject *py_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	}
 
 	if (!PyList_Check(pylist)) {
+		PyErr_SetString(PyExc_SystemError, "KX_BatchGroup(objects): excepts a list");
 		return NULL;
 	}
 
@@ -177,6 +179,7 @@ KX_PYMETHODDEF_DOC(KX_BatchGroup, merge, "merge(objects)")
 	}
 
 	if (!PyList_Check(pylist)) {
+		PyErr_SetString(PyExc_SystemError, "batch.merge(objects): excepts a list");
 		return NULL;
 	}
 
@@ -206,6 +209,7 @@ KX_PYMETHODDEF_DOC(KX_BatchGroup, split, "split(objects)")
 	}
 
 	if (!PyList_Check(pylist)) {
+		PyErr_SetString(PyExc_SystemError, "batch.split(objects): excepts a list");
 		return NULL;
 	}
 

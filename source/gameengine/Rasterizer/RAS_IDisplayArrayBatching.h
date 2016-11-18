@@ -32,8 +32,10 @@
 class RAS_IDisplayArrayBatching : public virtual RAS_IDisplayArray
 {
 protected:
+	/// This struct is dedicated to store all the info of a part.
 	struct Part
 	{
+		/// Relative pointer to the start index, used for VBO.
 		void *m_indexOffset;
 
 		unsigned int m_startVertex;
@@ -43,6 +45,7 @@ protected:
 		unsigned int m_indexCount;
 	};
 
+	/// The part's info.
 	std::vector<Part> m_parts;
 
 public:
@@ -65,7 +68,16 @@ public:
 		return m_parts[index].m_indexCount;
 	}
 
+	/** Merge a display array with a transform matrix.
+	 * \param iarray The display array to merge.
+	 * \param mat The matrix applied on all the vertices.
+	 * \return The index of the part just added.
+	 */
 	virtual unsigned int Merge(RAS_IDisplayArray *iarray, const MT_Matrix4x4& mat) = 0;
+
+	/** Split a part.
+	 * \param partIndex The index of the part to remove.
+	 */
 	virtual void Split(unsigned int partIndex) = 0;
 
 	virtual Type GetType() const;

@@ -55,7 +55,15 @@ private:
 	/// The batch per material.
 	std::map<RAS_IPolyMaterial *, Batch> m_batchs;
 
+	/** Merge the display array of the passed mesh slot.
+	 * \param slot The mesh slot using the display array to merge.
+	 * \param mat The transform matrix to apply to vertices during merging.
+	 */
 	bool MergeMeshSlot(Batch& batch, RAS_MeshSlot *slot, const MT_Matrix4x4& mat);
+
+	/** Split the part representing the display array containing in the passed mesh slot.
+	 * \param slot The mesh slot using the display array to split.
+	 */
 	bool SplitMeshSlot(RAS_MeshSlot *slot);
 
 public:

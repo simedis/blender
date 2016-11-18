@@ -111,6 +111,7 @@ bool RAS_BatchGroup::SplitMeshSlot(RAS_MeshSlot *slot)
 	RAS_DisplayArrayBucket *origArrayBucket = batch.m_originalDisplayArrayBucketList[slot];
 
 	if (!origArrayBucket) {
+		CM_Error("could not restore mesh");
 		return false;
 	}
 
@@ -125,6 +126,7 @@ bool RAS_BatchGroup::SplitMeshSlot(RAS_MeshSlot *slot)
 
 	slot->m_batchPartIndex = -1;
 
+	// One part is removed and then all the part after must use an index smaller of one.
 	RAS_MeshSlotList::iterator mit = batch.m_meshSlots.erase(std::find(batch.m_meshSlots.begin(), batch.m_meshSlots.end(), slot));
 	for (RAS_MeshSlotList::iterator it = mit, end = batch.m_meshSlots.end(); it != end; ++it) {
 		RAS_MeshSlot *meshSlot = *it;
@@ -207,5 +209,6 @@ void RAS_BatchGroup::Destruct()
 
 	m_batchs.clear();
 
+	// Release here and destruct the batch group.
 	RemoveMeshUser();
 }
