@@ -31,6 +31,14 @@
 #include "RAS_IDisplayArrayBatching.h"
 #include "CM_Message.h"
 
+#ifdef _MSC_VER
+/* RAS_DisplayArrayBatching uses a diamond inheritance from a virtual pure base class. Only one branch of the diamond
+ * define these virtual pure functions and come in the final class with dominance. This behaviour is wanted
+ * but MSVC warn about it, we just disable the warning.
+ */
+#  pragma warning (disable:4250)
+#endif
+
 /// An array with data used for OpenGL drawing
 template <class Vertex>
 class RAS_DisplayArrayBatching : public RAS_DisplayArray<Vertex>, public RAS_IDisplayArrayBatching

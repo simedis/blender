@@ -39,8 +39,11 @@ private:
 	short m_users;
 
 	/// A batch contained the merged display array for all the display array used for a given material.
-	struct Batch
+	class Batch
 	{
+	public:
+		Batch();
+
 		/// The display array bucket owning the merged display array.
 		RAS_DisplayArrayBucket *m_displayArrayBucket;
 		/// The merged display array.
