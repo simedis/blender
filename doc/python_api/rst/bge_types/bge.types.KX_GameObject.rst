@@ -424,7 +424,7 @@ base class --- :class:`SCA_IObject`
 
    .. attribute:: batchGroup
 
-      The object batch group containing the batching mesh.
+      The object batch group containing the batched mesh.
 
       :type: :class:`KX_BatchGroup`
 

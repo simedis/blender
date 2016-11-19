@@ -103,7 +103,7 @@ static PyObject *py_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	}
 
 	if (!PyList_Check(pylist)) {
-		PyErr_SetString(PyExc_SystemError, "KX_BatchGroup(objects): excepts a list");
+		PyErr_SetString(PyExc_SystemError, "KX_BatchGroup(objects): expected a list");
 		return NULL;
 	}
 
@@ -179,7 +179,7 @@ KX_PYMETHODDEF_DOC(KX_BatchGroup, merge, "merge(objects)")
 	}
 
 	if (!PyList_Check(pylist)) {
-		PyErr_SetString(PyExc_SystemError, "batch.merge(objects): excepts a list");
+		PyErr_SetString(PyExc_SystemError, "batch.merge(objects): expected a list");
 		return NULL;
 	}
 
@@ -209,7 +209,7 @@ KX_PYMETHODDEF_DOC(KX_BatchGroup, split, "split(objects)")
 	}
 
 	if (!PyList_Check(pylist)) {
-		PyErr_SetString(PyExc_SystemError, "batch.split(objects): excepts a list");
+		PyErr_SetString(PyExc_SystemError, "batch.split(objects): expected a list");
 		return NULL;
 	}
 
