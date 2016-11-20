@@ -20,24 +20,24 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-/** \file RAS_IDisplayArrayBatching.cpp
+/** \file RAS_IBatchDisplayArray.cpp
  *  \ingroup bgerast
  */
 
-#include "RAS_DisplayArrayBatching.h"
+#include "RAS_BatchDisplayArray.h"
 
-RAS_IDisplayArrayBatching::RAS_IDisplayArrayBatching(PrimitiveType type, const RAS_TexVertFormat &format)
+RAS_IBatchDisplayArray::RAS_IBatchDisplayArray(PrimitiveType type, const RAS_TexVertFormat &format)
 	:RAS_IDisplayArray(type, format)
 {
 }
 
-RAS_IDisplayArrayBatching::~RAS_IDisplayArrayBatching()
+RAS_IBatchDisplayArray::~RAS_IBatchDisplayArray()
 {
 }
 
 #define NEW_DISPLAY_ARRAY_UV(vertformat, uv, color, primtype) \
 	if (vertformat.uvSize == uv && vertformat.colorSize == color) { \
-		return new RAS_DisplayArrayBatching<RAS_TexVert<uv, color> >(primtype, vertformat); \
+		return new RAS_BatchDisplayArray<RAS_TexVert<uv, color> >(primtype, vertformat); \
 	}
 
 #define NEW_DISPLAY_ARRAY_COLOR(vertformat, color, primtype) \
@@ -50,7 +50,7 @@ RAS_IDisplayArrayBatching::~RAS_IDisplayArrayBatching()
 	NEW_DISPLAY_ARRAY_UV(format, 7, color, type); \
 	NEW_DISPLAY_ARRAY_UV(format, 8, color, type);
 
-RAS_IDisplayArrayBatching *RAS_IDisplayArrayBatching::ConstructArray(RAS_IDisplayArray::PrimitiveType type, const RAS_TexVertFormat &format)
+RAS_IBatchDisplayArray *RAS_IBatchDisplayArray::ConstructArray(RAS_IDisplayArray::PrimitiveType type, const RAS_TexVertFormat &format)
 {
 	NEW_DISPLAY_ARRAY_COLOR(format, 1, type);
 	NEW_DISPLAY_ARRAY_COLOR(format, 2, type);
@@ -67,7 +67,7 @@ RAS_IDisplayArrayBatching *RAS_IDisplayArrayBatching::ConstructArray(RAS_IDispla
 #undef NEW_DISPLAY_ARRAY_COLOR
 
 
-RAS_IDisplayArray::Type RAS_IDisplayArrayBatching::GetType() const
+RAS_IDisplayArray::Type RAS_IBatchDisplayArray::GetType() const
 {
 	return BATCHING;
 }

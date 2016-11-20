@@ -25,7 +25,7 @@
  */
 
 #include "RAS_BatchGroup.h"
-#include "RAS_IDisplayArrayBatching.h"
+#include "RAS_IBatchDisplayArray.h"
 #include "RAS_IPolygonMaterial.h"
 #include "RAS_MaterialBucket.h"
 #include "RAS_MeshUser.h"
@@ -78,7 +78,7 @@ bool RAS_BatchGroup::MergeMeshSlot(RAS_BatchGroup::Batch& batch, RAS_MeshSlot *s
 	RAS_DisplayArrayBucket *origArrayBucket = slot->m_displayArrayBucket;
 	RAS_IDisplayArray *origArray = origArrayBucket->GetDisplayArray();
 	RAS_DisplayArrayBucket *arrayBucket = batch.m_displayArrayBucket;
-	RAS_IDisplayArrayBatching *array = batch.m_displayArray;
+	RAS_IBatchDisplayArray *array = batch.m_displayArray;
 
 	// Don't merge if the vertex format or pimitive type is not the same.
 	if (origArray->GetFormat() != array->GetFormat() || origArray->GetPrimitiveType() != array->GetPrimitiveType()) {
@@ -153,13 +153,13 @@ bool RAS_BatchGroup::MergeMeshUser(RAS_MeshUser *meshUser, const MT_Matrix4x4& m
 		// Create the batch if it is empty.
 		if (!batch.m_displayArray && !batch.m_displayArrayBucket) {
 			RAS_IDisplayArray *origarray = meshSlot->GetDisplayArray();
-			batch.m_displayArray = RAS_IDisplayArrayBatching::ConstructArray(origarray->GetPrimitiveType(), origarray->GetFormat());
+			batch.m_displayArray = RAS_IBatchDisplayArray::ConstructArray(origarray->GetPrimitiveType(), origarray->GetFormat());
 			batch.m_displayArrayBucket = new RAS_DisplayArrayBucket(meshSlot->m_bucket, batch.m_displayArray,
 																	meshSlot->m_mesh, meshSlot->m_meshMaterial);
-			CM_Debug("Created batching array: " << batch.m_displayArray << ", for material: " << material);
+			CM_Debug("Created batched array: " << batch.m_displayArray << ", for material: " << material);
 		}
 		else {
-			CM_Debug("Reuse batching array: " << batch.m_displayArray << ", for material: " << material);
+			CM_Debug("Reuse batched array: " << batch.m_displayArray << ", for material: " << material);
 		}
 
 		if (!MergeMeshSlot(batch, meshSlot, mat)) {

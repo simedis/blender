@@ -30,7 +30,7 @@
  */
 
 #include "RAS_DisplayArrayBucket.h"
-#include "RAS_DisplayArrayBatching.h"
+#include "RAS_BatchDisplayArray.h"
 #include "RAS_MaterialBucket.h"
 #include "RAS_IPolygonMaterial.h"
 #include "RAS_MeshObject.h"
@@ -416,7 +416,7 @@ void RAS_DisplayArrayBucket::RunBatchingNode(const RAS_RenderNodeArguments& args
 	std::vector<int> counts;
 	std::vector<void *> indices;
 
-	RAS_IDisplayArrayBatching *arrayBatching = dynamic_cast<RAS_IDisplayArrayBatching *>(m_displayArray);
+	RAS_IBatchDisplayArray *batchArray = dynamic_cast<RAS_IBatchDisplayArray *>(m_displayArray);
 
 	/* If the material use the transparency we must sort all mesh slots depending on the distance.
 	 * This code share the code used in RAS_BucketManager to do the sort.
@@ -433,15 +433,15 @@ void RAS_DisplayArrayBucket::RunBatchingNode(const RAS_RenderNodeArguments& args
 		RAS_MeshSlotList meshSlots(nummeshslots);
 		for (unsigned int i = 0; i < nummeshslots; ++i) {
 			const short index = sortedMeshSlots[i].m_ms->m_batchPartIndex;
-			indices.push_back(arrayBatching->GetPartIndexOffset(index));
-			counts.push_back(arrayBatching->GetPartIndexCount(index));
+			indices.push_back(batchArray->GetPartIndexOffset(index));
+			counts.push_back(batchArray->GetPartIndexCount(index));
 		}
 	}
 	else {
 		for (RAS_MeshSlotList::iterator it = m_activeMeshSlots.begin(), end = m_activeMeshSlots.end(); it != end; ++it) {
 			const short index = (*it)->m_batchPartIndex;
-			indices.push_back(arrayBatching->GetPartIndexOffset(index));
-			counts.push_back(arrayBatching->GetPartIndexCount(index));
+			indices.push_back(batchArray->GetPartIndexOffset(index));
+			counts.push_back(batchArray->GetPartIndexCount(index));
 		}
 	}
 

@@ -30,13 +30,13 @@
 #include "RAS_IDisplayArray.h"
 
 template <class Vertex>
-class RAS_DisplayArrayBatching;
+class RAS_BatchDisplayArray;
 
 /// An array with data used for OpenGL drawing
 template <class Vertex>
 class RAS_DisplayArray : public virtual RAS_IDisplayArray
 {
-friend class RAS_DisplayArrayBatching<Vertex>;
+friend class RAS_BatchDisplayArray<Vertex>;
 
 protected:
 	std::vector<Vertex> m_vertexes;

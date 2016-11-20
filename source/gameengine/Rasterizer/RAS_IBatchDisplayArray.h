@@ -20,7 +20,7 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-/** \file RAS_IDisplayArrayBatching.h
+/** \file RAS_IBatchDisplayArray.h
  *  \ingroup bgerast
  */
 
@@ -29,7 +29,7 @@
 
 #include "RAS_IDisplayArray.h"
 
-class RAS_IDisplayArrayBatching : public virtual RAS_IDisplayArray
+class RAS_IBatchDisplayArray : public virtual RAS_IDisplayArray
 {
 protected:
 	/// This struct is dedicated to store all the info of a part.
@@ -49,14 +49,14 @@ protected:
 	std::vector<Part> m_parts;
 
 public:
-	RAS_IDisplayArrayBatching(PrimitiveType type, const RAS_TexVertFormat &format);
-	virtual ~RAS_IDisplayArrayBatching();
+	RAS_IBatchDisplayArray(PrimitiveType type, const RAS_TexVertFormat &format);
+	virtual ~RAS_IBatchDisplayArray();
 
 	/** Construct the display array batching corresponding of the vertex of the given format.
 	 * \param type The type of primitives, one of the enumeration PrimitiveType.
 	 * \param format The format of vertex to use.
 	 */
-	static RAS_IDisplayArrayBatching *ConstructArray(PrimitiveType type, const RAS_TexVertFormat &format);
+	static RAS_IBatchDisplayArray *ConstructArray(PrimitiveType type, const RAS_TexVertFormat &format);
 
 	inline void *GetPartIndexOffset(const unsigned short index)
 	{

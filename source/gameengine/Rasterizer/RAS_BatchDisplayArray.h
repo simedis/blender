@@ -20,7 +20,7 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-/** \file RAS_DisplayArrayBatching.h
+/** \file RAS_BatchDisplayArray.h
  *  \ingroup bgerast
  */
 
@@ -28,11 +28,11 @@
 #define __RAS_DISPLAY_ARRAY_BATCHING_H__
 
 #include "RAS_DisplayArray.h"
-#include "RAS_IDisplayArrayBatching.h"
+#include "RAS_IBatchDisplayArray.h"
 #include "CM_Message.h"
 
 #ifdef _MSC_VER
-/* RAS_DisplayArrayBatching uses a diamond inheritance from a virtual pure base class. Only one branch of the diamond
+/* RAS_BatchDisplayArray uses a diamond inheritance from a virtual pure base class. Only one branch of the diamond
  * define these virtual pure functions and come in the final class with dominance. This behaviour is wanted
  * but MSVC warn about it, we just disable the warning.
  */
@@ -41,21 +41,21 @@
 
 /// An array with data used for OpenGL drawing
 template <class Vertex>
-class RAS_DisplayArrayBatching : public RAS_DisplayArray<Vertex>, public RAS_IDisplayArrayBatching
+class RAS_BatchDisplayArray : public RAS_DisplayArray<Vertex>, public RAS_IBatchDisplayArray
 {
 protected:
 	using RAS_DisplayArray<Vertex>::m_vertexes;
 	using RAS_DisplayArray<Vertex>::m_indices;
 
 public:
-	RAS_DisplayArrayBatching(RAS_IDisplayArray::PrimitiveType type, const RAS_TexVertFormat& format)
+	RAS_BatchDisplayArray(RAS_IDisplayArray::PrimitiveType type, const RAS_TexVertFormat& format)
 		:RAS_IDisplayArray(type, format),
 		RAS_DisplayArray<Vertex>(type, format),
-		RAS_IDisplayArrayBatching(type, format)
+		RAS_IBatchDisplayArray(type, format)
 	{
 	}
 
-	virtual ~RAS_DisplayArrayBatching()
+	virtual ~RAS_BatchDisplayArray()
 	{
 	}
 
@@ -69,9 +69,9 @@ public:
 		return NULL;
 	}
 
-	/** Merge array in the batching array.
+	/** Merge array in the batched array.
 	 * \param iarray The array to merge, must be of the same vertex format than the
-	 * batching array.
+	 * batched array.
 	 * \param mat The transformation to apply on each vertex in the merging.
 	 */
 	virtual unsigned int Merge(RAS_IDisplayArray *iarray, const MT_Matrix4x4& mat)

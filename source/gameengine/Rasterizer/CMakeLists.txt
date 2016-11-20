@@ -59,7 +59,7 @@ set(SRC
 	RAS_FramingManager.cpp
 	RAS_ICanvas.cpp
 	RAS_IDisplayArray.cpp
-	RAS_IDisplayArrayBatching.cpp
+	RAS_IBatchDisplayArray.cpp
 	RAS_InstancingBuffer.cpp
 	RAS_IPolygonMaterial.cpp
 	RAS_ITexVert.cpp
@@ -83,12 +83,12 @@ set(SRC
 	RAS_CubeMap.h
 	RAS_Deformer.h
 	RAS_DisplayArray.h
-	RAS_DisplayArrayBatching.h
+	RAS_BatchDisplayArray.h
 	RAS_DisplayArrayBucket.h
 	RAS_FramingManager.h
 	RAS_ICanvas.h
 	RAS_IDisplayArray.h
-	RAS_IDisplayArrayBatching.h
+	RAS_IBatchDisplayArray.h
 	RAS_IPolygonMaterial.h
 	RAS_IRasterizer.h
 	RAS_IStorageInfo.h
