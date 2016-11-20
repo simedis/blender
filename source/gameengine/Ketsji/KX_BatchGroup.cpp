@@ -77,6 +77,9 @@ void KX_BatchGroup::MergeObjects(const std::vector<KX_GameObject *>& objects)
 
 void KX_BatchGroup::SplitObjects(const std::vector<KX_GameObject *>& objects)
 {
+	// Add a fake mesh user to avoid free the batch group while running the function.
+	AddMeshUser();
+
 	for (std::vector<KX_GameObject *>::const_iterator it = objects.begin(), end = objects.end(); it != end; ++it) {
 		KX_GameObject *gameobj = *it;
 		RAS_MeshUser *meshUser = gameobj->GetMeshUser();
@@ -90,6 +93,8 @@ void KX_BatchGroup::SplitObjects(const std::vector<KX_GameObject *>& objects)
 			m_objects->RemoveValue(gameobj);
 		}
 	}
+
+	RemoveMeshUser();
 }
 
 #ifdef WITH_PYTHON

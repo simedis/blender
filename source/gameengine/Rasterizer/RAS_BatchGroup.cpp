@@ -36,8 +36,8 @@
 #include <algorithm>
 
 RAS_BatchGroup::Batch::Batch()
-	:m_displayArray(NULL),
-	m_displayArrayBucket(NULL)
+	:m_displayArrayBucket(NULL),
+	m_displayArray(NULL)
 {
 }
 
