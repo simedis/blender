@@ -33,7 +33,6 @@
 
 KX_BatchGroup::KX_BatchGroup()
 {
-	CM_FunctionDebug(this);
 	m_objects = new CListValue();
 	// The objects are not owned by the batching group, so not released on list releasing.
 	m_objects->SetReleaseOnDestruct(false);
@@ -41,7 +40,6 @@ KX_BatchGroup::KX_BatchGroup()
 
 KX_BatchGroup::~KX_BatchGroup()
 {
-	CM_FunctionDebug(this);
 	m_objects->Release();
 }
 

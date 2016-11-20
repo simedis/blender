@@ -44,7 +44,6 @@ RAS_BatchGroup::Batch::Batch()
 RAS_BatchGroup::RAS_BatchGroup()
 	:m_users(0)
 {
-	CM_Debug("New batch group");
 }
 
 RAS_BatchGroup::~RAS_BatchGroup()
@@ -53,8 +52,6 @@ RAS_BatchGroup::~RAS_BatchGroup()
 		Batch& batch = it->second;
 		batch.m_displayArrayBucket->Release();
 	}
-
-	CM_Debug("Delete batch group");
 }
 
 RAS_BatchGroup *RAS_BatchGroup::AddMeshUser()
@@ -156,10 +153,6 @@ bool RAS_BatchGroup::MergeMeshUser(RAS_MeshUser *meshUser, const MT_Matrix4x4& m
 			batch.m_displayArray = RAS_IBatchDisplayArray::ConstructArray(origarray->GetPrimitiveType(), origarray->GetFormat());
 			batch.m_displayArrayBucket = new RAS_DisplayArrayBucket(meshSlot->m_bucket, batch.m_displayArray,
 																	meshSlot->m_mesh, meshSlot->m_meshMaterial);
-			CM_Debug("Created batched array: " << batch.m_displayArray << ", for material: " << material);
-		}
-		else {
-			CM_Debug("Reuse batched array: " << batch.m_displayArray << ", for material: " << material);
 		}
 
 		if (!MergeMeshSlot(batch, meshSlot, mat)) {

@@ -95,8 +95,9 @@ public:
 		m_vertexes.reserve(startvertex + vertexcount);
 		m_indices.reserve(startindex + indexcount);
 
+#ifdef DEBUG
 		CM_Debug("Add part : " << (m_parts.size() - 1) << ", start index: " << startindex << ", index count: " << indexcount << ", start vertex: " << startvertex << ", vertex count: " << vertexcount);
-
+#endif  // DEBUG
 		// Normal and tangent matrix.
 		MT_Matrix4x4 nmat = mat.inverse().transposed();
 		nmat[0][3] = nmat[1][3] = nmat[2][3] = 0.0f;
@@ -129,14 +130,18 @@ public:
 
 		const unsigned int endvertex = startvertex + vertexcount;
 
+#ifdef DEBUG
 		CM_Debug("Move indices from " << startindex << " to " << m_indices.size() - indexcount << ", shift of " << indexcount);
+#endif  // DEBUG
 		for (unsigned int i = startindex, size = m_indices.size() - indexcount; i < size; ++i) {
 			m_indices[i] = m_indices[i + indexcount] - vertexcount;
 		}
 
 		m_indices.erase(m_indices.end() - indexcount, m_indices.end());
 
+#ifdef DEBUG
 		CM_Debug("Remove vertexes : start vertex: " << startvertex << ", end vertex: " << endvertex);
+#endif  // DEBUG
 		m_vertexes.erase(m_vertexes.begin() + startvertex, m_vertexes.begin() + endvertex);
 
 		for (unsigned i = partIndex + 1, size = m_parts.size(); i < size; ++i) {
