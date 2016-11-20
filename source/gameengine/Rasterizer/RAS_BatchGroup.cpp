@@ -77,9 +77,14 @@ bool RAS_BatchGroup::MergeMeshSlot(RAS_BatchGroup::Batch& batch, RAS_MeshSlot *s
 	RAS_DisplayArrayBucket *arrayBucket = batch.m_displayArrayBucket;
 	RAS_IBatchDisplayArray *array = batch.m_displayArray;
 
+	if (batch.m_originalDisplayArrayBucketList.find(slot) != batch.m_originalDisplayArrayBucketList.end()) {
+		CM_Error("could not merge twice a mesh");
+		return false;
+	}
+
 	// Don't merge if the vertex format or pimitive type is not the same.
 	if (origArray->GetFormat() != array->GetFormat() || origArray->GetPrimitiveType() != array->GetPrimitiveType()) {
-		CM_Error("failed merge mesh because of incompatible format.")
+		CM_Error("could not merge incompatible vertex format or primitive type")
 		return false;
 	}
 

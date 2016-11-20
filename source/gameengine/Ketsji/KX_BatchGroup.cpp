@@ -61,7 +61,7 @@ void KX_BatchGroup::MergeObjects(const std::vector<KX_GameObject *>& objects)
 		RAS_MeshUser *meshUser = gameobj->GetMeshUser();
 
 		if (!meshUser) {
-			CM_Warning("object \"" << gameobj->GetName() << "\" doesn't contain a mesh");
+			CM_Error("object \"" << gameobj->GetName() << "\" doesn't contain a mesh");
 			continue;
 		}
 
@@ -69,6 +69,9 @@ void KX_BatchGroup::MergeObjects(const std::vector<KX_GameObject *>& objects)
 
 		if (MergeMeshUser(meshUser, trans.toMatrix())) {
 			m_objects->Add(gameobj);
+		}
+		else {
+			CM_Error("failed merge object \"" << gameobj->GetName() << "\"");
 		}
 	}
 }
@@ -83,12 +86,15 @@ void KX_BatchGroup::SplitObjects(const std::vector<KX_GameObject *>& objects)
 		RAS_MeshUser *meshUser = gameobj->GetMeshUser();
 
 		if (!meshUser) {
-			CM_Warning("object \"" << gameobj->GetName() << "\" doesn't contain a mesh");
+			CM_Error("object \"" << gameobj->GetName() << "\" doesn't contain a mesh");
 			continue;
 		}
 
 		if (SplitMeshUser(meshUser)) {
 			m_objects->RemoveValue(gameobj);
+		}
+		else {
+			CM_Error("failed split object \"" << gameobj->GetName() << "\"");
 		}
 	}
 
