@@ -1343,6 +1343,11 @@ static PyObject *gPyClearDebugList(PyObject *)
 	Py_RETURN_NONE;
 }
 
+static PyObject *gPyGetColorBindCode(PyObject *)
+{
+	return PyLong_FromLong(KX_GetActiveEngine()->GetMainFboColorBindCode());
+}
+
 static PyObject *gPyGetDisplayDimensions(PyObject *)
 {
 	PyObject *result;
@@ -1412,6 +1417,7 @@ static struct PyMethodDef rasterizer_methods[] = {
 	{"showProperties",(PyCFunction) gPyShowProperties, METH_VARARGS, "show or hide the debug properties"},
 	{"autoDebugList",(PyCFunction) gPyAutoDebugList, METH_VARARGS, "enable or disable auto adding debug properties to the debug  list"},
 	{"clearDebugList",(PyCFunction) gPyClearDebugList, METH_NOARGS, "clears the debug property list"},
+	{"getColorBindCode",(PyCFunction)gPyGetColorBindCode, METH_NOARGS, "get main FBO color attachment bindcode"},
 	{ NULL, (PyCFunction) NULL, 0, NULL }
 };
 

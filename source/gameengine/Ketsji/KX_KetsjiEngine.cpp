@@ -155,7 +155,8 @@ KX_KetsjiEngine::KX_KetsjiEngine(KX_ISystem *system)
 	m_overrideFrameColorR(0.0f),
 	m_overrideFrameColorG(0.0f),
 	m_overrideFrameColorB(0.0f),
-	m_overrideFrameColorA(0.0f)
+	m_overrideFrameColorA(0.0f),
+	m_mainFboIndex(-1)
 {
 	// Initialize the time logger
 	m_logger = new KX_TimeCategoryLogger(25);
@@ -673,8 +674,8 @@ void KX_KetsjiEngine::Render()
 	}
 	// Else simply draw the off screen to screen.
 	else {
-		const short fboindex = m_rasterizer->GetCurrentOffScreenIndex();
-		m_rasterizer->DrawOffScreen(m_canvas, fboindex);
+		m_mainFboIndex = m_rasterizer->GetCurrentOffScreenIndex();
+		m_rasterizer->DrawOffScreen(m_canvas, m_mainFboIndex);
 	}
 
 	EndFrame();
@@ -1766,4 +1767,9 @@ void KX_KetsjiEngine::SetGlobalSettings(GlobalSettings *gs)
 GlobalSettings *KX_KetsjiEngine::GetGlobalSettings(void)
 {
 	return &m_globalsettings;
+}
+
+int KX_KetsjiEngine::GetMainFboColorBindCode()
+{
+	return m_rasterizer->GetOffscreenColorBindCode(m_mainFboIndex);
 }

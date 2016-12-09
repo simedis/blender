@@ -165,6 +165,9 @@ private:
 	bool m_stereo;
 	int m_curreye;
 
+	/// Main Scene FBO index
+	unsigned short m_mainFboIndex;
+
 	/// Categories for profiling display.
 	typedef enum {
 		tc_first = 0,
@@ -571,6 +574,8 @@ public:
 	 * It's only called from Blenderplayer.
 	 */
 	void Resize();
+
+	int GetMainFboColorBindCode();
 
 protected:
 	/**

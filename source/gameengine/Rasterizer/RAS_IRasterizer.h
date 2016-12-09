@@ -709,6 +709,9 @@ public:
 	 */
 	virtual void PrintHardwareInfo() = 0;
 
+	// Get Offscreen Color attachement bindcode
+	virtual int GetOffscreenColorBindCode(unsigned short offscreenindex) = 0;
+
 #ifdef WITH_CXX_GUARDEDALLOC
 	MEM_CXX_CLASS_ALLOC_FUNCS("GE:RAS_IRasterizer")
 #endif

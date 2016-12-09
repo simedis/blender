@@ -98,9 +98,6 @@ private:
 		/// The HDR quality.
 		short m_hdr;
 
-		/// Return or create off screen for the given index.
-		GPUOffScreen *GetOffScreen(unsigned short index);
-
 	public:
 		OffScreens();
 		~OffScreens();
@@ -115,6 +112,9 @@ private:
 		short GetCurrentIndex() const;
 		int GetSamples(unsigned short index);
 		GPUTexture *GetDepthTexture(unsigned short index);
+
+		/// Return or create off screen for the given index.
+		GPUOffScreen *GetOffScreen(unsigned short index);
 	};
 
 	struct OglDebugShape
@@ -424,6 +424,9 @@ public:
 	 * Prints information about what the hardware supports.
 	 */
 	virtual void PrintHardwareInfo();
+
+	// Get Offscreen Color attachement bindcode
+	virtual int GetOffscreenColorBindCode(unsigned short offscreenindex);
 
 #ifdef WITH_CXX_GUARDEDALLOC
 	MEM_CXX_CLASS_ALLOC_FUNCS("GE:RAS_OpenGLRasterizer")

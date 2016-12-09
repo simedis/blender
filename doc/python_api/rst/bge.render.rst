@@ -389,3 +389,9 @@ Functions
    Get the current vsync value
 
    :rtype: One of VSYNC_OFF, VSYNC_ON, VSYNC_ADAPTIVE
+
+.. function:: getColorBindCode()
+
+   Get main FBO color attachment bindcode.
+
+   :rtype: integer

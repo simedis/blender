@@ -2361,3 +2361,12 @@ void RAS_OpenGLRasterizer::PrintHardwareInfo()
 	CM_Message(" GL_ARB_draw_instanced supported?  "<< (GLEW_ARB_draw_instanced?"yes.":"no."));
 }
 
+int RAS_OpenGLRasterizer::GetOffscreenColorBindCode(unsigned short offscreenindex)
+{
+	GPUOffScreen *ofs = m_offScreens.GetOffScreen(offscreenindex);
+	if (ofs) {
+		return GPU_offscreen_color_texture(ofs);
+	}
+	return -1;
+}
+
