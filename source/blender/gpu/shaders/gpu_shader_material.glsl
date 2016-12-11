@@ -1956,25 +1956,21 @@ void shade_is_hemi(float inp, out float is)
 	is = 0.5 * inp + 0.5;
 }
 
-void lamp_area(mat4 lampmat, vec3 lampvec, vec3 lamppos, vec2 size, vec3 co,
-	out vec3 right, out vec3 up,
+void lamp_area(vec3 lampright, vec3 lampup, vec3 lampvec, vec3 lamppos, vec2 size, vec3 co,
 	out vec2 diagonal, out vec3 nearest, out float dist)
 {
-	right = (lampmat * vec4(1.0, 0.0, 0.0, 0.0)).xyz;
-	up = (lampmat * vec4(0.0, 1.0, 0.0, 0.0)).xyz;
-
 	// Project position to area light plane.
 	vec3 projection = projection_to_plane(co, lamppos, lampvec);
 	// Get the direction to the center.
 	vec3 dir = projection - lamppos;
 
 	// Move in plane space.
-	diagonal = vec2(dot(dir, right), dot(dir, up));
+	diagonal = vec2(dot(dir, lampright), dot(dir, lampup));
 	// Clamp the direction to the area square.
 	vec2 halfSize = size / 2.0;
 	vec2 nearest2D = clamp(diagonal, -halfSize, halfSize);
 	// Back in world space.
-	nearest = lamppos + (right * nearest2D.x + up * nearest2D.y);
+	nearest = lamppos + (lampright * nearest2D.x + lampup * nearest2D.y);
 	dist = distance(co, nearest);
 }
 
@@ -1993,19 +1989,17 @@ void shade_inp_area(vec3 co, vec3 vn, vec3 lampvec, vec3 nearest, float dist, fl
 	}
 }
 
-void lamp_area_spec(mat4 lampmat, vec3 lampvec, vec3 lamppos, vec3 co, vec3 vn,
+void lamp_area_spec(vec3 lampright, vec3 lampup, vec3 lampvec, vec3 lamppos, vec3 co, vec3 vn,
 	out vec2 specdir, out float angle, out float dist)
 {
-	vec3 right = (lampmat * vec4(1.0, 0.0, 0.0, 0.0)).xyz;
-	vec3 up = (lampmat * vec4(0.0, 1.0, 0.0, 0.0)).xyz;
 	vec3 R = reflect(-co, -vn);
 	vec3 E = co + R * (dot(lampvec, lamppos - co) / dot(lampvec, R));
 
 	angle = clamp(dot(R, lampvec), 0.0, 1.0);
 
 	vec3 dirSpec = E - lamppos;
-	specdir = vec2(dot(dirSpec, right),dot(dirSpec, up));
-	vec3 specPlane = lamppos + (right * specdir.x + up * specdir.y);
+	specdir = vec2(dot(dirSpec, lampright),dot(dirSpec, lampup));
+	vec3 specPlane = lamppos + (lampright * specdir.x + lampup * specdir.y);
 
 	dist = distance(co, specPlane);
 }

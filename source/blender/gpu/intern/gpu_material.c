@@ -155,10 +155,11 @@ struct GPULamp {
 	float obmat[4][4];
 	float imat[4][4];
 	float dynimat[4][4];
-	float dynareamat[4][4];
+	float dynarearight[3];
+	float dynareaup[3];
 
 	float spotsi, spotbl, k;
-	float area_size[2];
+	float areasize[2];
 	float spotvec[2];
 	float dyndist, dynatt1, dynatt2;
 	float dist, att1, att2;
@@ -449,7 +450,10 @@ void GPU_material_bind(
 					mul_m4_m4m4(lamp->dynpersmat, lamp->persmat, viewinv);
 				}
 				if (material->dynproperty & DYN_LAMP_AREAMAT) {
-					mul_m4_m4m4(lamp->dynareamat, viewmat, lamp->obmat);
+					float areamat[4][4];
+					mul_m4_m4m4(areamat, viewmat, lamp->obmat);
+					copy_v3_v3(lamp->dynarearight, areamat[0]);
+					copy_v3_v3(lamp->dynareaup, areamat[1]);
 				}
 			}
 		}
@@ -706,40 +710,6 @@ static GPUNodeLink *lamp_get_visibility(GPUMaterial *mat, GPULamp *lamp, GPUNode
 	}
 }
 
-#if 0
-static void area_lamp_vectors(LampRen *lar)
-{
-	float xsize = 0.5f * lar->area_size, ysize = 0.5f * lar->area_sizey;
-
-	/* make it smaller, so area light can be multisampled */
-	float multifac = 1.0f / sqrtf((float)lar->ray_totsamp);
-	xsize *= multifac;
-	ysize *= multifac;
-
-	/* corner vectors */
-	lar->area[0][0] = lar->co[0] - xsize * lar->mat[0][0] - ysize * lar->mat[1][0];
-	lar->area[0][1] = lar->co[1] - xsize * lar->mat[0][1] - ysize * lar->mat[1][1];
-	lar->area[0][2] = lar->co[2] - xsize * lar->mat[0][2] - ysize * lar->mat[1][2];
-
-	/* corner vectors */
-	lar->area[1][0] = lar->co[0] - xsize * lar->mat[0][0] + ysize * lar->mat[1][0];
-	lar->area[1][1] = lar->co[1] - xsize * lar->mat[0][1] + ysize * lar->mat[1][1];
-	lar->area[1][2] = lar->co[2] - xsize * lar->mat[0][2] + ysize * lar->mat[1][2];
-
-	/* corner vectors */
-	lar->area[2][0] = lar->co[0] + xsize * lar->mat[0][0] + ysize * lar->mat[1][0];
-	lar->area[2][1] = lar->co[1] + xsize * lar->mat[0][1] + ysize * lar->mat[1][1];
-	lar->area[2][2] = lar->co[2] + xsize * lar->mat[0][2] + ysize * lar->mat[1][2];
-
-	/* corner vectors */
-	lar->area[3][0] = lar->co[0] + xsize * lar->mat[0][0] - ysize * lar->mat[1][0];
-	lar->area[3][1] = lar->co[1] + xsize * lar->mat[0][1] - ysize * lar->mat[1][1];
-	lar->area[3][2] = lar->co[2] + xsize * lar->mat[0][2] - ysize * lar->mat[1][2];
-	/* only for correction button size, matrix size works on energy */
-	lar->areasize = lar->dist * lar->dist / (4.0f * xsize * ysize);
-}
-#endif
-
 static void ramp_blend(
         GPUMaterial *mat, GPUNodeLink *fac, GPUNodeLink *col1, GPUNodeLink *col2, int type,
         GPUNodeLink **r_col)
@@ -924,7 +894,7 @@ static void shade_area_diff_texture(GPUMaterial *mat, GPULamp *lamp, GPUNodeLink
 					 GPU_image(mtex->tex->ima, &mtex->tex->iuser, false),
 					 GPU_select_uniform(&mtex->lodbias, GPU_DYNAMIC_TEX_LODBIAS, NULL, mat->ma),
 					 diag, dist,
-					 GPU_dynamic_uniform((float *)lamp->area_size, GPU_DYNAMIC_LAMP_DYNAREASIZE, lamp->ob),
+					 GPU_dynamic_uniform(lamp->areasize, GPU_DYNAMIC_LAMP_DYNAREASIZE, lamp->ob),
 					 &tex_rgb);
 			texture_rgb_blend(mat, tex_rgb, *rgb, GPU_uniform(&one), GPU_uniform(&mtex->colfac), mtex->blendtype, rgb);
 		}
@@ -947,7 +917,7 @@ static void shade_area_spec_texture(GPUMaterial *mat, GPULamp *lamp, GPUNodeLink
 					 specdir, specdist,
 					 GPU_image(mtex->tex->ima, &mtex->tex->iuser, false),
 					 GPU_select_uniform(&mtex->lodbias, GPU_DYNAMIC_TEX_LODBIAS, NULL, mat->ma),
-					 GPU_dynamic_uniform((float *)lamp->area_size, GPU_DYNAMIC_LAMP_DYNAREASIZE, lamp->ob),
+					 GPU_dynamic_uniform(lamp->areasize, GPU_DYNAMIC_LAMP_DYNAREASIZE, lamp->ob),
 					 shi->har,
 					 &tex_rgb);
 			texture_rgb_blend(mat, tex_rgb, *rgb, GPU_uniform(&one), GPU_uniform(&mtex->colfac), mtex->blendtype, rgb);
@@ -960,7 +930,7 @@ static void shade_one_light(GPUShadeInput *shi, GPUShadeResult *shr, GPULamp *la
 	Material *ma = shi->mat;
 	GPUMaterial *mat = shi->gpumat;
 	GPUNodeLink *lv, *dist, *is, *inp, *i;
-	GPUNodeLink *aright, *aup, *adiag, *anear, *adist;
+	GPUNodeLink *adiag, *anear, *adist;
 	GPUNodeLink *outcol, *specfac, *t, *shadfac = NULL, *lcol;
 	float one = 1.0f;
 
@@ -972,12 +942,13 @@ static void shade_one_light(GPUShadeInput *shi, GPUShadeResult *shr, GPULamp *la
 
 	if (lamp->la->type == LA_AREA) {
 		GPU_link(mat, "lamp_area",
-				 GPU_dynamic_uniform((float *)lamp->dynareamat, GPU_DYNAMIC_LAMP_DYNAREAMAT, lamp->ob),
+				 GPU_dynamic_uniform(lamp->dynarearight, GPU_DYNAMIC_LAMP_DYNAREARIGHT, lamp->ob),
+				 GPU_dynamic_uniform(lamp->dynareaup, GPU_DYNAMIC_LAMP_DYNAREAUP, lamp->ob),
 				 GPU_dynamic_uniform(lamp->dynvec, GPU_DYNAMIC_LAMP_DYNVEC, lamp->ob),
 				 GPU_dynamic_uniform(lamp->dynco, GPU_DYNAMIC_LAMP_DYNCO, lamp->ob),
-				 GPU_dynamic_uniform((float *)lamp->area_size, GPU_DYNAMIC_LAMP_DYNAREASIZE, lamp->ob),
+				 GPU_dynamic_uniform(lamp->areasize, GPU_DYNAMIC_LAMP_DYNAREASIZE, lamp->ob),
 				 GPU_builtin(GPU_VIEW_POSITION),
-				 &aright, &aup, &adiag, &anear, &adist);
+				 &adiag, &anear, &adist);
 	}
 
 	GPUNodeLink *visifac = lamp_get_visibility(mat, lamp, &lv, &dist);
@@ -1152,14 +1123,15 @@ static void shade_one_light(GPUShadeInput *shi, GPUShadeResult *shr, GPULamp *la
 		else if (lamp->type == LA_AREA) {
 			GPUNodeLink *specdir, *specangle, *specdist;
 			GPU_link(mat, "lamp_area_spec",
-					 GPU_dynamic_uniform((float *)lamp->dynareamat, GPU_DYNAMIC_LAMP_DYNAREAMAT, lamp->ob),
+					 GPU_dynamic_uniform(lamp->dynarearight, GPU_DYNAMIC_LAMP_DYNAREARIGHT, lamp->ob),
+					 GPU_dynamic_uniform(lamp->dynareaup, GPU_DYNAMIC_LAMP_DYNAREAUP, lamp->ob),
 					 GPU_dynamic_uniform(lamp->dynvec, GPU_DYNAMIC_LAMP_DYNVEC, lamp->ob),
 					 GPU_dynamic_uniform(lamp->dynco, GPU_DYNAMIC_LAMP_DYNCO, lamp->ob),
 					 GPU_builtin(GPU_VIEW_POSITION), vn,
 					 &specdir, &specangle, &specdist);
 
 			GPU_link(mat, "shade_area_spec", specdir, specangle, specdist,
-					 GPU_dynamic_uniform((float *)lamp->area_size, GPU_DYNAMIC_LAMP_DYNAREASIZE, lamp->ob),
+					 GPU_dynamic_uniform(lamp->areasize, GPU_DYNAMIC_LAMP_DYNAREASIZE, lamp->ob),
 					 shi->har, &specfac);
 			GPU_link(mat, "shade_spec_area_inp", specfac, inp, &specfac);
 
@@ -2541,12 +2513,12 @@ void GPU_lamp_update(GPULamp *lamp, int lay, int hide, float obmat[4][4])
 
 	if (lamp->type == LA_AREA) {
 		/* Scale area sizes by lamp object scale. */
-		lamp->area_size[0] = lamp->la->area_size * obmat_scale[0];
+		lamp->areasize[0] = lamp->la->area_size * obmat_scale[0];
 		if (lamp->la->area_shape == LA_AREA_SQUARE) {
-			lamp->area_size[1] = lamp->la->area_size * obmat_scale[1];
+			lamp->areasize[1] = lamp->la->area_size * obmat_scale[1];
 		}
 		else {
-			lamp->area_size[1] = lamp->la->area_sizey * obmat_scale[1];
+			lamp->areasize[1] = lamp->la->area_sizey * obmat_scale[1];
 		}
 	}
 
