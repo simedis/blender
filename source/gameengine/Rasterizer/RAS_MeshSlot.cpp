@@ -47,6 +47,7 @@
 // mesh slot
 RAS_MeshSlot::RAS_MeshSlot()
 	:m_displayArray(NULL),
+	m_node(this, &RAS_MeshSlot::RunNode, NULL),
 	m_bucket(NULL),
 	m_displayArrayBucket(NULL),
 	m_mesh(NULL),
@@ -78,6 +79,7 @@ RAS_MeshSlot::RAS_MeshSlot(const RAS_MeshSlot& slot)
 	m_bucket = slot.m_bucket;
 	m_displayArrayBucket = slot.m_displayArrayBucket;
 	m_displayArray = slot.m_displayArray;
+	m_node = RAS_MeshSlotUpwardNode(this, &RAS_MeshSlot::RunNode, NULL);
 
 	if (m_displayArrayBucket) {
 		m_displayArrayBucket->AddRef();
@@ -159,4 +161,15 @@ void RAS_MeshSlot::SetDeformer(RAS_Deformer *deformer)
 void RAS_MeshSlot::SetMeshUser(RAS_MeshUser *user)
 {
 	m_meshUser = user;
+}
+
+void RAS_MeshSlot::GenerateTree(RAS_DisplayArrayUpwardNode *root, RAS_UpwardTreeLeafs *leafs)
+{
+	m_node.SetParent(root);
+	leafs->push_back(&m_node);
+}
+
+void RAS_MeshSlot::RunNode(const RAS_RenderNodeArguments& args)
+{
+	m_bucket->RenderMeshSlot(args.m_trans, args.m_rasty, this);
 }

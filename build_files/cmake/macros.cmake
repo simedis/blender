@@ -640,6 +640,7 @@ function(SETUP_BLENDER_SORTED_LIBS)
 		ge_device
 		ge_logic
 		ge_oglrasterizer
+		ge_rasterizer_node
 		ge_rasterizer
 		ge_common
 		ge_logic_expressions

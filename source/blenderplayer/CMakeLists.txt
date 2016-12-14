@@ -128,6 +128,7 @@ endif()
 		ge_phys_dummy
 		ge_logic 
 		ge_oglrasterizer
+		ge_rasterizer_node
 		ge_rasterizer
 		ge_logic_expressions
 		ge_common
