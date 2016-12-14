@@ -47,8 +47,10 @@
 #endif // WIN32
 
 RAS_MaterialBucket::RAS_MaterialBucket(RAS_IPolyMaterial *mat)
+	:m_material(mat),
+	m_downwardNode(this, &RAS_MaterialBucket::BindNode, &RAS_MaterialBucket::UnbindNode),
+	m_upwardNode(this, &RAS_MaterialBucket::BindNode, &RAS_MaterialBucket::UnbindNode)
 {
-	m_material = mat;
 }
 
 RAS_MaterialBucket::~RAS_MaterialBucket()
@@ -129,6 +131,15 @@ void RAS_MaterialBucket::RemoveMeshObject(RAS_MeshObject *mesh)
 	}
 }
 
+void RAS_MaterialBucket::RemoveActiveMeshSlots()
+{
+	for (RAS_DisplayArrayBucketList::iterator it = m_displayArrayBucketList.begin(), end = m_displayArrayBucketList.end();
+		 it != end; ++it)
+	{
+		(*it)->RemoveActiveMeshSlots();
+	}
+}
+
 unsigned int RAS_MaterialBucket::GetNumActiveMeshSlots()
 {
 	unsigned int count = 0;
@@ -152,13 +163,11 @@ RAS_MeshSlotList::iterator RAS_MaterialBucket::msEnd()
 	return m_meshSlots.end();
 }
 
-bool RAS_MaterialBucket::ActivateMaterial(RAS_IRasterizer *rasty)
+void RAS_MaterialBucket::ActivateMaterial(RAS_IRasterizer *rasty)
 {
 	if (rasty->GetOverrideShader() == RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE) {
 		m_material->Activate(rasty);
 	}
-
-	return true;
 }
 
 void RAS_MaterialBucket::DesactivateMaterial(RAS_IRasterizer *rasty)
@@ -207,37 +216,33 @@ void RAS_MaterialBucket::RenderMeshSlot(const MT_Transform& cameratrans, RAS_IRa
 	rasty->PopMatrix();
 }
 
-void RAS_MaterialBucket::RenderMeshSlots(const MT_Transform& cameratrans, RAS_IRasterizer *rasty)
+void RAS_MaterialBucket::GenerateTree(RAS_ManagerDownwardNode *downwardRoot, RAS_ManagerUpwardNode *upwardRoot,
+									  RAS_UpwardTreeLeafs *upwardLeafs, RAS_IRasterizer *rasty, bool sort)
 {
-	if (GetNumActiveMeshSlots() == 0) {
+	if (m_displayArrayBucketList.size() == 0) {
 		return;
 	}
 
-	bool matactivated = ActivateMaterial(rasty);
-
-	for (RAS_DisplayArrayBucketList::iterator it = m_displayArrayBucketList.begin(), end = m_displayArrayBucketList.end();
-		it != end; ++it)
-	{
-		RAS_DisplayArrayBucket *displayArrayBucket = *it;
-		if (!matactivated) {
-			displayArrayBucket->RemoveActiveMeshSlots();
-			continue;
-		}
-
-		// Choose the rendering mode : geometry instancing render / regular render.
-		if (UseInstancing()) {
-			displayArrayBucket->RenderMeshSlotsInstancing(cameratrans, rasty, IsAlpha());
-		}
-		else {
-			displayArrayBucket->RenderMeshSlots(cameratrans, rasty);
-		}
-
-		displayArrayBucket->RemoveActiveMeshSlots();
+	const bool instancing = UseInstancing();
+	for (RAS_DisplayArrayBucket *displayArrayBucket : m_displayArrayBucketList) {
+		displayArrayBucket->GenerateTree(&m_downwardNode, &m_upwardNode, upwardLeafs, rasty, sort, instancing);
 	}
 
-	if (matactivated) {
-		DesactivateMaterial(rasty);
+	downwardRoot->AddChild(&m_downwardNode);
+
+	if (sort) {
+		m_upwardNode.SetParent(upwardRoot);
 	}
+}
+
+void RAS_MaterialBucket::BindNode(const RAS_RenderNodeArguments& args)
+{
+	ActivateMaterial(args.m_rasty);
+}
+
+void RAS_MaterialBucket::UnbindNode(const RAS_RenderNodeArguments& args)
+{
+	DesactivateMaterial(args.m_rasty);
 }
 
 void RAS_MaterialBucket::SetDisplayArrayUnmodified()

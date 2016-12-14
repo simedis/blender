@@ -33,6 +33,8 @@
 #define __RAS_MESH_SLOT_H__
 
 #include "RAS_TexVert.h"
+#include "RAS_RenderNode.h"
+#include "RAS_UpwardNodeLeafs.h"
 
 #include <vector>
 
@@ -49,6 +51,7 @@ class RAS_MeshSlot
 {
 private:
 	RAS_IDisplayArray *m_displayArray;
+	RAS_MeshSlotUpwardNode m_node;
 
 public:
 	// for rendering
@@ -69,6 +72,9 @@ public:
 	RAS_IDisplayArray *GetDisplayArray();
 	void SetDeformer(RAS_Deformer *deformer);
 	void SetMeshUser(RAS_MeshUser *user);
+
+	void GenerateTree(RAS_DisplayArrayUpwardNode *root, RAS_UpwardTreeLeafs *leafs);
+	void RunNode(const RAS_RenderNodeArguments& args);
 
 #ifdef WITH_CXX_GUARDEDALLOC
 	MEM_CXX_CLASS_ALLOC_FUNCS("GE:RAS_MeshSlot")
