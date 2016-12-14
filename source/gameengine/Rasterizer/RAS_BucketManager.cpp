@@ -207,13 +207,24 @@ void RAS_BucketManager::RenderSortedBuckets(const MT_Transform& cameratrans, RAS
 	}
 }
 
+void RAS_BucketManager::RenderBasicBucketsNode(const RAS_ManagerNode::SubNodeTypeList& subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty)
+{
+	for (RAS_ManagerNode::SubNodeTypeList::const_iterator it = subNodes.begin(), end = subNodes.end(); it != end; ++it) {
+		(*it)(cameratrans, rasty);
+	}
+}
+
 void RAS_BucketManager::RenderBasicBuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, RAS_BucketManager::BucketType bucketType)
 {
+	RAS_ManagerNode node(this, &RAS_BucketManager::RenderBasicBucketsNode);
 	BucketList& solidBuckets = m_buckets[bucketType];
 	for (BucketList::iterator bit = solidBuckets.begin(); bit != solidBuckets.end(); ++bit) {
 		RAS_MaterialBucket *bucket = *bit;
-		bucket->RenderMeshSlots(cameratrans, rasty);
+		bucket->GenerateTree(node);
+// 		bucket->RenderMeshSlots(cameratrans, rasty);
 	}
+
+	node(cameratrans, rasty);
 }
 
 void RAS_BucketManager::Renderbuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty)

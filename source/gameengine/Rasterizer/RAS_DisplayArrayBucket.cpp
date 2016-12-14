@@ -267,12 +267,8 @@ void RAS_DisplayArrayBucket::SetAttribLayers(RAS_IRasterizer *rasty) const
 	rasty->SetAttribLayers(m_attribLayers);
 }
 
-void RAS_DisplayArrayBucket::RenderMeshSlots(const MT_Transform& cameratrans, RAS_IRasterizer *rasty)
+void RAS_DisplayArrayBucket::RenderMeshSlotsNode(const RAS_DisplayArrayNode::SubNodeTypeList& UNUSED(subNodes), const MT_Transform& cameratrans, RAS_IRasterizer *rasty)
 {
-	if (m_activeMeshSlots.size() == 0) {
-		return;
-	}
-
 	// Update deformer and render settings.
 	UpdateActiveMeshSlots(rasty);
 
@@ -284,6 +280,12 @@ void RAS_DisplayArrayBucket::RenderMeshSlots(const MT_Transform& cameratrans, RA
 	}
 
 	rasty->UnbindPrimitives(this);
+}
+
+void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialNode& rootnode)
+{
+	RAS_DisplayArrayNode node(this, &RAS_DisplayArrayBucket::RenderMeshSlotsNode);
+	rootnode.AddNode(node);
 }
 
 void RAS_DisplayArrayBucket::RenderMeshSlotsInstancing(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool alpha)
