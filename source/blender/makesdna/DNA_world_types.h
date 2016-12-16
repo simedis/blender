@@ -150,6 +150,7 @@ typedef struct World {
 #define WO_DBVT_CULLING		  32
 #define WO_AMB_OCC   		  64
 #define WO_INDIRECT_LIGHT	  128
+#define WO_MIST_IN_VIEWPORT   256
 
 /* aomix */
 enum {

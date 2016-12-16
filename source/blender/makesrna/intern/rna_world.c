@@ -412,6 +412,11 @@ static void rna_def_world_mist(BlenderRNA *brna)
 	RNA_def_property_ui_text(prop, "Use Mist", "Occlude objects with the environment color as they are further away");
 	RNA_def_property_update(prop, 0, "rna_World_draw_update");
 
+	prop = RNA_def_property(srna, "use_mist_in_viewport", PROP_BOOLEAN, PROP_NONE);
+	RNA_def_property_boolean_sdna(prop, NULL, "mode", WO_MIST_IN_VIEWPORT);
+	RNA_def_property_ui_text(prop, "Use Mist in viewport", "Choose to disable mist in viewport only (not in BGE)");
+	RNA_def_property_update(prop, 0, "rna_World_draw_update");
+
 	prop = RNA_def_property(srna, "intensity", PROP_FLOAT, PROP_NONE);
 	RNA_def_property_float_sdna(prop, NULL, "misi");
 	RNA_def_property_range(prop, 0, 1);

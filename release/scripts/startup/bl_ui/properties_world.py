@@ -230,6 +230,9 @@ class WORLD_PT_mist(WorldButtonsPanel, Panel):
 
         layout.active = world.mist_settings.use_mist
 
+        row = layout.row()
+        row.prop(world.mist_settings, "use_mist_in_viewport", text="Mist In Viewport")
+
         split = layout.split()
 
         col = split.column()

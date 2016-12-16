@@ -671,6 +671,9 @@ class WORLD_PT_game_mist(WorldButtonsPanel, Panel):
 
         layout.active = world.mist_settings.use_mist
 
+        row = layout.row()
+        row.prop(world.mist_settings, "use_mist_in_viewport", text="Mist In Viewport")
+
         layout.prop(world.mist_settings, "falloff")
 
         row = layout.row(align=True)
