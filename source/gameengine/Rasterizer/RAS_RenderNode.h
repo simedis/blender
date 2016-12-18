@@ -4,10 +4,10 @@
 class RAS_BucketManager;
 class RAS_MaterialBucket;
 class RAS_DisplayArrayBucket;
+class RAS_MeshSlot;
 class RAS_IRasterizer;
 class MT_Transform;
 
-class RAS_MeshSlot;
 class RAS_MaterialNode;
 class RAS_DisplayArrayNode;
 class RAS_MeshSlotNode;
@@ -17,9 +17,9 @@ class RAS_BaseNode
 {
 public:
 	typedef std::vector<SubNodeType> SubNodeTypeList;
-	typedef std::function<void(InfoType, const SubNodeTypeList&, Args ...)> Function;
+	typedef std::function<void(InfoType, SubNodeTypeList, Args ...)> Function;
 
-private:
+public: //private:
 	InfoType m_info;
 	Function m_function;
 	SubNodeTypeList m_subNodes;
@@ -34,9 +34,17 @@ public:
 	{
 	}
 
+	RAS_BaseNode(const RAS_BaseNode& node)
+	{
+		m_info = node.m_info;
+		m_function = node.m_function;
+		m_subNodes = node.m_subNodes;
+		std::cout << __func__ << ", " << m_subNodes.size() << std::endl;
+	}
+
 	inline void AddNode(const SubNodeType& subNode)
 	{
-		std::cout << __PRETTY_FUNCTION__ << std::endl;
+// 		std::cout << __PRETTY_FUNCTION__ << std::endl;
 		m_subNodes.push_back(subNode);
 	}
 
@@ -45,10 +53,9 @@ public:
 		return m_subNodes.empty();
 	}
 
-	template <class ... ArgsType>
-	inline const void operator()(ArgsType ... args) const
+	inline const void operator()(Args ... args) const
 	{
-		std::cout << __PRETTY_FUNCTION__ << std::endl;
+// 		std::cout << __PRETTY_FUNCTION__ << std::endl;
 		m_function(m_info, m_subNodes, args...);
 	}
 };

@@ -207,8 +207,9 @@ void RAS_BucketManager::RenderSortedBuckets(const MT_Transform& cameratrans, RAS
 	}
 }
 
-void RAS_BucketManager::RenderBasicBucketsNode(const RAS_ManagerNode::SubNodeTypeList& subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty)
+void RAS_BucketManager::RenderBasicBucketsNode(RAS_ManagerNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty)
 {
+	std::cout << __func__ << "sub nodes count: " << subNodes.size() << std::endl;
 	for (RAS_ManagerNode::SubNodeTypeList::const_iterator it = subNodes.begin(), end = subNodes.end(); it != end; ++it) {
 		(*it)(cameratrans, rasty);
 	}
@@ -221,7 +222,6 @@ void RAS_BucketManager::RenderBasicBuckets(const MT_Transform& cameratrans, RAS_
 	for (BucketList::iterator bit = solidBuckets.begin(); bit != solidBuckets.end(); ++bit) {
 		RAS_MaterialBucket *bucket = *bit;
 		bucket->GenerateTree(node);
-// 		bucket->RenderMeshSlots(cameratrans, rasty);
 	}
 
 	node(cameratrans, rasty);

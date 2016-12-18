@@ -60,7 +60,7 @@ public:
 	void DesactivateMaterial(RAS_IRasterizer *rasty);
 	void RenderMeshSlot(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, RAS_MeshSlot *ms);
 	/// Render all mesh slots for solid render.
-	void RenderMeshSlotsNode(const RAS_MaterialNode::SubNodeTypeList& subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
+	void RenderMeshSlotsNode(RAS_MaterialNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
 	void GenerateTree(RAS_ManagerNode& rootnode);
 
 	// Mesh Slot Access

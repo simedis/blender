@@ -144,7 +144,7 @@ public:
 	void SetAttribLayers(RAS_IRasterizer *rasty) const;
 
 	/// Render all mesh slots for solid render.
-	void RenderMeshSlotsNode(const RAS_DisplayArrayNode::SubNodeTypeList& subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
+	void RenderMeshSlotsNode(RAS_DisplayArrayNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
 	void GenerateTree(RAS_MaterialNode& rootnode);
 	void RenderMeshSlots(const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
 	/// Render all mesh slots with geometry instancing render.
