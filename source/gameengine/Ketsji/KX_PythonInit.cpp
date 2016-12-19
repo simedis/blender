@@ -1883,7 +1883,37 @@ static void initPySysObjects(Main *maggie)
 {
 	PyObject *sys_path      = PySys_GetObject("path");
 	PyObject *sys_meta_path = PySys_GetObject("meta_path");
-	
+
+	const char *const userConfigPath[] = {"modules", "addons"};
+
+	// Trying adding path for user config addons and modules.
+	for (unsigned short i = 0; i < ARRAY_SIZE(userConfigPath); ++i) {
+		const char *const modpath = BKE_appdir_folder_id(BLENDER_USER_SCRIPTS, userConfigPath[i]);
+		// The path could be nonexistent.
+		if (!modpath) {
+			continue;
+		}
+
+		PyObject *pymodpath = PyUnicode_FromString(modpath);
+
+		bool found = false;
+		// Avoid adding the path twice in the import paths.
+		for (unsigned int j = 0, size = PyList_GET_SIZE(sys_path); j < size; ++j) {
+			// Compare each path with the current path to add.
+			if (PyObject_RichCompareBool(PyList_GET_ITEM(sys_path, j), pymodpath, Py_EQ) == 1) {
+				found = true;
+				break;
+			}
+		}
+
+		// The path is not already in import paths and can be added.
+		if (!found) {
+			PyList_Insert(sys_path, 0, pymodpath);
+		}
+
+		Py_DECREF(pymodpath);
+	}
+
 	if (gp_sys_backup.path == NULL) {
 		/* backup */
 		backupPySysObjects();
