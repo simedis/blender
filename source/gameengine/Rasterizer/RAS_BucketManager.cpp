@@ -154,6 +154,7 @@ void RAS_BucketManager::OrderBuckets(const MT_Transform& cameratrans, RAS_Bucket
 
 void RAS_BucketManager::RenderSortedBuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, RAS_BucketManager::BucketType bucketType)
 {
+#if 0
 	std::vector<sortedmeshslot> slots;
 	std::vector<sortedmeshslot>::iterator sit;
 
@@ -205,11 +206,21 @@ void RAS_BucketManager::RenderSortedBuckets(const MT_Transform& cameratrans, RAS
 	if (matactivated) {
 		lastMaterialBucket->DesactivateMaterial(rasty);
 	}
+#endif
+
+	RAS_ManagerNode node(RAS_NullNode(), this, &RAS_BucketManager::RenderBasicBucketsNode);
+
+	BucketList& solidBuckets = m_buckets[bucketType];
+	for (BucketList::iterator bit = solidBuckets.begin(); bit != solidBuckets.end(); ++bit) {
+		RAS_MaterialBucket *bucket = *bit;
+		bucket->GenerateTree(node, true);
+	}
+	
+	node(cameratrans, rasty);
 }
 
 void RAS_BucketManager::RenderBasicBucketsNode(RAS_ManagerNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty)
 {
-	std::cout << __func__ << "sub nodes count: " << subNodes.size() << std::endl;
 	for (RAS_ManagerNode::SubNodeTypeList::const_iterator it = subNodes.begin(), end = subNodes.end(); it != end; ++it) {
 		(*it)(cameratrans, rasty);
 	}
@@ -217,11 +228,11 @@ void RAS_BucketManager::RenderBasicBucketsNode(RAS_ManagerNode::SubNodeTypeList 
 
 void RAS_BucketManager::RenderBasicBuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, RAS_BucketManager::BucketType bucketType)
 {
-	RAS_ManagerNode node(this, &RAS_BucketManager::RenderBasicBucketsNode);
+	RAS_ManagerNode node(RAS_NullNode(), this, &RAS_BucketManager::RenderBasicBucketsNode);
 	BucketList& solidBuckets = m_buckets[bucketType];
 	for (BucketList::iterator bit = solidBuckets.begin(); bit != solidBuckets.end(); ++bit) {
 		RAS_MaterialBucket *bucket = *bit;
-		bucket->GenerateTree(node);
+		bucket->GenerateTree(node, false);
 	}
 
 	node(cameratrans, rasty);
@@ -395,6 +406,11 @@ void RAS_BucketManager::Renderbuckets(const MT_Transform& cameratrans, RAS_IRast
 		}
 	}
 
+	BucketList& buckets = m_buckets[ALL_BUCKET];
+	for (BucketList::iterator it = buckets.begin(), end = buckets.end(); it != end; ++it) {
+		(*it)->RemoveActiveMeshSlots();
+	}
+
 	/* If we're drawing shadows and bucket wasn't rendered (outside of the lamp frustum or doesn't cast shadows)
 	 * then the mesh is still modified, so we don't want to set MeshModified to false yet (it will mess up
 	 * updating display lists). Just leave this step for the main render pass.
@@ -402,7 +418,6 @@ void RAS_BucketManager::Renderbuckets(const MT_Transform& cameratrans, RAS_IRast
 	if (rasty->GetDrawingMode() != RAS_IRasterizer::RAS_SHADOW) {
 		/* All meshes should be up to date now */
 		/* Don't do this while processing buckets because some meshes are split between buckets */
-		BucketList& buckets = m_buckets[ALL_BUCKET];
 		for (BucketList::iterator it = buckets.begin(), end = buckets.end(); it != end; ++it) {
 			(*it)->SetDisplayArrayUnmodified();
 		}

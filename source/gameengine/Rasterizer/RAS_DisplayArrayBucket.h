@@ -145,7 +145,8 @@ public:
 
 	/// Render all mesh slots for solid render.
 	void RenderMeshSlotsNode(RAS_DisplayArrayNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
-	void GenerateTree(RAS_MaterialNode& rootnode);
+	void RenderMeshSlotsAlphaNode(RAS_DisplayArrayNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
+	void GenerateTree(RAS_MaterialNode& rootnode, bool alpha);
 	void RenderMeshSlots(const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
 	/// Render all mesh slots with geometry instancing render.
 	void RenderMeshSlotsInstancing(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool alpha);

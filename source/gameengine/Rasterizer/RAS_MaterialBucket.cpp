@@ -129,6 +129,15 @@ void RAS_MaterialBucket::RemoveMeshObject(RAS_MeshObject *mesh)
 	}
 }
 
+void RAS_MaterialBucket::RemoveActiveMeshSlots()
+{
+	for (RAS_DisplayArrayBucketList::iterator it = m_displayArrayBucketList.begin(), end = m_displayArrayBucketList.end();
+		 it != end; ++it)
+	{
+		(*it)->RemoveActiveMeshSlots();
+	}
+}
+
 unsigned int RAS_MaterialBucket::GetNumActiveMeshSlots()
 {
 	unsigned int count = 0;
@@ -211,7 +220,6 @@ void RAS_MaterialBucket::RenderMeshSlotsNode(RAS_MaterialNode::SubNodeTypeList s
 {
 	bool matactivated = ActivateMaterial(rasty);
 
-	std::cout << __func__ << "sub nodes count: " << subNodes.size() << std::endl;
 	for (RAS_MaterialNode::SubNodeTypeList::const_iterator it = subNodes.begin(), end = subNodes.end(); it != end; ++it) {
 		(*it)(cameratrans, rasty);
 	}
@@ -241,14 +249,14 @@ void RAS_MaterialBucket::RenderMeshSlotsNode(RAS_MaterialNode::SubNodeTypeList s
 	}
 }
 
-void RAS_MaterialBucket::GenerateTree(RAS_ManagerNode& rootnode)
+void RAS_MaterialBucket::GenerateTree(RAS_ManagerNode& rootnode, bool alpha)
 {
-	RAS_MaterialNode node(this, &RAS_MaterialBucket::RenderMeshSlotsNode);
+	RAS_MaterialNode node(rootnode, this, &RAS_MaterialBucket::RenderMeshSlotsNode);
 
 	for (RAS_DisplayArrayBucketList::iterator it = m_displayArrayBucketList.begin(), end = m_displayArrayBucketList.end();
 		 it != end; ++it)
 	{
-		(*it)->GenerateTree(node);
+		(*it)->GenerateTree(node, alpha);
 	}
 
 	rootnode.AddNode(node);

@@ -282,14 +282,39 @@ void RAS_DisplayArrayBucket::RenderMeshSlotsNode(RAS_DisplayArrayNode::SubNodeTy
 	rasty->UnbindPrimitives(this);
 }
 
-void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialNode& rootnode)
+void RAS_DisplayArrayBucket::RenderMeshSlotsAlphaNode(RAS_DisplayArrayNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty)
+{
+	// Update deformer and render settings.
+	UpdateActiveMeshSlots(rasty);
+
+	rasty->BindPrimitives(this);
+
+	for (RAS_DisplayArrayNode::SubNodeTypeList::const_iterator it = subNodes.begin(), end = subNodes.end(); it != end; ++it) {
+		(*it)(cameratrans, rasty);
+	}
+
+	rasty->UnbindPrimitives(this);
+}
+
+void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialNode& rootnode, bool alpha)
 {
 	if (m_activeMeshSlots.empty()) {
 		return;
 	}
 
-	RAS_DisplayArrayNode node(this, &RAS_DisplayArrayBucket::RenderMeshSlotsNode);
-	rootnode.AddNode(node);
+	if (alpha) {
+		RAS_DisplayArrayNode node(rootnode, this, &RAS_DisplayArrayBucket::RenderMeshSlotsAlphaNode);
+
+		for (RAS_MeshSlotList::iterator it = m_activeMeshSlots.begin(), end = m_activeMeshSlots.end(); it != end; ++it) {
+			(*it)->GenerateTree(node);
+		}
+
+		rootnode.AddNode(node);
+	}
+	else {
+		RAS_DisplayArrayNode node(rootnode, this, &RAS_DisplayArrayBucket::RenderMeshSlotsNode);
+		rootnode.AddNode(node);
+	}
 }
 
 void RAS_DisplayArrayBucket::RenderMeshSlotsInstancing(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool alpha)

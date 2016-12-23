@@ -61,7 +61,7 @@ public:
 	void RenderMeshSlot(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, RAS_MeshSlot *ms);
 	/// Render all mesh slots for solid render.
 	void RenderMeshSlotsNode(RAS_MaterialNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
-	void GenerateTree(RAS_ManagerNode& rootnode);
+	void GenerateTree(RAS_ManagerNode& rootnode, bool alpha);
 
 	// Mesh Slot Access
 	RAS_MeshSlotList::iterator msBegin();
@@ -75,6 +75,7 @@ public:
 	void RemoveMeshObject(RAS_MeshObject *mesh);
 	/// Set the mesh object as unmodified flag.
 	void SetDisplayArrayUnmodified();
+	void RemoveActiveMeshSlots();
 	unsigned int GetNumActiveMeshSlots();
 
 	/// Find a display array bucket for the given display array.

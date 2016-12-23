@@ -33,6 +33,7 @@
 #define __RAS_MESH_SLOT_H__
 
 #include "RAS_TexVert.h"
+#include "RAS_RenderNode.h"
 
 #include <vector>
 
@@ -69,6 +70,9 @@ public:
 	RAS_IDisplayArray *GetDisplayArray();
 	void SetDeformer(RAS_Deformer *deformer);
 	void SetMeshUser(RAS_MeshUser *user);
+
+	void RenderNode(RAS_MeshSlotNode::SubNodeTypeList UNUSED(subNodes), const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
+	void GenerateTree(RAS_DisplayArrayNode& rootnode);
 
 #ifdef WITH_CXX_GUARDEDALLOC
 	MEM_CXX_CLASS_ALLOC_FUNCS("GE:RAS_MeshSlot")
