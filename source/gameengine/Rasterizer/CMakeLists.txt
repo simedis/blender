@@ -25,6 +25,7 @@
 
 set(INC
 	.
+	Node
 	../Common
 	../Expressions
 	../Ketsji
@@ -62,7 +63,6 @@ set(SRC
 	RAS_MeshSlot.cpp
 	RAS_MeshUser.cpp
 	RAS_Polygon.cpp
-	RAS_RenderNode.cpp
 	RAS_Shader.cpp
 	RAS_Texture.cpp
 	RAS_TextUser.cpp
@@ -100,7 +100,6 @@ set(SRC
 	RAS_MeshUser.h
 	RAS_Polygon.h
 	RAS_Rect.h
-	RAS_RenderNode.h
 	RAS_Shader.h
 	RAS_Texture.h
 	RAS_TextUser.h

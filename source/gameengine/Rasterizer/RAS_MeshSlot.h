@@ -50,6 +50,7 @@ class RAS_MeshSlot
 {
 private:
 	RAS_IDisplayArray *m_displayArray;
+	RAS_MeshSlotNode m_node;
 
 public:
 	// for rendering
@@ -72,7 +73,7 @@ public:
 	void SetMeshUser(RAS_MeshUser *user);
 
 	void RenderNode(RAS_MeshSlotNode::SubNodeTypeList UNUSED(subNodes), const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
-	void GenerateTree(RAS_DisplayArrayNode& rootnode);
+	void GenerateTree(RAS_DisplayArrayNode *rootnode);
 
 #ifdef WITH_CXX_GUARDEDALLOC
 	MEM_CXX_CLASS_ALLOC_FUNCS("GE:RAS_MeshSlot")

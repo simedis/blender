@@ -34,7 +34,6 @@
 
 #include "RAS_MeshSlot.h" // needed for RAS_MeshSlotList
 #include "RAS_IRasterizer.h" // needed for RAS_IRasterizer::StorageType and RAS_IRasterizer::AttribLayerList
-#include "RAS_RenderNode.h"
 
 #include "MT_Transform.h"
 
@@ -88,6 +87,10 @@ private:
 
 	/// The attribute's layers used by the couple mesh material.
 	RAS_IRasterizer::AttribLayerList m_attribLayers;
+
+	RAS_DisplayArrayNode m_node;
+	RAS_DisplayArrayNode m_sortNode;
+	RAS_DisplayArrayNode m_instancingNode;
 
 public:
 	RAS_DisplayArrayBucket(RAS_MaterialBucket *bucket, RAS_IDisplayArray *array, RAS_MeshObject *mesh, RAS_MeshMaterial *meshmat);
@@ -143,13 +146,13 @@ public:
 
 	void SetAttribLayers(RAS_IRasterizer *rasty) const;
 
+	void GenerateTree(RAS_MaterialNode *rootnode, bool sort);
+
 	/// Render all mesh slots for solid render.
-	void RenderMeshSlotsNode(RAS_DisplayArrayNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
-	void RenderMeshSlotsAlphaNode(RAS_DisplayArrayNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
-	void GenerateTree(RAS_MaterialNode& rootnode, bool alpha);
-	void RenderMeshSlots(const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
+	void RenderMeshSlotsNode(RAS_DisplayArrayNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);
+	void RenderMeshSlotsSortNode(RAS_DisplayArrayNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);
 	/// Render all mesh slots with geometry instancing render.
-	void RenderMeshSlotsInstancing(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool alpha);
+	void RenderMeshSlotsInstancingNode(RAS_DisplayArrayNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);
 
 	/// Replace the material bucket of this display array bucket by the one given.
 	void ChangeMaterialBucket(RAS_MaterialBucket *bucket);

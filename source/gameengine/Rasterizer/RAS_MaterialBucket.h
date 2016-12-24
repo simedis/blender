@@ -37,6 +37,7 @@
 
 class RAS_IPolyMaterial;
 class RAS_IRasterizer;
+class RAS_MaterialNode;
 
 /* Contains a list of display arrays with the same material,
  * and a mesh slot for each mesh that uses display arrays in
@@ -56,12 +57,12 @@ public:
 	bool UseInstancing() const;
 
 	// Rendering
-	bool ActivateMaterial(RAS_IRasterizer *rasty);
+	void ActivateMaterial(RAS_IRasterizer *rasty);
 	void DesactivateMaterial(RAS_IRasterizer *rasty);
 	void RenderMeshSlot(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, RAS_MeshSlot *ms);
 	/// Render all mesh slots for solid render.
-	void RenderMeshSlotsNode(RAS_MaterialNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
-	void GenerateTree(RAS_ManagerNode& rootnode, bool alpha);
+	void RenderMeshSlotsNode(RAS_MaterialNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);
+	void GenerateTree(RAS_ManagerNode *rootnode, bool sort);
 
 	// Mesh Slot Access
 	RAS_MeshSlotList::iterator msBegin();
@@ -91,6 +92,8 @@ private:
 	RAS_MeshSlotList m_meshSlots; // all the mesh slots
 	RAS_IPolyMaterial *m_material;
 	RAS_DisplayArrayBucketList m_displayArrayBucketList;
+
+	RAS_MaterialNode m_node;
 
 #ifdef WITH_CXX_GUARDEDALLOC
 	MEM_CXX_CLASS_ALLOC_FUNCS("GE:RAS_MaterialBucket")

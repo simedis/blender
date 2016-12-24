@@ -62,6 +62,10 @@ RAS_DisplayArrayBucket::RAS_DisplayArrayBucket(RAS_MaterialBucket *bucket, RAS_I
 	m_instancingBuffer(NULL)
 {
 	m_bucket->AddDisplayArrayBucket(this);
+
+	m_node = new RAS_DisplayArrayNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsNode);
+	m_sortNode = new RAS_DisplayArrayNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsSortNode);
+	m_instancingNode = new RAS_DisplayArrayNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsInstancingNode);
 }
 
 RAS_DisplayArrayBucket::~RAS_DisplayArrayBucket()
@@ -267,7 +271,29 @@ void RAS_DisplayArrayBucket::SetAttribLayers(RAS_IRasterizer *rasty) const
 	rasty->SetAttribLayers(m_attribLayers);
 }
 
-void RAS_DisplayArrayBucket::RenderMeshSlotsNode(RAS_DisplayArrayNode::SubNodeTypeList UNUSED(subNodes), const MT_Transform& cameratrans, RAS_IRasterizer *rasty)
+void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialNode *rootnode, bool sort)
+{
+	if (m_activeMeshSlots.empty()) {
+		return;
+	}
+
+	if (m_bucket->UseInstancing()) {
+		rootnode->AddNode(m_instancingNode);
+	}
+	else if (sort) {
+		for (RAS_MeshSlotList::iterator it = m_activeMeshSlots.begin(), end = m_activeMeshSlots.end(); it != end; ++it) {
+			(*it)->GenerateTree(m_sortNode);
+		}
+
+		rootnode->AddNode(m_sortNode);
+	}
+	else {
+		rootnode->AddNode(m_node);
+	}
+}
+
+void RAS_DisplayArrayBucket::RenderMeshSlotsNode(RAS_DisplayArrayNode::SubNodeTypeList UNUSED(subNodes), const MT_Transform& cameratrans,
+												 RAS_IRasterizer *rasty, bool UNUSED(sort))
 {
 	// Update deformer and render settings.
 	UpdateActiveMeshSlots(rasty);
@@ -282,7 +308,8 @@ void RAS_DisplayArrayBucket::RenderMeshSlotsNode(RAS_DisplayArrayNode::SubNodeTy
 	rasty->UnbindPrimitives(this);
 }
 
-void RAS_DisplayArrayBucket::RenderMeshSlotsAlphaNode(RAS_DisplayArrayNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty)
+void RAS_DisplayArrayBucket::RenderMeshSlotsSortNode(RAS_DisplayArrayNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans,
+													  RAS_IRasterizer *rasty, bool UNUSED(sort))
 {
 	// Update deformer and render settings.
 	UpdateActiveMeshSlots(rasty);
@@ -290,39 +317,16 @@ void RAS_DisplayArrayBucket::RenderMeshSlotsAlphaNode(RAS_DisplayArrayNode::SubN
 	rasty->BindPrimitives(this);
 
 	for (RAS_DisplayArrayNode::SubNodeTypeList::const_iterator it = subNodes.begin(), end = subNodes.end(); it != end; ++it) {
-		(*it)(cameratrans, rasty);
+		(*it)->Execute(cameratrans, rasty);
 	}
 
 	rasty->UnbindPrimitives(this);
 }
 
-void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialNode& rootnode, bool alpha)
+void RAS_DisplayArrayBucket::RenderMeshSlotsInstancingNode(RAS_DisplayArrayNode::SubNodeTypeList UNUSED(subNodes), const MT_Transform& cameratrans,
+														   RAS_IRasterizer *rasty, bool sort)
 {
-	if (m_activeMeshSlots.empty()) {
-		return;
-	}
-
-	if (alpha) {
-		RAS_DisplayArrayNode node(rootnode, this, &RAS_DisplayArrayBucket::RenderMeshSlotsAlphaNode);
-
-		for (RAS_MeshSlotList::iterator it = m_activeMeshSlots.begin(), end = m_activeMeshSlots.end(); it != end; ++it) {
-			(*it)->GenerateTree(node);
-		}
-
-		rootnode.AddNode(node);
-	}
-	else {
-		RAS_DisplayArrayNode node(rootnode, this, &RAS_DisplayArrayBucket::RenderMeshSlotsNode);
-		rootnode.AddNode(node);
-	}
-}
-
-void RAS_DisplayArrayBucket::RenderMeshSlotsInstancing(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool alpha)
-{
-	unsigned int nummeshslots = m_activeMeshSlots.size(); 
-	if (nummeshslots == 0) {
-		return;
-	}
+	const unsigned int nummeshslots = m_activeMeshSlots.size(); 
 
 	// Create the instancing buffer only if it needed.
 	if (!m_instancingBuffer) {
@@ -340,7 +344,7 @@ void RAS_DisplayArrayBucket::RenderMeshSlotsInstancing(const MT_Transform& camer
 	/* If the material use the transparency we must sort all mesh slots depending on the distance.
 	 * This code share the code used in RAS_BucketManager to do the sort.
 	 */
-	if (alpha) {
+	if (sort) {
 		std::vector<RAS_BucketManager::sortedmeshslot> sortedMeshSlots(nummeshslots);
 
 		const MT_Vector3 pnorm(cameratrans.getBasis()[2]);

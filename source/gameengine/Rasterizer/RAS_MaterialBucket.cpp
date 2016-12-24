@@ -47,8 +47,9 @@
 #endif // WIN32
 
 RAS_MaterialBucket::RAS_MaterialBucket(RAS_IPolyMaterial *mat)
+	:m_material(mat),
+	m_node(this, &RAS_MaterialBucket::RenderMeshSlotsNode)
 {
-	m_material = mat;
 }
 
 RAS_MaterialBucket::~RAS_MaterialBucket()
@@ -161,13 +162,11 @@ RAS_MeshSlotList::iterator RAS_MaterialBucket::msEnd()
 	return m_meshSlots.end();
 }
 
-bool RAS_MaterialBucket::ActivateMaterial(RAS_IRasterizer *rasty)
+void RAS_MaterialBucket::ActivateMaterial(RAS_IRasterizer *rasty)
 {
 	if (rasty->GetOverrideShader() == RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE) {
 		m_material->Activate(rasty);
 	}
-
-	return true;
 }
 
 void RAS_MaterialBucket::DesactivateMaterial(RAS_IRasterizer *rasty)
@@ -216,50 +215,30 @@ void RAS_MaterialBucket::RenderMeshSlot(const MT_Transform& cameratrans, RAS_IRa
 	rasty->PopMatrix();
 }
 
-void RAS_MaterialBucket::RenderMeshSlotsNode(RAS_MaterialNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty)
+void RAS_MaterialBucket::RenderMeshSlotsNode(RAS_MaterialNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort)
 {
-	bool matactivated = ActivateMaterial(rasty);
+	ActivateMaterial(rasty);
 
 	for (RAS_MaterialNode::SubNodeTypeList::const_iterator it = subNodes.begin(), end = subNodes.end(); it != end; ++it) {
-		(*it)(cameratrans, rasty);
+		(*it)->Execute(cameratrans, rasty, sort);
 	}
 
-	/*for (RAS_DisplayArrayBucketList::iterator it = m_displayArrayBucketList.begin(), end = m_displayArrayBucketList.end();
-		it != end; ++it)
-	{
-		RAS_DisplayArrayBucket *displayArrayBucket = *it;
-		if (!matactivated) {
-			displayArrayBucket->RemoveActiveMeshSlots();
-			continue;
-		}
-
-		// Choose the rendering mode : geometry instancing render / regular render.
-		if (UseInstancing()) {
-			displayArrayBucket->RenderMeshSlotsInstancing(cameratrans, rasty, IsAlpha());
-		}
-		else {
-			displayArrayBucket->RenderMeshSlots(cameratrans, rasty);
-		}
-
-		displayArrayBucket->RemoveActiveMeshSlots();
-	}*/
-
-	if (matactivated) {
-		DesactivateMaterial(rasty);
-	}
+	DesactivateMaterial(rasty);
 }
 
-void RAS_MaterialBucket::GenerateTree(RAS_ManagerNode& rootnode, bool alpha)
+void RAS_MaterialBucket::GenerateTree(RAS_ManagerNode *rootnode, bool sort)
 {
-	RAS_MaterialNode node(rootnode, this, &RAS_MaterialBucket::RenderMeshSlotsNode);
+	if (m_displayArrayBucketList.empty()) {
+		return;
+	}
 
 	for (RAS_DisplayArrayBucketList::iterator it = m_displayArrayBucketList.begin(), end = m_displayArrayBucketList.end();
 		 it != end; ++it)
 	{
-		(*it)->GenerateTree(node, alpha);
+		(*it)->GenerateTree(&m_node, sort);
 	}
 
-	rootnode.AddNode(node);
+	rootnode->AddNode(&m_node);
 }
 
 void RAS_MaterialBucket::SetDisplayArrayUnmodified()

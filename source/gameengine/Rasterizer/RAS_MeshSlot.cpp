@@ -47,6 +47,7 @@
 // mesh slot
 RAS_MeshSlot::RAS_MeshSlot()
 	:m_displayArray(NULL),
+	m__node(this, &RAS_MeshSlot::RenderNode),
 	m_bucket(NULL),
 	m_displayArrayBucket(NULL),
 	m_mesh(NULL),
@@ -66,6 +67,8 @@ RAS_MeshSlot::~RAS_MeshSlot()
 	if (m_displayArrayBucket) {
 		m_displayArrayBucket->Release();
 	}
+
+	delete m_node;
 }
 
 RAS_MeshSlot::RAS_MeshSlot(const RAS_MeshSlot& slot)
@@ -78,6 +81,7 @@ RAS_MeshSlot::RAS_MeshSlot(const RAS_MeshSlot& slot)
 	m_bucket = slot.m_bucket;
 	m_displayArrayBucket = slot.m_displayArrayBucket;
 	m_displayArray = slot.m_displayArray;
+	m_node = RAS_MeshSlotNode(this, &RAS_MeshSlot::RenderNode);
 
 	if (m_displayArrayBucket) {
 		m_displayArrayBucket->AddRef();
@@ -166,8 +170,7 @@ void RAS_MeshSlot::RenderNode(RAS_MeshSlotNode::SubNodeTypeList UNUSED(subNodes)
 	m_bucket->RenderMeshSlot(cameratrans, rasty, this);
 }
 
-void RAS_MeshSlot::GenerateTree(RAS_DisplayArrayNode& rootnode)
+void RAS_MeshSlot::GenerateTree(RAS_DisplayArrayNode *rootnode)
 {
-	RAS_MeshSlotNode node(rootnode, this, &RAS_MeshSlot::RenderNode);
-	rootnode.AddNode(node);
+	rootnode->AddNode(&m_node);
 }

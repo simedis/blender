@@ -85,6 +85,8 @@ protected:
 	 */
 	int m_cachedNumActiveMeshSlots[NUM_BUCKET_TYPE];
 
+	RAS_ManagerNode *m_node;
+
 public:
 	RAS_BucketManager();
 	virtual ~RAS_BucketManager();
@@ -114,7 +116,7 @@ private:
 	void OrderBuckets(const MT_Transform& cameratrans, RAS_BucketManager::BucketType bucketType,
 	                  std::vector<sortedmeshslot>& slots, bool alpha, RAS_IRasterizer *rasty);
 
-	void RenderBasicBucketsNode(RAS_ManagerNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
+	void RenderBasicBucketsNode(RAS_ManagerNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);
 	void RenderBasicBuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, BucketType bucketType);
 	void RenderSortedBuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, BucketType bucketType);
 
