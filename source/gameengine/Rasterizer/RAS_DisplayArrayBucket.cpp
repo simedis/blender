@@ -59,13 +59,12 @@ RAS_DisplayArrayBucket::RAS_DisplayArrayBucket(RAS_MaterialBucket *bucket, RAS_I
 	m_useDisplayList(false),
 	m_useVao(false),
 	m_storageInfo(NULL),
-	m_instancingBuffer(NULL)
+	m_instancingBuffer(NULL),
+	m_node(this, &RAS_DisplayArrayBucket::RenderMeshSlotsNode),
+	m_sortNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsSortNode),
+	m_instancingNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsInstancingNode)
 {
 	m_bucket->AddDisplayArrayBucket(this);
-
-	m_node = new RAS_DisplayArrayNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsNode);
-	m_sortNode = new RAS_DisplayArrayNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsSortNode);
-	m_instancingNode = new RAS_DisplayArrayNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsInstancingNode);
 }
 
 RAS_DisplayArrayBucket::~RAS_DisplayArrayBucket()
@@ -278,17 +277,17 @@ void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialNode *rootnode, bool sort)
 	}
 
 	if (m_bucket->UseInstancing()) {
-		rootnode->AddNode(m_instancingNode);
+		rootnode->AddSubNode(&m_instancingNode);
 	}
 	else if (sort) {
 		for (RAS_MeshSlotList::iterator it = m_activeMeshSlots.begin(), end = m_activeMeshSlots.end(); it != end; ++it) {
-			(*it)->GenerateTree(m_sortNode);
+			(*it)->GenerateTree(&m_sortNode);
 		}
 
-		rootnode->AddNode(m_sortNode);
+		rootnode->AddSubNode(&m_sortNode);
 	}
 	else {
-		rootnode->AddNode(m_node);
+		rootnode->AddSubNode(&m_node);
 	}
 }
 
@@ -345,12 +344,12 @@ void RAS_DisplayArrayBucket::RenderMeshSlotsInstancingNode(RAS_DisplayArrayNode:
 	 * This code share the code used in RAS_BucketManager to do the sort.
 	 */
 	if (sort) {
-		std::vector<RAS_BucketManager::sortedmeshslot> sortedMeshSlots(nummeshslots);
+		std::vector<RAS_BucketManager::SortedMeshSlot> sortedMeshSlots(nummeshslots);
 
 		const MT_Vector3 pnorm(cameratrans.getBasis()[2]);
 		unsigned int i = 0;
 		for (RAS_MeshSlotList::iterator it = m_activeMeshSlots.begin(), end = m_activeMeshSlots.end(); it != end; ++it) {
-			sortedMeshSlots[i++].set(*it, m_bucket, pnorm);
+			sortedMeshSlots[i++] = RAS_BucketManager::SortedMeshSlot(*it, pnorm);
 		}
 		std::sort(sortedMeshSlots.begin(), sortedMeshSlots.end(), RAS_BucketManager::backtofront());
 		std::vector<RAS_MeshSlot *> meshSlots(nummeshslots);

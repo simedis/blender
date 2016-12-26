@@ -238,7 +238,7 @@ void RAS_MaterialBucket::GenerateTree(RAS_ManagerNode *rootnode, bool sort)
 		(*it)->GenerateTree(&m_node, sort);
 	}
 
-	rootnode->AddNode(&m_node);
+	rootnode->AddSubNode(&m_node);
 }
 
 void RAS_MaterialBucket::SetDisplayArrayUnmodified()

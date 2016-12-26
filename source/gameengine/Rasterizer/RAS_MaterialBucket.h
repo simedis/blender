@@ -37,7 +37,6 @@
 
 class RAS_IPolyMaterial;
 class RAS_IRasterizer;
-class RAS_MaterialNode;
 
 /* Contains a list of display arrays with the same material,
  * and a mesh slot for each mesh that uses display arrays in

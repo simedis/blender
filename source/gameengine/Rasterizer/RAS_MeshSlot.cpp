@@ -47,7 +47,7 @@
 // mesh slot
 RAS_MeshSlot::RAS_MeshSlot()
 	:m_displayArray(NULL),
-	m__node(this, &RAS_MeshSlot::RenderNode),
+	m_node(this, &RAS_MeshSlot::RenderNode),
 	m_bucket(NULL),
 	m_displayArrayBucket(NULL),
 	m_mesh(NULL),
@@ -67,8 +67,6 @@ RAS_MeshSlot::~RAS_MeshSlot()
 	if (m_displayArrayBucket) {
 		m_displayArrayBucket->Release();
 	}
-
-	delete m_node;
 }
 
 RAS_MeshSlot::RAS_MeshSlot(const RAS_MeshSlot& slot)
@@ -172,5 +170,5 @@ void RAS_MeshSlot::RenderNode(RAS_MeshSlotNode::SubNodeTypeList UNUSED(subNodes)
 
 void RAS_MeshSlot::GenerateTree(RAS_DisplayArrayNode *rootnode)
 {
-	rootnode->AddNode(&m_node);
+	rootnode->AddSubNode(&m_node);
 }

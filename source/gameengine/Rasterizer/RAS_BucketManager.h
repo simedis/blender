@@ -43,23 +43,29 @@ class RAS_BucketManager
 {
 public:
 	typedef std::vector<RAS_MaterialBucket *> BucketList;
-	struct sortedmeshslot
+	class SortedMeshSlot
 	{
+	public:
 		/// depth
 		MT_Scalar m_z;
-		/// mesh slot
-		RAS_MeshSlot *m_ms;
-		/// buck mesh slot came from
-		RAS_MaterialBucket *m_bucket;
-		void set(RAS_MeshSlot *ms, RAS_MaterialBucket *bucket, const MT_Vector3& pnorm);
+
+		union {
+			RAS_MeshSlot *m_ms;
+			RAS_MeshSlotNode *m_node;
+		};
+
+		SortedMeshSlot() = default;
+		SortedMeshSlot(RAS_MeshSlot *ms, const MT_Vector3& pnorm);
+		SortedMeshSlot(RAS_MeshSlotNode *node, const MT_Vector3& pnorm);
 	};
+
 	struct backtofront
 	{
-		bool operator()(const sortedmeshslot &a, const sortedmeshslot &b);
+		bool operator()(const SortedMeshSlot &a, const SortedMeshSlot &b);
 	};
 	struct fronttoback
 	{
-		bool operator()(const sortedmeshslot &a, const sortedmeshslot &b);
+		bool operator()(const SortedMeshSlot &a, const SortedMeshSlot &b);
 	};
 
 protected:
@@ -85,7 +91,7 @@ protected:
 	 */
 	int m_cachedNumActiveMeshSlots[NUM_BUCKET_TYPE];
 
-	RAS_ManagerNode *m_node;
+	RAS_ManagerNode m_node;
 
 public:
 	RAS_BucketManager();
@@ -114,7 +120,7 @@ private:
 	void ClearNumActiveMeshSlotsCache();
 
 	void OrderBuckets(const MT_Transform& cameratrans, RAS_BucketManager::BucketType bucketType,
-	                  std::vector<sortedmeshslot>& slots, bool alpha, RAS_IRasterizer *rasty);
+	                  std::vector<SortedMeshSlot>& slots, bool alpha, RAS_IRasterizer *rasty);
 
 	void RenderBasicBucketsNode(RAS_ManagerNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);
 	void RenderBasicBuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, BucketType bucketType);

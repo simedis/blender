@@ -46,7 +46,7 @@
 #include <algorithm>
 /* sorting */
 
-void RAS_BucketManager::sortedmeshslot::set(RAS_MeshSlot *ms, RAS_MaterialBucket *bucket, const MT_Vector3& pnorm)
+RAS_BucketManager::SortedMeshSlot::SortedMeshSlot(RAS_MeshSlot *ms, const MT_Vector3& pnorm)
 {
 	// would be good to use the actual bounding box center instead
 	float *matrix = ms->m_meshUser->GetMatrix();
@@ -54,23 +54,32 @@ void RAS_BucketManager::sortedmeshslot::set(RAS_MeshSlot *ms, RAS_MaterialBucket
 
 	m_z = MT_dot(pnorm, pos);
 	m_ms = ms;
-	m_bucket = bucket;
 }
 
-bool RAS_BucketManager::backtofront::operator()(const sortedmeshslot &a, const sortedmeshslot &b)
+RAS_BucketManager::SortedMeshSlot::SortedMeshSlot(RAS_MeshSlotNode *node, const MT_Vector3& pnorm)
+{
+	RAS_MeshSlot *ms = node->GetInfo();
+	// would be good to use the actual bounding box center instead
+	float *matrix = ms->m_meshUser->GetMatrix();
+	const MT_Vector3 pos(matrix[12], matrix[13], matrix[14]);
+
+	m_z = MT_dot(pnorm, pos);
+	m_node = node;
+}
+
+bool RAS_BucketManager::backtofront::operator()(const SortedMeshSlot &a, const SortedMeshSlot &b)
 {
 	return (a.m_z < b.m_z) || (a.m_z == b.m_z && a.m_ms < b.m_ms);
 }
 
-bool RAS_BucketManager::fronttoback::operator()(const sortedmeshslot &a, const sortedmeshslot &b)
+bool RAS_BucketManager::fronttoback::operator()(const SortedMeshSlot &a, const SortedMeshSlot &b)
 {
 	return (a.m_z > b.m_z) || (a.m_z == b.m_z && a.m_ms > b.m_ms);
 }
 
 RAS_BucketManager::RAS_BucketManager()
+	:m_node(this, &RAS_BucketManager::RenderBasicBucketsNode)
 {
-	m_node = new RAS_ManagerNode(this, &RAS_BucketManager::RenderBasicBucketsNode);
-
 	ClearNumActiveMeshSlotsCache();
 }
 
@@ -81,8 +90,6 @@ RAS_BucketManager::~RAS_BucketManager()
 		delete *it;
 	}
 	buckets.clear();
-
-	delete m_node;
 }
 
 unsigned int RAS_BucketManager::GetNumActiveMeshSlots(BucketType bucketType)
@@ -112,8 +119,9 @@ void RAS_BucketManager::ClearNumActiveMeshSlotsCache()
 }
 
 void RAS_BucketManager::OrderBuckets(const MT_Transform& cameratrans, RAS_BucketManager::BucketType bucketType,
-                                     std::vector<sortedmeshslot>& slots, bool alpha, RAS_IRasterizer *rasty)
+                                     std::vector<SortedMeshSlot>& slots, bool alpha, RAS_IRasterizer *rasty)
 {
+#if 0
 	const unsigned int size = GetNumActiveMeshSlots(bucketType);
 	// Discard if there's no mesh slots.
 	if (size == 0) {
@@ -154,13 +162,14 @@ void RAS_BucketManager::OrderBuckets(const MT_Transform& cameratrans, RAS_Bucket
 		sort(slots.begin(), slots.end(), backtofront());
 	else
 		sort(slots.begin(), slots.end(), fronttoback());
+#endif
 }
 
 void RAS_BucketManager::RenderSortedBuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, RAS_BucketManager::BucketType bucketType)
 {
 #if 0
-	std::vector<sortedmeshslot> slots;
-	std::vector<sortedmeshslot>::iterator sit;
+	std::vector<SortedMeshSlot> slots;
+	std::vector<SortedMeshSlot>::iterator sit;
 
 	OrderBuckets(cameratrans, bucketType, slots, true, rasty);
 	// Discard if there's no mesh slots.
@@ -213,14 +222,37 @@ void RAS_BucketManager::RenderSortedBuckets(const MT_Transform& cameratrans, RAS
 #endif
 
 	BucketList& solidBuckets = m_buckets[bucketType];
-	for (BucketList::iterator bit = solidBuckets.begin(); bit != solidBuckets.end(); ++bit) {
-		RAS_MaterialBucket *bucket = *bit;
-		bucket->GenerateTree(m_node, true);
+	for (RAS_MaterialBucket *bucket : solidBuckets) {
+		bucket->GenerateTree(&m_node, true);
 	}
 
-	m_node->Execute(cameratrans, rasty, true);
-	std::cout << "Sorted render" << std::endl;
-	m_node->Print(0);
+	/* Camera's near plane equation: pnorm.dot(point) + pval,
+	 * but we leave out pval since it's constant anyway */
+	const MT_Vector3 pnorm(cameratrans.getBasis()[2]);
+	std::vector<SortedMeshSlot> sortedSlots;
+	m_node.ForEach<RAS_MeshSlotNode>([&sortedSlots, &pnorm](RAS_MeshSlotNode *node) { sortedSlots.push_back(SortedMeshSlot(node, pnorm)); });
+
+	std::sort(sortedSlots.begin(), sortedSlots.end(), backtofront());
+
+	for (unsigned int i = 0, size = sortedSlots.size(); i < size; ++i) {
+		sortedSlots[i].m_node->SetOrder(i, i);
+	}
+
+// 	m_node.Print(0, true);
+
+	std::forward_list<RAS_BaseNode *> collector;
+	m_node.Split(collector);
+
+	m_node.Execute(cameratrans, rasty, true);
+// 	m_node.Print(0, true);
+	m_node.Clear();
+
+	unsigned short i = 0;
+	for (RAS_BaseNode *node : collector) {
+		delete node;
+		++i;
+	}
+	collector.clear();
 }
 
 void RAS_BucketManager::RenderBasicBucketsNode(RAS_ManagerNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort)
@@ -236,12 +268,13 @@ void RAS_BucketManager::RenderBasicBuckets(const MT_Transform& cameratrans, RAS_
 	BucketList& solidBuckets = m_buckets[bucketType];
 	for (BucketList::iterator bit = solidBuckets.begin(); bit != solidBuckets.end(); ++bit) {
 		RAS_MaterialBucket *bucket = *bit;
-		bucket->GenerateTree(m_node, false);
+		bucket->GenerateTree(&m_node, false);
 	}
 
-	m_node->Execute(cameratrans, rasty, false);
-	std::cout << "Basic render" << std::endl;
-	m_node->Print(0);
+	m_node.Execute(cameratrans, rasty, false);
+// 	std::cout << "Basic render" << std::endl;
+// 	m_node.Print(0, true);
+	m_node.Clear();
 }
 
 void RAS_BucketManager::Renderbuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty)
