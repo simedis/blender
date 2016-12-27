@@ -78,6 +78,9 @@ base class --- :class:`CValue`
       A float < 1.0f will make the distance to camera used to compute
       levels of detail decrease.
 
+      :warning: To use objects LoD while we render cubemaps, the option "CubeMap LoD"
+      has to be checked in Scene tab.
+
       :type: float
 
    .. method:: update()

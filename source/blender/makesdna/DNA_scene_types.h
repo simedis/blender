@@ -924,6 +924,7 @@ enum {
 
 /* GameData.lodflag */
 #define SCE_LOD_USE_HYST		(1 << 0)
+#define SCE_LOD_CUBEMAP_USE     (1 << 1)
 
 /* GameData.hdr */
 #define GAME_HDR_NONE		0

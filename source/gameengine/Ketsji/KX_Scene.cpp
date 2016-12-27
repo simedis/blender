@@ -155,7 +155,8 @@ KX_Scene::KX_Scene(SCA_IInputDevice *inputDevice,
 	m_ueberExecutionPriority(0),
 	m_blenderScene(scene),
 	m_isActivedHysteresis(false),
-	m_lodHysteresisValue(0)
+	m_lodHysteresisValue(0),
+	m_lodCubeMapUse(false)
 {
 	m_suspendedtime = 0.0;
 	m_suspendeddelta = 0.0;
@@ -1746,6 +1747,16 @@ void KX_Scene::SetLodHysteresisValue(int hysteresisvalue)
 int KX_Scene::GetLodHysteresisValue(void)
 {
 	return m_lodHysteresisValue;
+}
+
+void KX_Scene::SetLodForCubeMaps(bool active)
+{
+	m_lodCubeMapUse = active;
+}
+
+bool KX_Scene::GetLodForCubeMaps()
+{
+	return m_lodCubeMapUse;
 }
 
 void KX_Scene::UpdateObjectActivity(void) 

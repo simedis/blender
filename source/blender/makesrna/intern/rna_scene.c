@@ -4809,6 +4809,11 @@ static void rna_def_scene_game_data(BlenderRNA *brna)
 	RNA_def_property_ui_text(prop, "Hysteresis %",
 	                         "Minimum distance change required to transition to the previous level of detail");
 	RNA_def_property_update(prop, NC_SCENE, NULL);
+
+	prop = RNA_def_property(srna, "use_cubemap_lod", PROP_BOOLEAN, PROP_NONE);
+	RNA_def_property_boolean_sdna(prop, NULL, "lodflag", SCE_LOD_CUBEMAP_USE);
+	RNA_def_property_ui_text(prop, "Cubemaps LoD", "Use objects LoD while rendering cubemaps");
+	RNA_def_property_update(prop, NC_SCENE, NULL);
 }
 
 static void rna_def_gpu_dof_fx(BlenderRNA *brna)

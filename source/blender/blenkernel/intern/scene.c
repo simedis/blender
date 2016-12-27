@@ -728,7 +728,7 @@ void BKE_scene_init(Scene *sce)
 	sce->gm.recastData.detailsampledist = 6.0f;
 	sce->gm.recastData.detailsamplemaxerror = 1.0f;
 
-	sce->gm.lodflag = SCE_LOD_USE_HYST;
+	sce->gm.lodflag |= SCE_LOD_USE_HYST;
 	sce->gm.scehysteresis = 10;
 
 	sce->gm.exitkey = 218; // Blender key code for ESC

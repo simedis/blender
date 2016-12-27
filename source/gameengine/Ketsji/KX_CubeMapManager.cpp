@@ -141,7 +141,9 @@ void KX_CubeMapManager::RenderCubeMap(RAS_IRasterizer *rasty, KX_CubeMap *cubeMa
 		/* Updating the lod per face is normally not expensive because a cube map normally show every objects
 		 * but here we update only visible object of a face including the clip end and start.
 		 */
-		m_scene->UpdateObjectLods(m_camera);
+		if (m_scene->GetLodForCubeMaps()) {
+			m_scene->UpdateObjectLods(m_camera);
+		}
 
 		/* Update animations to use the culling of each faces, BL_ActionManager avoid redundants
 		 * updates internally. */

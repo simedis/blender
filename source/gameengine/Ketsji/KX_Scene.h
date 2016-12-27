@@ -303,6 +303,10 @@ protected:
 	 */
 	bool m_isActivedHysteresis;
 	int m_lodHysteresisValue;
+	/**
+	 * Use Objects LOD while rendering cubemaps
+	 */
+	bool m_lodCubeMapUse;
 
 public:
 	KX_Scene(SCA_IInputDevice *inputDevice,
@@ -508,6 +512,9 @@ public:
 	bool IsActivedLodHysteresis();
 	void SetLodHysteresisValue(int hysteresisvalue);
 	int GetLodHysteresisValue();
+	// Objects LoD while rendering cubemaps
+	void SetLodForCubeMaps(bool active);
+	bool GetLodForCubeMaps();
 	
 	// Update the activity box settings for objects in this scene, if needed.
 	void UpdateObjectActivity(void);

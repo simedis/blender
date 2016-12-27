@@ -533,6 +533,8 @@ class SCENE_PT_game_hysteresis(SceneButtonsPanel, Panel):
         row = layout.row()
         row.active = gs.use_scene_hysteresis
         row.prop(gs, "scene_hysteresis_percentage", text="")
+        row = layout.row()
+        row.prop(gs, "use_cubemap_lod", text="CubeMap LoD")
 
 
 class RENDER_PT_game_console(SceneButtonsPanel, Panel):

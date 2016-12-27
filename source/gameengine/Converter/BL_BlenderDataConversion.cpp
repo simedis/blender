@@ -1493,6 +1493,8 @@ void BL_ConvertBlenderObjects(struct Main* maggie,
 		kxscene->SetLodHysteresisValue(blenderscene->gm.scehysteresis);
 	}
 
+	kxscene->SetLodForCubeMaps(blenderscene->gm.lodflag & SCE_LOD_CUBEMAP_USE);
+
 	// convert world
 	KX_WorldInfo* worldinfo = new KX_WorldInfo(blenderscene, blenderscene->world);
 	worldinfo->UpdateWorldSettings(rendertools);
