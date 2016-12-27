@@ -116,6 +116,11 @@ void RAS_DisplayArrayBucket::ProcessReplica()
 	if (m_displayArray) {
 		m_displayArray = m_displayArray->GetReplica();
 	}
+
+	m_node = RAS_DisplayArrayNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsNode);
+	m_sortNode = RAS_DisplayArrayNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsSortNode);
+	m_instancingNode = RAS_DisplayArrayNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsInstancingNode);
+
 	m_bucket->AddDisplayArrayBucket(this);
 }
 
