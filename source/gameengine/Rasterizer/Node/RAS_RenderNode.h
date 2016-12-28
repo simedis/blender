@@ -10,9 +10,20 @@ class RAS_MeshSlot;
 class RAS_IRasterizer;
 class MT_Transform;
 
-typedef RAS_Node<RAS_NullNode *, RAS_MeshSlot *, const MT_Transform&, RAS_IRasterizer *> RAS_MeshSlotNode;
-typedef RAS_Node<RAS_MeshSlotNode *, RAS_DisplayArrayBucket *, const MT_Transform&, RAS_IRasterizer *, bool> RAS_DisplayArrayNode;
-typedef RAS_Node<RAS_DisplayArrayNode *, RAS_MaterialBucket *, const MT_Transform&, RAS_IRasterizer *, bool> RAS_MaterialNode;
-typedef RAS_Node<RAS_MaterialNode *, RAS_BucketManager *, const MT_Transform&, RAS_IRasterizer *, bool> RAS_ManagerNode;
+typedef RAS_Node<RAS_NullNode *, RAS_MeshSlot *, true,
+	const MT_Transform&, RAS_IRasterizer *>
+	RAS_MeshSlotNode;
+
+typedef RAS_Node<RAS_MeshSlotNode *, RAS_DisplayArrayBucket *, false,
+	const MT_Transform&, RAS_IRasterizer *, bool>
+	RAS_DisplayArrayNode;
+
+typedef RAS_Node<RAS_DisplayArrayNode *, RAS_MaterialBucket *, false,
+	const MT_Transform&, RAS_IRasterizer *, bool>
+	RAS_MaterialNode;
+
+typedef RAS_Node<RAS_MaterialNode *, RAS_BucketManager *, false,
+	const MT_Transform&, RAS_IRasterizer *, bool>
+	RAS_ManagerNode;
 
 #endif  // __RAS_RENDER_NODE__

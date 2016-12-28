@@ -60,9 +60,9 @@ RAS_DisplayArrayBucket::RAS_DisplayArrayBucket(RAS_MaterialBucket *bucket, RAS_I
 	m_useVao(false),
 	m_storageInfo(NULL),
 	m_instancingBuffer(NULL),
-	m_node(this, &RAS_DisplayArrayBucket::RenderMeshSlotsNode),
+	m_node(this, &RAS_DisplayArrayBucket::RenderMeshSlotsNode, true),
 	m_sortNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsSortNode),
-	m_instancingNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsInstancingNode)
+	m_instancingNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsInstancingNode, true)
 {
 	m_bucket->AddDisplayArrayBucket(this);
 }
@@ -117,9 +117,9 @@ void RAS_DisplayArrayBucket::ProcessReplica()
 		m_displayArray = m_displayArray->GetReplica();
 	}
 
-	m_node = RAS_DisplayArrayNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsNode);
+	m_node = RAS_DisplayArrayNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsNode, true);
 	m_sortNode = RAS_DisplayArrayNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsSortNode);
-	m_instancingNode = RAS_DisplayArrayNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsInstancingNode);
+	m_instancingNode = RAS_DisplayArrayNode(this, &RAS_DisplayArrayBucket::RenderMeshSlotsInstancingNode, true);
 
 	m_bucket->AddDisplayArrayBucket(this);
 }
@@ -277,7 +277,7 @@ void RAS_DisplayArrayBucket::SetAttribLayers(RAS_IRasterizer *rasty) const
 
 void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialNode *rootnode, bool sort)
 {
-	if (m_activeMeshSlots.empty()) {
+	if (m_activeMeshSlots.size() == 0) {
 		return;
 	}
 
@@ -285,8 +285,8 @@ void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialNode *rootnode, bool sort)
 		rootnode->AddSubNode(&m_instancingNode);
 	}
 	else if (sort) {
-		for (RAS_MeshSlotList::iterator it = m_activeMeshSlots.begin(), end = m_activeMeshSlots.end(); it != end; ++it) {
-			(*it)->GenerateTree(&m_sortNode);
+		for (RAS_MeshSlot *slot : m_activeMeshSlots) {
+			slot->GenerateTree(&m_sortNode);
 		}
 
 		rootnode->AddSubNode(&m_sortNode);

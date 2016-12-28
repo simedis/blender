@@ -220,39 +220,39 @@ void RAS_BucketManager::RenderSortedBuckets(const MT_Transform& cameratrans, RAS
 		lastMaterialBucket->DesactivateMaterial(rasty);
 	}
 #endif
-
+#if 1
 	BucketList& solidBuckets = m_buckets[bucketType];
 	for (RAS_MaterialBucket *bucket : solidBuckets) {
 		bucket->GenerateTree(&m_node, true);
 	}
 
-	/* Camera's near plane equation: pnorm.dot(point) + pval,
-	 * but we leave out pval since it's constant anyway */
-	const MT_Vector3 pnorm(cameratrans.getBasis()[2]);
-	std::vector<SortedMeshSlot> sortedSlots;
-	m_node.ForEach<RAS_MeshSlotNode>([&sortedSlots, &pnorm](RAS_MeshSlotNode *node) { sortedSlots.push_back(SortedMeshSlot(node, pnorm)); });
+	if (m_node.GetValid()) {
+		/* Camera's near plane equation: pnorm.dot(point) + pval,
+		 * but we leave out pval since it's constant anyway */
+		const MT_Vector3 pnorm(cameratrans.getBasis()[2]);
+		std::vector<SortedMeshSlot> sortedSlots;
+		m_node.ForEach<RAS_MeshSlotNode>([&sortedSlots, &pnorm](RAS_MeshSlotNode *node) { sortedSlots.push_back(SortedMeshSlot(node, pnorm)); });
 
-	std::sort(sortedSlots.begin(), sortedSlots.end(), backtofront());
+		std::sort(sortedSlots.begin(), sortedSlots.end(), backtofront());
 
-	for (unsigned int i = 0, size = sortedSlots.size(); i < size; ++i) {
-		sortedSlots[i].m_node->SetOrder(i, i);
+		for (unsigned int i = 0, size = sortedSlots.size(); i < size; ++i) {
+			sortedSlots[i].m_node->SetOrder(i, i);
+		}
+
+// 		m_node.Print(0, true);
+
+		std::vector<RAS_BaseNode *> collector;
+		m_node.Split(collector);
+
+		m_node.Execute(cameratrans, rasty, true);
+// 		m_node.Print(0, true);
+
+		for (RAS_BaseNode *node : collector) {
+			delete node;
+		}
+		collector.clear();
 	}
-
-// 	m_node.Print(0, true);
-
-	std::forward_list<RAS_BaseNode *> collector;
-	m_node.Split(collector);
-
-	m_node.Execute(cameratrans, rasty, true);
-// 	m_node.Print(0, true);
-	m_node.Clear();
-
-	unsigned short i = 0;
-	for (RAS_BaseNode *node : collector) {
-		delete node;
-		++i;
-	}
-	collector.clear();
+#endif
 }
 
 void RAS_BucketManager::RenderBasicBucketsNode(RAS_ManagerNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort)
@@ -266,15 +266,15 @@ void RAS_BucketManager::RenderBasicBuckets(const MT_Transform& cameratrans, RAS_
 {
 	RAS_ManagerNode node(this, &RAS_BucketManager::RenderBasicBucketsNode);
 	BucketList& solidBuckets = m_buckets[bucketType];
-	for (BucketList::iterator bit = solidBuckets.begin(); bit != solidBuckets.end(); ++bit) {
-		RAS_MaterialBucket *bucket = *bit;
+	for (RAS_MaterialBucket *bucket : solidBuckets) {
 		bucket->GenerateTree(&m_node, false);
 	}
 
-	m_node.Execute(cameratrans, rasty, false);
-// 	std::cout << "Basic render" << std::endl;
-// 	m_node.Print(0, true);
-	m_node.Clear();
+	if (m_node.GetValid()) {
+		m_node.Execute(cameratrans, rasty, false);
+// 		std::cout << "Basic render" << std::endl;
+// 		m_node.Print(0, true);
+	}
 }
 
 void RAS_BucketManager::Renderbuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty)

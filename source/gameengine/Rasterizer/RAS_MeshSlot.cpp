@@ -47,7 +47,7 @@
 // mesh slot
 RAS_MeshSlot::RAS_MeshSlot()
 	:m_displayArray(NULL),
-	m_node(this, &RAS_MeshSlot::RenderNode),
+	m_node(this, &RAS_MeshSlot::RenderNode, true),
 	m_bucket(NULL),
 	m_displayArrayBucket(NULL),
 	m_mesh(NULL),
@@ -79,7 +79,7 @@ RAS_MeshSlot::RAS_MeshSlot(const RAS_MeshSlot& slot)
 	m_bucket = slot.m_bucket;
 	m_displayArrayBucket = slot.m_displayArrayBucket;
 	m_displayArray = slot.m_displayArray;
-	m_node = RAS_MeshSlotNode(this, &RAS_MeshSlot::RenderNode);
+	m_node = RAS_MeshSlotNode(this, &RAS_MeshSlot::RenderNode, true);
 
 	if (m_displayArrayBucket) {
 		m_displayArrayBucket->AddRef();

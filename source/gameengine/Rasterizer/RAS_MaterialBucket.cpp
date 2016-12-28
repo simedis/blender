@@ -228,14 +228,12 @@ void RAS_MaterialBucket::RenderMeshSlotsNode(RAS_MaterialNode::SubNodeTypeList s
 
 void RAS_MaterialBucket::GenerateTree(RAS_ManagerNode *rootnode, bool sort)
 {
-	if (m_displayArrayBucketList.empty()) {
+	if (m_displayArrayBucketList.size() == 0) {
 		return;
 	}
 
-	for (RAS_DisplayArrayBucketList::iterator it = m_displayArrayBucketList.begin(), end = m_displayArrayBucketList.end();
-		 it != end; ++it)
-	{
-		(*it)->GenerateTree(&m_node, sort);
+	for (RAS_DisplayArrayBucket *displayArrayBucket : m_displayArrayBucketList) {
+		displayArrayBucket->GenerateTree(&m_node, sort);
 	}
 
 	rootnode->AddSubNode(&m_node);

@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <iostream>
 #include <vector>
-#include <forward_list>
 #include <iterator>
 #include <thread>
 #include <typeinfo>
@@ -47,22 +46,18 @@ public:
 	{
 	}
 
-	void Clear()
-	{
-	}
-
 	template<class NodeType, class FunctionType>
-	void ForEach(FunctionType function)
+	void ForEach(const FunctionType& function)
 	{
 	}
 
 	template<class NodeType>
-	void Split(NodeType parent, std::forward_list<RAS_BaseNode *>& collector)
+	void Split(NodeType parent, std::vector<RAS_BaseNode *>& collector)
 	{
 	}
 };
 
-template <class SubNodeType, class InfoType, class ... Args>
+template <class SubNodeType, class InfoType, bool IsFinal, class ... Args>
 class RAS_Node : public RAS_BaseNode
 {
 public:
@@ -70,8 +65,8 @@ public:
 	typedef typename SubNodeTypeList::iterator SubNodeTypeListIterator;
 	typedef std::function<void(InfoType, SubNodeTypeList, Args ...)> Function;
 
-protected:
-	typedef RAS_Node<SubNodeType, InfoType, Args ...> SelfType;
+public:
+	typedef RAS_Node<SubNodeType, InfoType, IsFinal, Args ...> SelfType;
 
 	InfoType m_info;
 	Function m_function;
@@ -100,6 +95,7 @@ public:
 		m_function = other.m_function;
 		m_orderBegin = -1;
 		m_orderEnd = -1;
+		m_final = other.m_final;
 		m_subNodes.clear();
 	}
 
@@ -130,7 +126,9 @@ public:
 
 	inline void AddSubNode(const SubNodeType& subNode)
 	{
-		m_subNodes.push_back(subNode);
+		if (subNode->GetValid()) {
+			m_subNodes.push_back(subNode);
+		}
 	}
 
 	inline void AddSubNodes(const SubNodeTypeList& subNodes)
@@ -138,36 +136,45 @@ public:
 		m_subNodes.insert(m_subNodes.begin(), subNodes.begin(), subNodes.end());
 	}
 
+	template<bool _IsFinal = IsFinal>
+	typename std::enable_if<_IsFinal, bool>::type GetValid() const
+	{
+		return true;
+	}
+
+	template<bool _IsFinal = IsFinal>
+	typename std::enable_if<!_IsFinal, bool>::type GetValid() const
+	{
+		return m_final || !GetEmpty();
+	}
+
 	inline bool GetEmpty() const
 	{
-		return m_subNodes.empty();
+		return m_subNodes.size() == 0;
 	}
 
-	inline const void Execute(Args ... args) const
+	inline const void Execute(Args ... args)
 	{
 		m_function(m_info, m_subNodes, args...);
+		m_subNodes.clear();
 	}
 
-	template<class NodeType, class FunctionType, typename std::enable_if<std::is_same<NodeType, SelfType>::value, int>::type = 0>
-	inline void ForEach(FunctionType function)
+	template<class NodeType, class FunctionType>
+	inline typename std::enable_if<std::is_same<NodeType, SelfType>::value, void>::type ForEach(const FunctionType& function)
 	{
 		function(this);
 	}
 
-	template<class NodeType, class FunctionType, typename std::enable_if<!std::is_same<NodeType, SelfType>::value, int>::type = 0>
-	inline void ForEach(FunctionType function)
+	template<class NodeType, class FunctionType>
+	inline typename std::enable_if<!std::is_same<NodeType, SelfType>::value, void>::type ForEach(const FunctionType& function)
 	{
 		for (SubNodeType& node : m_subNodes) {
 			node->ForEach<NodeType>(function);
 		}
 	}
 
-	void Split(std::forward_list<RAS_BaseNode *>& collector)
+	void Split(std::vector<RAS_BaseNode *>& collector)
 	{
-		if (m_subNodes.empty()) {
-			return;
-		}
-
 		const SubNodeTypeList auxSubNodes = m_subNodes;
 		for (SubNodeType node : auxSubNodes) {
 			node->Split(this, collector);
@@ -179,18 +186,16 @@ public:
 
 		std::sort(m_subNodes.begin(), m_subNodes.end(),
 				  [](const SubNodeType node1, const SubNodeType node2) { return node1->GetOrderBegin() < node2->GetOrderEnd(); });
-
-		m_orderBegin = m_subNodes.front()->GetOrderBegin();
-		m_orderEnd = m_subNodes.back()->GetOrderEnd();
 	}
 
-	template <class NodeType>
-	void Split(NodeType parent, std::forward_list<RAS_BaseNode *>& collector)
+	template<class NodeType, bool _IsFinal = IsFinal>
+	typename std::enable_if<_IsFinal, void>::type Split(NodeType parent, std::vector<RAS_BaseNode *>& collector)
 	{
-		if (m_subNodes.empty()) {
-			return;
-		}
+	}
 
+	template<class NodeType, bool _IsFinal = IsFinal>
+	typename std::enable_if<!_IsFinal, void>::type Split(NodeType parent, std::vector<RAS_BaseNode *>& collector)
+	{
 		const SubNodeTypeList auxSubNodes = m_subNodes;
 		for (SubNodeType node : auxSubNodes) {
 			node->Split(this, collector);
@@ -219,7 +224,7 @@ public:
 				replica->m_orderBegin = replica->m_subNodes.front()->GetOrderBegin();
 				replica->m_orderEnd = replica->m_subNodes.back()->GetOrderEnd();
 				nodes.push_back(replica);
-				collector.push_front(replica);
+				collector.push_back(replica);
 				begin = jt;
 			}
 		}
@@ -230,11 +235,13 @@ public:
 		m_orderEnd = m_subNodes.back()->GetOrderEnd();
 	}
 
-	void Reduce()
+	template<bool _IsFinal = IsFinal>
+	typename std::enable_if<_IsFinal, void>::type Clear()
 	{
 	}
 
-	inline void Clear()
+	template<bool _IsFinal = IsFinal>
+	typename std::enable_if<!_IsFinal, void>::type Clear()
 	{
 		for (SubNodeType& node : m_subNodes) {
 			node->Clear();
