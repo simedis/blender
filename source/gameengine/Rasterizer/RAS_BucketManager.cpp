@@ -242,10 +242,12 @@ void RAS_BucketManager::RenderSortedBuckets(const MT_Transform& cameratrans, RAS
 // 		m_node.Print(0, true);
 
 		std::vector<RAS_BaseNode *> collector;
-		m_node.Split(collector);
+// 		m_node.Split(collector);
 
-		m_node.Execute(cameratrans, rasty, true);
+// 		m_node.Execute(cameratrans, rasty, true);
 // 		m_node.Print(0, true);
+
+		m_node.Clear();
 
 		for (RAS_BaseNode *node : collector) {
 			delete node;
@@ -255,10 +257,10 @@ void RAS_BucketManager::RenderSortedBuckets(const MT_Transform& cameratrans, RAS
 #endif
 }
 
-void RAS_BucketManager::RenderBasicBucketsNode(RAS_ManagerNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort)
+void RAS_BucketManager::RenderBasicBucketsNode(RAS_ManagerNode::SubNodeTypeList& subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort)
 {
-	for (RAS_ManagerNode::SubNodeTypeList::const_iterator it = subNodes.begin(), end = subNodes.end(); it != end; ++it) {
-		(*it)->Execute(cameratrans, rasty, sort);
+	for (RAS_ManagerNode::SubNodeType node : subNodes) {
+		node->Execute(cameratrans, rasty, sort);
 	}
 }
 

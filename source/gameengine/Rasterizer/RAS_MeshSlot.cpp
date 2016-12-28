@@ -163,7 +163,7 @@ void RAS_MeshSlot::SetMeshUser(RAS_MeshUser *user)
 	m_meshUser = user;
 }
 
-void RAS_MeshSlot::RenderNode(RAS_MeshSlotNode::SubNodeTypeList UNUSED(subNodes), const MT_Transform& cameratrans, RAS_IRasterizer *rasty)
+void RAS_MeshSlot::RenderNode(RAS_MeshSlotNode::SubNodeTypeList& UNUSED(subNodes), const MT_Transform& cameratrans, RAS_IRasterizer *rasty)
 {
 	m_bucket->RenderMeshSlot(cameratrans, rasty, this);
 }

@@ -57,7 +57,7 @@ RAS_DisplayArrayBucket::RAS_DisplayArrayBucket(RAS_MaterialBucket *bucket, RAS_I
 	m_mesh(mesh),
 	m_meshMaterial(meshmat),
 	m_useDisplayList(false),
-	m_useVao(false),
+	m_useVao(/*false*/true),
 	m_storageInfo(NULL),
 	m_instancingBuffer(NULL),
 	m_node(this, &RAS_DisplayArrayBucket::RenderMeshSlotsNode, true),
@@ -275,13 +275,16 @@ void RAS_DisplayArrayBucket::SetAttribLayers(RAS_IRasterizer *rasty) const
 	rasty->SetAttribLayers(m_attribLayers);
 }
 
-void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialNode *rootnode, bool sort)
+void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialNode *rootnode, bool sort, bool instancing)
 {
 	if (m_activeMeshSlots.size() == 0) {
 		return;
 	}
 
-	if (m_bucket->UseInstancing()) {
+// 	// Update deformer and render settings.
+// 	UpdateActiveMeshSlots(rasty);
+
+	if (instancing) {
 		rootnode->AddSubNode(&m_instancingNode);
 	}
 	else if (sort) {
@@ -296,12 +299,9 @@ void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialNode *rootnode, bool sort)
 	}
 }
 
-void RAS_DisplayArrayBucket::RenderMeshSlotsNode(RAS_DisplayArrayNode::SubNodeTypeList UNUSED(subNodes), const MT_Transform& cameratrans,
+void RAS_DisplayArrayBucket::RenderMeshSlotsNode(RAS_DisplayArrayNode::SubNodeTypeList& UNUSED(subNodes), const MT_Transform& cameratrans,
 												 RAS_IRasterizer *rasty, bool UNUSED(sort))
 {
-	// Update deformer and render settings.
-	UpdateActiveMeshSlots(rasty);
-
 	rasty->BindPrimitives(this);
 
 	for (RAS_MeshSlotList::iterator it = m_activeMeshSlots.begin(), end = m_activeMeshSlots.end(); it != end; ++it) {
@@ -312,22 +312,19 @@ void RAS_DisplayArrayBucket::RenderMeshSlotsNode(RAS_DisplayArrayNode::SubNodeTy
 	rasty->UnbindPrimitives(this);
 }
 
-void RAS_DisplayArrayBucket::RenderMeshSlotsSortNode(RAS_DisplayArrayNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans,
+void RAS_DisplayArrayBucket::RenderMeshSlotsSortNode(RAS_DisplayArrayNode::SubNodeTypeList& subNodes, const MT_Transform& cameratrans,
 													  RAS_IRasterizer *rasty, bool UNUSED(sort))
 {
-	// Update deformer and render settings.
-	UpdateActiveMeshSlots(rasty);
-
 	rasty->BindPrimitives(this);
 
-	for (RAS_DisplayArrayNode::SubNodeTypeList::const_iterator it = subNodes.begin(), end = subNodes.end(); it != end; ++it) {
-		(*it)->Execute(cameratrans, rasty);
+	for (RAS_DisplayArrayNode::SubNodeType node : subNodes) {
+		node->Execute(cameratrans, rasty);
 	}
 
 	rasty->UnbindPrimitives(this);
 }
 
-void RAS_DisplayArrayBucket::RenderMeshSlotsInstancingNode(RAS_DisplayArrayNode::SubNodeTypeList UNUSED(subNodes), const MT_Transform& cameratrans,
+void RAS_DisplayArrayBucket::RenderMeshSlotsInstancingNode(RAS_DisplayArrayNode::SubNodeTypeList& UNUSED(subNodes), const MT_Transform& cameratrans,
 														   RAS_IRasterizer *rasty, bool sort)
 {
 	const unsigned int nummeshslots = m_activeMeshSlots.size(); 

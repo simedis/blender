@@ -146,13 +146,13 @@ public:
 
 	void SetAttribLayers(RAS_IRasterizer *rasty) const;
 
-	void GenerateTree(RAS_MaterialNode *rootnode, bool sort);
+	void GenerateTree(RAS_MaterialNode *rootnode, bool sort, bool instancing);
 
 	/// Render all mesh slots for solid render.
-	void RenderMeshSlotsNode(RAS_DisplayArrayNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);
-	void RenderMeshSlotsSortNode(RAS_DisplayArrayNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);
+	void RenderMeshSlotsNode(RAS_DisplayArrayNode::SubNodeTypeList& subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);
+	void RenderMeshSlotsSortNode(RAS_DisplayArrayNode::SubNodeTypeList& subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);
 	/// Render all mesh slots with geometry instancing render.
-	void RenderMeshSlotsInstancingNode(RAS_DisplayArrayNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);
+	void RenderMeshSlotsInstancingNode(RAS_DisplayArrayNode::SubNodeTypeList& subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);
 
 	/// Replace the material bucket of this display array bucket by the one given.
 	void ChangeMaterialBucket(RAS_MaterialBucket *bucket);

@@ -122,7 +122,7 @@ private:
 	void OrderBuckets(const MT_Transform& cameratrans, RAS_BucketManager::BucketType bucketType,
 	                  std::vector<SortedMeshSlot>& slots, bool alpha, RAS_IRasterizer *rasty);
 
-	void RenderBasicBucketsNode(RAS_ManagerNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);
+	void RenderBasicBucketsNode(RAS_ManagerNode::SubNodeTypeList& subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);
 	void RenderBasicBuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, BucketType bucketType);
 	void RenderSortedBuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, BucketType bucketType);
 

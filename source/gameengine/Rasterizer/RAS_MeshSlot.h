@@ -72,7 +72,7 @@ public:
 	void SetDeformer(RAS_Deformer *deformer);
 	void SetMeshUser(RAS_MeshUser *user);
 
-	void RenderNode(RAS_MeshSlotNode::SubNodeTypeList UNUSED(subNodes), const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
+	void RenderNode(RAS_MeshSlotNode::SubNodeTypeList& UNUSED(subNodes), const MT_Transform& cameratrans, RAS_IRasterizer *rasty);
 	void GenerateTree(RAS_DisplayArrayNode *rootnode);
 
 #ifdef WITH_CXX_GUARDEDALLOC

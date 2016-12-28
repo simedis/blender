@@ -57,16 +57,23 @@ public:
 	}
 };
 
-template <class SubNodeType, class InfoType, bool IsFinal, class ... Args>
+enum class RAS_NodeFlag {
+	ALWAYS_FINAL,
+	MAYBE_FINAL,
+	NEVER_FINAL
+};
+
+template <class _SubNodeType, class InfoType, RAS_NodeFlag Flag, class ... Args>
 class RAS_Node : public RAS_BaseNode
 {
 public:
+	typedef _SubNodeType SubNodeType;
 	typedef std::vector<SubNodeType> SubNodeTypeList;
 	typedef typename SubNodeTypeList::iterator SubNodeTypeListIterator;
-	typedef std::function<void(InfoType, SubNodeTypeList, Args ...)> Function;
+	typedef std::function<void(InfoType, SubNodeTypeList&, Args ...)> Function;
 
 public:
-	typedef RAS_Node<SubNodeType, InfoType, IsFinal, Args ...> SelfType;
+	typedef RAS_Node<SubNodeType, InfoType, Flag, Args ...> SelfType;
 
 	InfoType m_info;
 	Function m_function;
@@ -76,7 +83,7 @@ public:
 	bool m_final;
 
 public:
-	RAS_Node(InfoType info, Function function, bool isfinal = false)
+	RAS_Node(InfoType info, Function function, int isfinal = false)
 		:m_info(info),
 		m_function(function),
 		m_orderBegin(-1),
@@ -136,14 +143,20 @@ public:
 		m_subNodes.insert(m_subNodes.begin(), subNodes.begin(), subNodes.end());
 	}
 
-	template<bool _IsFinal = IsFinal>
-	typename std::enable_if<_IsFinal, bool>::type GetValid() const
+	template<RAS_NodeFlag _Flag = Flag>
+	typename std::enable_if<_Flag == RAS_NodeFlag::ALWAYS_FINAL, bool>::type GetValid() const
 	{
 		return true;
 	}
 
-	template<bool _IsFinal = IsFinal>
-	typename std::enable_if<!_IsFinal, bool>::type GetValid() const
+	template<RAS_NodeFlag _Flag = Flag>
+	typename std::enable_if<_Flag == RAS_NodeFlag::NEVER_FINAL, bool>::type GetValid() const
+	{
+		return !GetEmpty();
+	}
+
+	template<RAS_NodeFlag _Flag = Flag>
+	typename std::enable_if<_Flag == RAS_NodeFlag::MAYBE_FINAL, bool>::type GetValid() const
 	{
 		return m_final || !GetEmpty();
 	}
@@ -188,13 +201,13 @@ public:
 				  [](const SubNodeType node1, const SubNodeType node2) { return node1->GetOrderBegin() < node2->GetOrderEnd(); });
 	}
 
-	template<class NodeType, bool _IsFinal = IsFinal>
-	typename std::enable_if<_IsFinal, void>::type Split(NodeType parent, std::vector<RAS_BaseNode *>& collector)
+	template<class NodeType, RAS_NodeFlag _Flag = Flag>
+	typename std::enable_if<_Flag == RAS_NodeFlag::ALWAYS_FINAL, void>::type Split(NodeType parent, std::vector<RAS_BaseNode *>& collector)
 	{
 	}
 
-	template<class NodeType, bool _IsFinal = IsFinal>
-	typename std::enable_if<!_IsFinal, void>::type Split(NodeType parent, std::vector<RAS_BaseNode *>& collector)
+	template<class NodeType, RAS_NodeFlag _Flag = Flag>
+	typename std::enable_if<_Flag != RAS_NodeFlag::ALWAYS_FINAL, void>::type Split(NodeType parent, std::vector<RAS_BaseNode *>& collector)
 	{
 		const SubNodeTypeList auxSubNodes = m_subNodes;
 		for (SubNodeType node : auxSubNodes) {
@@ -235,13 +248,13 @@ public:
 		m_orderEnd = m_subNodes.back()->GetOrderEnd();
 	}
 
-	template<bool _IsFinal = IsFinal>
-	typename std::enable_if<_IsFinal, void>::type Clear()
+	template<RAS_NodeFlag _Flag = Flag>
+	typename std::enable_if<_Flag == RAS_NodeFlag::ALWAYS_FINAL, void>::type Clear()
 	{
 	}
 
-	template<bool _IsFinal = IsFinal>
-	typename std::enable_if<!_IsFinal, void>::type Clear()
+	template<RAS_NodeFlag _Flag = Flag>
+	typename std::enable_if<_Flag != RAS_NodeFlag::ALWAYS_FINAL, void>::type Clear()
 	{
 		for (SubNodeType& node : m_subNodes) {
 			node->Clear();

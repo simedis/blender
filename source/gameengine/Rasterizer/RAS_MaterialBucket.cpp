@@ -215,12 +215,12 @@ void RAS_MaterialBucket::RenderMeshSlot(const MT_Transform& cameratrans, RAS_IRa
 	rasty->PopMatrix();
 }
 
-void RAS_MaterialBucket::RenderMeshSlotsNode(RAS_MaterialNode::SubNodeTypeList subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort)
+void RAS_MaterialBucket::RenderMeshSlotsNode(RAS_MaterialNode::SubNodeTypeList& subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort)
 {
 	ActivateMaterial(rasty);
 
-	for (RAS_MaterialNode::SubNodeTypeList::const_iterator it = subNodes.begin(), end = subNodes.end(); it != end; ++it) {
-		(*it)->Execute(cameratrans, rasty, sort);
+	for (RAS_MaterialNode::SubNodeType node : subNodes) {
+		node->Execute(cameratrans, rasty, sort);
 	}
 
 	DesactivateMaterial(rasty);
@@ -232,8 +232,9 @@ void RAS_MaterialBucket::GenerateTree(RAS_ManagerNode *rootnode, bool sort)
 		return;
 	}
 
+	const bool instancing = UseInstancing();
 	for (RAS_DisplayArrayBucket *displayArrayBucket : m_displayArrayBucketList) {
-		displayArrayBucket->GenerateTree(&m_node, sort);
+		displayArrayBucket->GenerateTree(&m_node, sort, instancing);
 	}
 
 	rootnode->AddSubNode(&m_node);
