@@ -63,10 +63,11 @@ enum class RAS_NodeFlag {
 	NEVER_FINAL
 };
 
-template <class _SubNodeType, class InfoType, RAS_NodeFlag Flag, class ... Args>
+template <class _ParentNodeType, class _SubNodeType, class InfoType, RAS_NodeFlag Flag, class ... Args>
 class RAS_Node : public RAS_BaseNode
 {
 public:
+	typedef _ParentNodeType ParentNodeType;
 	typedef _SubNodeType SubNodeType;
 	typedef std::vector<SubNodeType> SubNodeTypeList;
 	typedef typename SubNodeTypeList::iterator SubNodeTypeListIterator;
@@ -77,6 +78,7 @@ public:
 
 	InfoType m_info;
 	Function m_function;
+	ParentNodeType m_parentNode;
 	SubNodeTypeList m_subNodes;
 	int m_orderBegin;
 	int m_orderEnd;
@@ -131,10 +133,16 @@ public:
 		m_orderEnd = end;
 	}
 
+	void SetParentNode(ParentNodeType parentNode)
+	{
+		m_parentNode = parentNode;
+	}
+
 	inline void AddSubNode(const SubNodeType& subNode)
 	{
 		if (subNode->GetValid()) {
 			m_subNodes.push_back(subNode);
+			subNode->SetParentNode(this);
 		}
 	}
 
