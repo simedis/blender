@@ -146,7 +146,7 @@ public:
 
 	void SetAttribLayers(RAS_IRasterizer *rasty) const;
 
-	void GenerateTree(RAS_MaterialNode *rootnode, bool sort, bool instancing);
+	void GenerateTree(RAS_MaterialNode *rootNode, RAS_MaterialNode *sortRootNode, bool sort, bool instancing);
 
 	/// Render all mesh slots for solid render.
 	void RenderMeshSlotsNode(RAS_DisplayArrayNode::SubNodeTypeList& subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);

@@ -170,5 +170,5 @@ void RAS_MeshSlot::RenderNode(RAS_MeshSlotNode::SubNodeTypeList& UNUSED(subNodes
 
 void RAS_MeshSlot::GenerateTree(RAS_DisplayArrayNode *rootnode)
 {
-	rootnode->AddSubNode(&m_node);
+	m_node.SetParentNode(rootnode);
 }

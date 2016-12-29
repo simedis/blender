@@ -10,20 +10,33 @@ class RAS_MeshSlot;
 class RAS_IRasterizer;
 class MT_Transform;
 
-typedef RAS_Node<RAS_NullNode *, RAS_MaterialNode *, RAS_BucketManager *, RAS_NodeFlag::NEVER_FINAL,
-	const MT_Transform&, RAS_IRasterizer *, bool>
-	RAS_ManagerNode;
+class RAS_MaterialNode;
+class RAS_ManagerNode;
+class RAS_DisplayArrayNode;
+class RAS_MeshSlotNode;
 
-typedef RAS_Node<RAS_ManagerNode *, RAS_DisplayArrayNode *, RAS_MaterialBucket *, RAS_NodeFlag::NEVER_FINAL,
+class RAS_ManagerNode : public RAS_Node<RAS_NullNode *, RAS_MaterialNode *, RAS_BucketManager *, RAS_NodeFlag::NEVER_FINAL,
 	const MT_Transform&, RAS_IRasterizer *, bool>
-	RAS_MaterialNode;
+{
+	using RAS_Node::RAS_Node;
+};
 
-typedef RAS_Node<RAS_MaterialNode *, RAS_MeshSlotNode *, RAS_DisplayArrayBucket *, RAS_NodeFlag::MAYBE_FINAL,
+class RAS_MaterialNode : public RAS_Node<RAS_ManagerNode *, RAS_DisplayArrayNode *, RAS_MaterialBucket *, RAS_NodeFlag::NEVER_FINAL,
 	const MT_Transform&, RAS_IRasterizer *, bool>
-	RAS_DisplayArrayNode;
+{
+	using RAS_Node::RAS_Node;
+};
 
-typedef RAS_Node<RAS_DisplayArrayNode *, RAS_NullNode *, RAS_MeshSlot *, RAS_NodeFlag::ALWAYS_FINAL,
+class RAS_DisplayArrayNode : public RAS_Node<RAS_MaterialNode *, RAS_MeshSlotNode *, RAS_DisplayArrayBucket *, RAS_NodeFlag::MAYBE_FINAL,
+	const MT_Transform&, RAS_IRasterizer *, bool>
+{
+	using RAS_Node::RAS_Node;
+};
+
+class RAS_MeshSlotNode : public RAS_Node<RAS_DisplayArrayNode *, RAS_NullNode *, RAS_MeshSlot *, RAS_NodeFlag::ALWAYS_FINAL,
 	const MT_Transform&, RAS_IRasterizer *>
-	RAS_MeshSlotNode;
+{
+	using RAS_Node::RAS_Node;
+};
 
 #endif  // __RAS_RENDER_NODE__

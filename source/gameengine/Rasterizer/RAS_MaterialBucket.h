@@ -61,7 +61,7 @@ public:
 	void RenderMeshSlot(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, RAS_MeshSlot *ms);
 	/// Render all mesh slots for solid render.
 	void RenderMeshSlotsNode(RAS_MaterialNode::SubNodeTypeList& subNodes, const MT_Transform& cameratrans, RAS_IRasterizer *rasty, bool sort);
-	void GenerateTree(RAS_ManagerNode *rootnode, bool sort);
+	void GenerateTree(RAS_ManagerNode *rootNode, RAS_ManagerNode *sortRootNode, bool sort);
 
 	// Mesh Slot Access
 	RAS_MeshSlotList::iterator msBegin();
@@ -93,6 +93,7 @@ private:
 	RAS_DisplayArrayBucketList m_displayArrayBucketList;
 
 	RAS_MaterialNode m_node;
+	RAS_MaterialNode m_sortNode;
 
 #ifdef WITH_CXX_GUARDEDALLOC
 	MEM_CXX_CLASS_ALLOC_FUNCS("GE:RAS_MaterialBucket")

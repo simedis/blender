@@ -275,7 +275,7 @@ void RAS_DisplayArrayBucket::SetAttribLayers(RAS_IRasterizer *rasty) const
 	rasty->SetAttribLayers(m_attribLayers);
 }
 
-void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialNode *rootnode, bool sort, bool instancing)
+void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialNode *rootNode, RAS_MaterialNode *sortRootNode, bool sort, bool instancing)
 {
 	if (m_activeMeshSlots.size() == 0) {
 		return;
@@ -285,17 +285,17 @@ void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialNode *rootnode, bool sort,
 // 	UpdateActiveMeshSlots(rasty);
 
 	if (instancing) {
-		rootnode->AddSubNode(&m_instancingNode);
+		rootNode->AddSubNode(&m_instancingNode);
 	}
 	else if (sort) {
 		for (RAS_MeshSlot *slot : m_activeMeshSlots) {
 			slot->GenerateTree(&m_sortNode);
 		}
 
-		rootnode->AddSubNode(&m_sortNode);
+		m_sortNode.SetParentNode(sortRootNode);
 	}
 	else {
-		rootnode->AddSubNode(&m_node);
+		rootNode->AddSubNode(&m_node);
 	}
 }
 

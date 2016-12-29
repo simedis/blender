@@ -74,7 +74,7 @@ public:
 	typedef std::function<void(InfoType, SubNodeTypeList&, Args ...)> Function;
 
 public:
-	typedef RAS_Node<SubNodeType, InfoType, Flag, Args ...> SelfType;
+	typedef RAS_Node<ParentNodeType, SubNodeType, InfoType, Flag, Args ...> SelfType;
 
 	InfoType m_info;
 	Function m_function;
@@ -133,6 +133,11 @@ public:
 		m_orderEnd = end;
 	}
 
+	ParentNodeType GetParentNode() const
+	{
+		return m_parentNode;
+	}
+
 	void SetParentNode(ParentNodeType parentNode)
 	{
 		m_parentNode = parentNode;
@@ -142,7 +147,6 @@ public:
 	{
 		if (subNode->GetValid()) {
 			m_subNodes.push_back(subNode);
-			subNode->SetParentNode(this);
 		}
 	}
 
@@ -181,13 +185,13 @@ public:
 	}
 
 	template<class NodeType, class FunctionType>
-	inline typename std::enable_if<std::is_same<NodeType, SelfType>::value, void>::type ForEach(const FunctionType& function)
+	inline typename std::enable_if<std::is_base_of<SelfType, NodeType>::value, void>::type ForEach(const FunctionType& function)
 	{
-		function(this);
+		function((NodeType *)this);
 	}
 
 	template<class NodeType, class FunctionType>
-	inline typename std::enable_if<!std::is_same<NodeType, SelfType>::value, void>::type ForEach(const FunctionType& function)
+	inline typename std::enable_if<!std::is_base_of<SelfType, NodeType>::value, void>::type ForEach(const FunctionType& function)
 	{
 		for (SubNodeType& node : m_subNodes) {
 			node->ForEach<NodeType>(function);

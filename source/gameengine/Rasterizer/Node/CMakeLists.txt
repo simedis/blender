@@ -30,6 +30,7 @@ set(SRC
 	RAS_BaseNode.cpp
 
 	RAS_BaseNode.h
+	RAS_UpwardNode.h
 	RAS_RenderNode.h
 	RAS_NodeCleaner.h
 	RAS_NodeOrderer.h

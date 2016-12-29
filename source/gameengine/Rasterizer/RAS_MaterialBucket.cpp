@@ -48,7 +48,8 @@
 
 RAS_MaterialBucket::RAS_MaterialBucket(RAS_IPolyMaterial *mat)
 	:m_material(mat),
-	m_node(this, &RAS_MaterialBucket::RenderMeshSlotsNode)
+	m_node(this, &RAS_MaterialBucket::RenderMeshSlotsNode),
+	m_sortNode(this, &RAS_MaterialBucket::RenderMeshSlotsNode)
 {
 }
 
@@ -226,7 +227,7 @@ void RAS_MaterialBucket::RenderMeshSlotsNode(RAS_MaterialNode::SubNodeTypeList& 
 	DesactivateMaterial(rasty);
 }
 
-void RAS_MaterialBucket::GenerateTree(RAS_ManagerNode *rootnode, bool sort)
+void RAS_MaterialBucket::GenerateTree(RAS_ManagerNode *rootNode, RAS_ManagerNode *sortRootNode, bool sort)
 {
 	if (m_displayArrayBucketList.size() == 0) {
 		return;
@@ -234,10 +235,14 @@ void RAS_MaterialBucket::GenerateTree(RAS_ManagerNode *rootnode, bool sort)
 
 	const bool instancing = UseInstancing();
 	for (RAS_DisplayArrayBucket *displayArrayBucket : m_displayArrayBucketList) {
-		displayArrayBucket->GenerateTree(&m_node, sort, instancing);
+		displayArrayBucket->GenerateTree(&m_node, &m_sortNode, sort, instancing);
 	}
 
-	rootnode->AddSubNode(&m_node);
+	rootNode->AddSubNode(&m_node);
+
+	if (sort) {
+		m_sortNode.SetParentNode(sortRootNode);
+	}
 }
 
 void RAS_MaterialBucket::SetDisplayArrayUnmodified()

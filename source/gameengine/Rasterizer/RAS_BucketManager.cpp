@@ -78,7 +78,8 @@ bool RAS_BucketManager::fronttoback::operator()(const SortedMeshSlot &a, const S
 }
 
 RAS_BucketManager::RAS_BucketManager()
-	:m_node(this, &RAS_BucketManager::RenderBasicBucketsNode)
+	:m_node(this, &RAS_BucketManager::RenderBasicBucketsNode),
+	m_sortNode(this, &RAS_BucketManager::RenderBasicBucketsNode)
 {
 	ClearNumActiveMeshSlotsCache();
 }
@@ -223,7 +224,7 @@ void RAS_BucketManager::RenderSortedBuckets(const MT_Transform& cameratrans, RAS
 #if 1
 	BucketList& solidBuckets = m_buckets[bucketType];
 	for (RAS_MaterialBucket *bucket : solidBuckets) {
-		bucket->GenerateTree(&m_node, true);
+		bucket->GenerateTree(&m_node, &m_sortNode, true);
 	}
 
 	if (m_node.GetValid()) {
@@ -241,18 +242,39 @@ void RAS_BucketManager::RenderSortedBuckets(const MT_Transform& cameratrans, RAS
 
 // 		m_node.Print(0, true);
 
-		std::vector<RAS_BaseNode *> collector;
+// 		std::vector<RAS_BaseNode *> collector;
 // 		m_node.Split(collector);
 
 // 		m_node.Execute(cameratrans, rasty, true);
 // 		m_node.Print(0, true);
 
-		m_node.Clear();
+// 		m_node.Clear();
 
-		for (RAS_BaseNode *node : collector) {
-			delete node;
+// 		for (RAS_BaseNode *node : collector) {
+// 			delete node;
+// 		}
+// 		collector.clear();
+
+		RAS_ManagerNode node = m_sortNode;
+		RAS_MaterialNode *prematnode = NULL;
+		RAS_DisplayArrayNode *predabnode = NULL;
+
+		for (const SortedMeshSlot& slot : sortedSlots) {
+			RAS_MeshSlotNode *msnode = slot->m_node;
+			RAS_DisplayArrayNode *dabnode = msnode->GetParentNode();
+			if (dabnode != predabnode) {
+				
+			}
+
+			RAS_MaterialNode *matnode = dabnode->GetParentNode();
+
+			if (matnode == prematnode) {
+				prematnode->AddSubNode(dabnode);
+				continue;
+			}
 		}
-		collector.clear();
+
+		m_node.Clear();
 	}
 #endif
 }
@@ -269,7 +291,7 @@ void RAS_BucketManager::RenderBasicBuckets(const MT_Transform& cameratrans, RAS_
 	RAS_ManagerNode node(this, &RAS_BucketManager::RenderBasicBucketsNode);
 	BucketList& solidBuckets = m_buckets[bucketType];
 	for (RAS_MaterialBucket *bucket : solidBuckets) {
-		bucket->GenerateTree(&m_node, false);
+		bucket->GenerateTree(&m_node, NULL, false);
 	}
 
 	if (m_node.GetValid()) {

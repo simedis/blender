@@ -92,6 +92,7 @@ protected:
 	int m_cachedNumActiveMeshSlots[NUM_BUCKET_TYPE];
 
 	RAS_ManagerNode m_node;
+	RAS_ManagerNode m_sortNode;
 
 public:
 	RAS_BucketManager();
