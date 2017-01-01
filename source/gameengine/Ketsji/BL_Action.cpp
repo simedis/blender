@@ -452,6 +452,8 @@ void BL_Action::Update(float curtime, bool applyToObject)
 			obj->BlendInPose(m_blendpose, m_layer_weight, m_blendmode);
 
 		obj->UpdateTimestep(curtime);
+		// Make sure the armature pose is updated for the possible next action blending with the last armature pose.
+		obj->ApplyPose();
 	}
 	else
 	{
