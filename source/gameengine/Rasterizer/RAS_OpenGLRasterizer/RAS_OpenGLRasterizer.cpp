@@ -2413,6 +2413,7 @@ static void DrawPerspectiveCameraFrustum(KX_Camera *cam, float ratiox, float rat
 
 	/* draw edges */
 	glEnable(GL_LINE_STIPPLE);
+	glColor4f(0.8f, 0.5f, 0.0f, 1.0f);
 	DrawDebugCameraBox(box, false);
 	glDisable(GL_LINE_STIPPLE);
 
@@ -2464,6 +2465,7 @@ static void DrawOrthographicCameraFrustum(KX_Camera *cam, float ratiox, float ra
 
 	/* draw edges */
 	glEnable(GL_LINE_STIPPLE);
+	glColor4f(0.8f, 0.5f, 0.0f, 1.0f);
 	DrawDebugCameraBox(box, false);
 	glDisable(GL_LINE_STIPPLE);
 
