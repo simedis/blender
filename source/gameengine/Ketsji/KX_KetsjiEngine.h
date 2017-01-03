@@ -208,6 +208,8 @@ private:
 	bool m_showBoundingBox;
 	/// Enable debug draw armatures.
 	bool m_showArmature;
+	/// Enable cameras frustum debugging.
+	bool m_showCamerasFrustum;
 
 	/// Override framing bars color?
 	bool m_overrideFrameColor;
@@ -528,6 +530,11 @@ public:
 
 	/// Returns the current setting for armatures debug.
 	void SetShowArmatures(bool show);
+
+	/// Show camera frustum
+	void SetShowCamerasFrustum(bool show);
+	bool GetShowCamerasFrustum();
+	void DrawActiveCameraFrustum(KX_Camera *cam, KX_Scene *scene);
 
 	/// Allow debug armatures.
 	bool GetShowArmatures() const;
