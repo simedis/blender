@@ -189,6 +189,48 @@ int RAS_OpenGLLight::GetShadowBindCode()
 	return -1;
 }
 
+void RAS_OpenGLLight::GetShadowBox(MT_Vector3 *box, MT_Matrix4x4 shadowmat)
+{
+	GPULamp *lamp = GetGPULamp();
+
+	if (lamp) {
+		KX_LightObject *light = (KX_LightObject *)m_light;
+
+		if (light->GetLightData()->m_type == RAS_ILightObject::LIGHT_SUN) {
+			float f = GPU_lamp_frustum_size(lamp) * 0.5f;
+			box[0] = MT_Vector3(-f, -f, -5.0);
+			box[1] = MT_Vector3(-f, -f, 5.0);
+			box[2] = MT_Vector3(-f, f, -5.0);
+			box[3] = MT_Vector3(-f, f, 5.0);
+			box[4] = MT_Vector3(f, -f, -5.0);
+			box[5] = MT_Vector3(f, -f, 5.0);
+			box[6] = MT_Vector3(f, f, -5.0);
+			box[7] = MT_Vector3(f, f, 5.0);
+
+		}
+		else if (light->GetLightData()->m_type == RAS_ILightObject::LIGHT_SPOT) {
+			float x, y, z, z_abs;
+			x = -GPU_lamp_distance(lamp);
+			y = cosf(GPU_lamp_spotsize(lamp) * 0.5f);
+			z = x * sqrtf(1.0f - y * y);
+			x *= y;
+			z_abs = fabsf(z);
+
+			box[0][0] = box[1][0] = box[2][0] = box[3][0] = -z_abs;
+			box[4][0] = box[5][0] = box[6][0] = box[7][0] = +z_abs;
+			box[0][1] = box[1][1] = box[4][1] = box[5][1] = -z_abs;
+			box[2][1] = box[3][1] = box[6][1] = box[7][1] = +z_abs;
+			box[0][2] = box[3][2] = box[4][2] = box[7][2] = -FLT_MAX;
+			box[1][2] = box[2][2] = box[5][2] = box[6][2] = 0.0f;
+		}
+
+		/*for (unsigned short i = 0; i < 8; ++i) {
+			MT_Vector4 v = MT_Vector4(box[i][0], box[i][1], box[i][2], 0.0f) * shadowmat;
+			box[i] = v.to3d();
+		}*/
+	}
+}
+
 MT_Matrix4x4 RAS_OpenGLLight::GetShadowMatrix()
 {
 	GPULamp *lamp;

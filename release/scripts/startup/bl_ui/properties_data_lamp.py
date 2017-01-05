@@ -91,6 +91,7 @@ class DATA_PT_lamp(DataButtonsPanel, Panel):
         sub = col.column()
         sub.prop(lamp, "color", text="")
         sub.prop(lamp, "energy")
+        sub.prop(lamp, "show_lamp_frustum", text="BGE Shadow Frustum")
 
         if lamp.type in {'POINT', 'SPOT'}:
             sub.label(text="Falloff:")

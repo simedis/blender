@@ -39,6 +39,7 @@ class KX_Scene;
 
 class MT_Transform;
 class MT_Matrix4x4;
+class MT_Vector3;
 
 struct Image;
 
@@ -65,6 +66,7 @@ public:
 	float	m_shadowbleedbias;
 	short	m_shadowmaptype;
 	float	m_shadowcolor[3];
+	bool	m_showShadowFrustum;
 
 	float	m_color[3];
 
@@ -89,6 +91,7 @@ public:
 	virtual bool NeedShadowUpdate() = 0;
 	virtual int GetShadowBindCode() = 0;
 	virtual MT_Matrix4x4 GetShadowMatrix() = 0;
+	virtual void GetShadowBox(MT_Vector3 *box, MT_Matrix4x4 shadowmat) = 0;
 	virtual int GetShadowLayer() = 0;
 	virtual void BindShadowBuffer(RAS_ICanvas *canvas, KX_Camera *cam, MT_Transform& camtrans) = 0;
 	virtual void UnbindShadowBuffer() = 0;

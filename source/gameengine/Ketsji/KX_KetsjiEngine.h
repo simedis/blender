@@ -220,6 +220,8 @@ private:
 	/// Alpha component of framing bar color.
 	float m_overrideFrameColorA;
 
+	std::vector<MT_Vector3 *> m_lightsFrustum;
+
 	/// Settings that doesn't go away with Game Actuator
 	GlobalSettings m_globalsettings;
 
@@ -290,7 +292,7 @@ public:
 	/// returns true if an update happened to indicate -> Render
 	bool NextFrame();
 	void Render();
-	void RenderShadowBuffers(KX_Scene *scene);
+	void RenderShadowBuffers(KX_Scene *scene, std::vector<KX_Camera *> cameras);
 
 	void StartEngine(bool clearIpo);
 	void StopEngine();

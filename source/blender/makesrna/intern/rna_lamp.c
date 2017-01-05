@@ -382,6 +382,11 @@ static void rna_def_lamp(BlenderRNA *brna)
 	RNA_def_property_ui_text(prop, "Layer", "Illuminate objects only on the same layers the lamp is on");
 	RNA_def_property_update(prop, 0, "rna_Lamp_update");
 
+	prop = RNA_def_property(srna, "show_lamp_frustum", PROP_BOOLEAN, PROP_NONE);
+	RNA_def_property_boolean_sdna(prop, NULL, "mode", LA_SHOW_BGE_FRUSTUM);
+	RNA_def_property_ui_text(prop, "BGE Frustum", "Shadows frustum in BGE");
+	RNA_def_property_update(prop, 0, "rna_Lamp_update");
+
 	prop = RNA_def_property(srna, "use_negative", PROP_BOOLEAN, PROP_NONE);
 	RNA_def_property_boolean_sdna(prop, NULL, "mode", LA_NEG);
 	RNA_def_property_ui_text(prop, "Negative", "Cast negative light");
