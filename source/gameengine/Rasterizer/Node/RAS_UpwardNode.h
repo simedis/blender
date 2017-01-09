@@ -3,13 +3,20 @@
 
 #include "RAS_BaseNode.h"
 
+/** RAS_UpwardNode is a node storing its parent node.
+ *
+ * A upward node is using for sorted render were two non-consecutive nodes could share
+ * the same parent node. In this case the render can be proceed from top to bottom, but
+ * from the bottom (leafs) to the bottom. This process is external in RAS_UpwardNodeVisitor.
+ *
+ * \param _ParentType The parent node type.
+ */
 template <class _ParentType, class InfoType, RAS_NodeFlag Flag, class Args>
 class RAS_UpwardNode : public RAS_BaseNode<InfoType, Flag, Args>
 {
 public:
 	using typename RAS_BaseNode<InfoType, Flag, Args>::Function;
 	typedef _ParentType ParentType;
-	typedef RAS_UpwardNode<ParentType, InfoType, Flag, Args> SelfType;
 
 private:
 	ParentType *m_parent;

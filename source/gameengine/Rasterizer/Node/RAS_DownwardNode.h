@@ -5,6 +5,15 @@
 
 #include <vector>
 
+/** RAS_DownwardNode is a node which store its children nodes.
+ *
+ * A downward node is using for unsorted render when the bind and unbind call can be proceed
+ * by iterating from the top of the tree to the bottom.
+ * Each downward node in render process call its bind function then render all its children
+ * nodes and finally call its unbind function.
+ *
+ * \param _ChildType The children node type.
+ */
 template <class _ChildType, class InfoType, RAS_NodeFlag Flag, class Args>
 class RAS_DownwardNode : public RAS_BaseNode<InfoType, Flag, Args>
 {
@@ -12,7 +21,6 @@ public:
 	using typename RAS_BaseNode<InfoType, Flag, Args>::Function;
 	typedef _ChildType ChildType;
 	typedef std::vector<ChildType *> ChildTypeList;
-	typedef RAS_DownwardNode<ChildType, InfoType, Flag, Args> SelfType;
 
 private:
 	ChildTypeList m_children;
@@ -31,6 +39,9 @@ public:
 	{
 	}
 
+	/** Returning true when a node is valid. A node is valid if it is always final or
+	 * if it has at least one children.
+	 */
 	bool GetValid() const
 	{
 		if (Flag == RAS_NodeFlag::NEVER_FINAL) {
@@ -39,6 +50,7 @@ public:
 		return true;
 	}
 
+	/// Add a child node if it is valid.
 	void AddChild(ChildType *child)
 	{
 		if (child->GetValid()) {
@@ -53,9 +65,12 @@ public:
 		}
 	}
 
+	/** Recursive function calling the bind function, call itsefl in children nodes
+	 * and calling unbind function.
+	 * \param Args The function arguments to use for binding and unbinding.
+	 */
 	void Execute(const Args& args)
 	{
-		// TODO ajouter une reference vers une struture passée en argument de toutes les fonctions
 		this->Bind(args);
 
 		for (ChildType *child : m_children) {
@@ -64,6 +79,7 @@ public:
 
 		this->Unbind(args);
 
+		// In the same time we can remove the children nodes.
 		Clear();
 	}
 
