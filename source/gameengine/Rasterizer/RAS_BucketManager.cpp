@@ -81,7 +81,6 @@ RAS_BucketManager::RAS_BucketManager()
 	:m_downwardNode(this, NULL, NULL),
 	m_upwardNode(this, NULL, NULL)
 {
-	ClearNumActiveMeshSlotsCache();
 }
 
 RAS_BucketManager::~RAS_BucketManager()
@@ -91,32 +90,6 @@ RAS_BucketManager::~RAS_BucketManager()
 		delete *it;
 	}
 	buckets.clear();
-}
-
-unsigned int RAS_BucketManager::GetNumActiveMeshSlots(BucketType bucketType)
-{
-	int count = m_cachedNumActiveMeshSlots[bucketType];
-	if (count != -1) {
-		return count;
-	}
-
-	count = 0;
-	BucketList& buckets = m_buckets[bucketType];
-	for (BucketList::iterator it = buckets.begin(), end = buckets.end(); it != end; ++it) {
-		count += (*it)->GetNumActiveMeshSlots();
-	}
-
-	// Update cache value.
-	m_cachedNumActiveMeshSlots[bucketType] = count;
-
-	return count;
-}
-
-void RAS_BucketManager::ClearNumActiveMeshSlotsCache()
-{
-	for (unsigned short i = 0; i < NUM_BUCKET_TYPE; ++i) {
-		m_cachedNumActiveMeshSlots[i] = -1;
-	}
 }
 
 void RAS_BucketManager::RenderSortedBuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, RAS_BucketManager::BucketType bucketType)
@@ -165,8 +138,6 @@ void RAS_BucketManager::RenderBasicBuckets(const MT_Transform& cameratrans, RAS_
 
 void RAS_BucketManager::Renderbuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty)
 {
-	ClearNumActiveMeshSlotsCache();
-
 	switch (rasty->GetDrawingMode()) {
 		case RAS_IRasterizer::RAS_SHADOW:
 		{
@@ -178,7 +149,7 @@ void RAS_BucketManager::Renderbuckets(const MT_Transform& cameratrans, RAS_IRast
 			 * variance shadow or an empty shader.
 			 */
 
-			if (GetNumActiveMeshSlots(SOLID_SHADOW_BUCKET) != 0) {
+			if (m_buckets[SOLID_SHADOW_BUCKET].size() > 0) {
 				rasty->SetOverrideShader(isVarianceShadow ?
 				                         RAS_IRasterizer::RAS_OVERRIDE_SHADER_SHADOW_VARIANCE :
 				                         RAS_IRasterizer::RAS_OVERRIDE_SHADER_BASIC);
@@ -189,7 +160,7 @@ void RAS_BucketManager::Renderbuckets(const MT_Transform& cameratrans, RAS_IRast
 			 * shader for variance and simple shadow.
 			 */
 
-			if (GetNumActiveMeshSlots(SOLID_SHADOW_INSTANCING_BUCKET) != 0) {
+			if (m_buckets[SOLID_SHADOW_INSTANCING_BUCKET].size() > 0) {
 				rasty->SetOverrideShader(isVarianceShadow ?
 				                         RAS_IRasterizer::RAS_OVERRIDE_SHADER_SHADOW_VARIANCE_INSTANCING :
 				                         RAS_IRasterizer::RAS_OVERRIDE_SHADER_BASIC_INSTANCING);
@@ -201,7 +172,7 @@ void RAS_BucketManager::Renderbuckets(const MT_Transform& cameratrans, RAS_IRast
 				 * shader for variance shadow.
 				 */
 
-				if (GetNumActiveMeshSlots(ALPHA_SHADOW_INSTANCING_BUCKET) != 0) {
+				if (m_buckets[ALPHA_SHADOW_INSTANCING_BUCKET].size() > 0) {
 					rasty->SetOverrideShader(RAS_IRasterizer::RAS_OVERRIDE_SHADER_SHADOW_VARIANCE_INSTANCING);
 				}
 				RenderBasicBuckets(cameratrans, rasty, ALPHA_SHADOW_INSTANCING_BUCKET);
@@ -210,7 +181,7 @@ void RAS_BucketManager::Renderbuckets(const MT_Transform& cameratrans, RAS_IRast
 				 * shader for variance shadow and ordering.
 				 */
 
-				if (GetNumActiveMeshSlots(ALPHA_SHADOW_BUCKET) != 0) {
+				if (m_buckets[ALPHA_SHADOW_BUCKET].size() > 0) {
 					rasty->SetOverrideShader(RAS_IRasterizer::RAS_OVERRIDE_SHADER_SHADOW_VARIANCE);
 				}
 				RenderBasicBuckets(cameratrans, rasty, ALPHA_SHADOW_BUCKET);
@@ -236,7 +207,7 @@ void RAS_BucketManager::Renderbuckets(const MT_Transform& cameratrans, RAS_IRast
 
 			// Rendering solid regular materials with an empty override shader.
 
-			if (GetNumActiveMeshSlots(SOLID_BUCKET) != 0) {
+			if (m_buckets[SOLID_BUCKET].size() > 0) {
 				rasty->SetOverrideShader(RAS_IRasterizer::RAS_OVERRIDE_SHADER_BASIC);
 			}
 			RenderBasicBuckets(cameratrans, rasty, SOLID_BUCKET);
@@ -245,9 +216,9 @@ void RAS_BucketManager::Renderbuckets(const MT_Transform& cameratrans, RAS_IRast
 			 * with an override shader.
 			 */
 
-			if ((GetNumActiveMeshSlots(SOLID_INSTANCING_BUCKET) +
-				GetNumActiveMeshSlots(ALPHA_INSTANCING_BUCKET) +
-				GetNumActiveMeshSlots(ALPHA_DEPTH_INSTANCING_BUCKET)) != 0) {
+			if ((m_buckets[SOLID_INSTANCING_BUCKET].size() +
+				m_buckets[ALPHA_INSTANCING_BUCKET].size() +
+				m_buckets[ALPHA_DEPTH_INSTANCING_BUCKET].size()) != 0) {
 				rasty->SetOverrideShader(RAS_IRasterizer::RAS_OVERRIDE_SHADER_BASIC_INSTANCING);
 			}
 			RenderBasicBuckets(cameratrans, rasty, SOLID_INSTANCING_BUCKET);
@@ -262,7 +233,7 @@ void RAS_BucketManager::Renderbuckets(const MT_Transform& cameratrans, RAS_IRast
 			 * an empty shader and ordering.
 			 */
 
-			if ((GetNumActiveMeshSlots(ALPHA_BUCKET) + GetNumActiveMeshSlots(ALPHA_DEPTH_BUCKET)) != 0) {
+			if ((m_buckets[ALPHA_BUCKET].size() + m_buckets[ALPHA_DEPTH_BUCKET].size()) != 0) {
 				rasty->SetOverrideShader(RAS_IRasterizer::RAS_OVERRIDE_SHADER_BASIC);
 			}
 			RenderSortedBuckets(cameratrans, rasty, ALPHA_BUCKET);
@@ -292,7 +263,7 @@ void RAS_BucketManager::Renderbuckets(const MT_Transform& cameratrans, RAS_IRast
 			RenderSortedBuckets(cameratrans, rasty, ALPHA_BUCKET);
 
 			// Render soft particles after all other materials.
-			if ((GetNumActiveMeshSlots(ALPHA_DEPTH_BUCKET) + GetNumActiveMeshSlots(ALPHA_DEPTH_INSTANCING_BUCKET)) > 0) {
+			if ((m_buckets[ALPHA_DEPTH_BUCKET].size() + m_buckets[ALPHA_DEPTH_INSTANCING_BUCKET].size()) > 0) {
 				rasty->UpdateGlobalDepthTexture();
 
 				RenderBasicBuckets(cameratrans, rasty, ALPHA_DEPTH_INSTANCING_BUCKET);

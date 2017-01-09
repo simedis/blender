@@ -34,7 +34,6 @@
 
 #include "RAS_TexVert.h"
 #include "RAS_RenderNode.h"
-#include "RAS_UpwardNodeLeafs.h"
 
 #include <vector>
 
