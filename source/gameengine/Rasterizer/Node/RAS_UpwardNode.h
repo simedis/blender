@@ -36,12 +36,12 @@ public:
 	{
 	}
 
-	ParentType *GetParent() const
+	inline ParentType *GetParent() const
 	{
 		return m_parent;
 	}
 
-	void SetParent(ParentType *parent)
+	inline void SetParent(ParentType *parent)
 	{
 		m_parent = parent;
 	}

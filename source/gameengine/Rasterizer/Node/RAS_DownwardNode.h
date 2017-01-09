@@ -42,7 +42,7 @@ public:
 	/** Returning true when a node is valid. A node is valid if it is always final or
 	 * if it has at least one children.
 	 */
-	bool GetValid() const
+	inline bool GetValid() const
 	{
 		if (Flag == RAS_NodeFlag::NEVER_FINAL) {
 			return m_children.size() > 0;
@@ -51,14 +51,14 @@ public:
 	}
 
 	/// Add a child node if it is valid.
-	void AddChild(ChildType *child)
+	inline void AddChild(ChildType *child)
 	{
 		if (child->GetValid()) {
 			m_children.push_back(child);
 		}
 	}
 
-	void Clear()
+	inline void Clear()
 	{
 		if (Flag == RAS_NodeFlag::NEVER_FINAL) {
 			m_children.clear();

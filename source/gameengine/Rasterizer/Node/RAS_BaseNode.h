@@ -52,19 +52,19 @@ public:
 	{
 	}
 
-	InfoType *GetInfo() const
+	inline InfoType *GetInfo() const
 	{
 		return m_info;
 	}
 
-	void Bind(const Args& args)
+	inline void Bind(const Args& args)
 	{
 		if (m_bind) {
 			m_bind(m_info, args);
 		}
 	}
 
-	void Unbind(const Args& args)
+	inline void Unbind(const Args& args)
 	{
 		if (m_unbind) {
 			m_unbind(m_info, args);
