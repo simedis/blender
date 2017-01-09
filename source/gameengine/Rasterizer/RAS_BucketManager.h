@@ -86,10 +86,6 @@ protected:
 	};
 
 	BucketList m_buckets[NUM_BUCKET_TYPE];
-	/** Cached values computed by GetNumActiveMeshSlots.
-	 * -1 mean that the cache value is invalid.
-	 */
-	int m_cachedNumActiveMeshSlots[NUM_BUCKET_TYPE];
 
 	RAS_ManagerDownwardNode m_downwardNode;
 	RAS_ManagerUpwardNode m_upwardNode;
@@ -116,10 +112,6 @@ public:
 	}
 
 private:
-	unsigned int GetNumActiveMeshSlots(BucketType bucketType);
-	/// Clear the active mesh count cache.
-	void ClearNumActiveMeshSlotsCache();
-
 	void RenderBasicBuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, BucketType bucketType);
 	void RenderSortedBuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, BucketType bucketType);
 
