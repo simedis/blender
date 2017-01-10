@@ -344,10 +344,9 @@ void RAS_DisplayArrayBucket::RunInstancingNode(const RAS_RenderNodeArguments& ar
 		std::vector<RAS_BucketManager::SortedMeshSlot> sortedMeshSlots(nummeshslots);
 
 		const MT_Vector3 pnorm(args.m_trans.getBasis()[2]);
-		unsigned int i = 0;
-		for (RAS_MeshSlotList::iterator it = m_activeMeshSlots.begin(), end = m_activeMeshSlots.end(); it != end; ++it) {
-			sortedMeshSlots[i++] = RAS_BucketManager::SortedMeshSlot(*it, pnorm);
-		}
+		std::transform(m_activeMeshSlots.begin(), m_activeMeshSlots.end(), sortedMeshSlots.end(),
+			[&pnorm](RAS_MeshSlot *slot) { return RAS_BucketManager::SortedMeshSlot(slot, pnorm); });
+
 		std::sort(sortedMeshSlots.begin(), sortedMeshSlots.end(), RAS_BucketManager::backtofront());
 		std::vector<RAS_MeshSlot *> meshSlots(nummeshslots);
 		for (unsigned int i = 0; i < nummeshslots; ++i) {
