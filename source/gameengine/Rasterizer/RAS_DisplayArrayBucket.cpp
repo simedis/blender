@@ -421,14 +421,13 @@ void RAS_DisplayArrayBucket::RunBatchingNode(const RAS_RenderNodeArguments& args
 	/* If the material use the transparency we must sort all mesh slots depending on the distance.
 	 * This code share the code used in RAS_BucketManager to do the sort.
 	 */
-	if (alpha) {
+	if (args.m_sort) {
 		std::vector<RAS_BucketManager::sortedmeshslot> sortedMeshSlots(nummeshslots);
 
-		const MT_Vector3 pnorm(cameratrans.getBasis()[2]);
-		unsigned int i = 0;
-		for (RAS_MeshSlotList::iterator it = m_activeMeshSlots.begin(), end = m_activeMeshSlots.end(); it != end; ++it) {
-			sortedMeshSlots[i++].set(*it, m_bucket, pnorm);
-		}
+		const MT_Vector3 pnorm(args.m_trans.getBasis()[2]);
+		std::transform(m_activeMeshSlots.begin(), m_activeMeshSlots.end(), sortedMeshSlots.begin(),
+				[](RAS_MeshSlot)
+		)
 		std::sort(sortedMeshSlots.begin(), sortedMeshSlots.end(), RAS_BucketManager::backtofront());
 		RAS_MeshSlotList meshSlots(nummeshslots);
 		for (unsigned int i = 0; i < nummeshslots; ++i) {
@@ -445,6 +444,7 @@ void RAS_DisplayArrayBucket::RunBatchingNode(const RAS_RenderNodeArguments& args
 		}
 	}
 
+	RAS_IRasterizer *rasty = args.m_rasty;
 	rasty->BindPrimitives(this);
 
 	rasty->IndexPrimitivesBatching(this, indices, counts);
