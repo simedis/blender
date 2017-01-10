@@ -60,6 +60,7 @@ private:
 		float uvrot;
 		float uvoffset[3];
 		float uvsize[3];
+		float fresnelfac;
 	} m_savedData;
 
 public:
@@ -120,6 +121,8 @@ public:
 	static int pyattr_set_ior(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
 	static PyObject *pyattr_get_refraction_ratio(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
 	static int pyattr_set_refraction_ratio(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject *pyattr_get_fresnel_factor(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_set_fresnel_factor(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
 	static PyObject *pyattr_get_uv_rotation(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
 	static int pyattr_set_uv_rotation(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
 	static PyObject *pyattr_get_uv_offset(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
