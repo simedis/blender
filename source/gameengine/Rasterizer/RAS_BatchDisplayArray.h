@@ -39,7 +39,6 @@
 #  pragma warning (disable:4250)
 #endif
 
-/// An array with data used for OpenGL drawing
 template <class Vertex>
 class RAS_BatchDisplayArray : public RAS_DisplayArray<Vertex>, public RAS_IBatchDisplayArray
 {
@@ -83,7 +82,7 @@ public:
 		const unsigned int startvertex = m_vertexes.size();
 		const unsigned int startindex = m_indices.size();
 
-		// Add the array start index and count.
+		// Add the part info.
 		Part part;
 		part.m_startVertex = startvertex;
 		part.m_vertexCount = vertexcount;
@@ -92,12 +91,14 @@ public:
 		part.m_indexOffset = (void *)(part.m_startIndex * sizeof(unsigned int));
 		m_parts.push_back(part);
 
+		// Pre-allocate vertex list and index list.
 		m_vertexes.reserve(startvertex + vertexcount);
 		m_indices.reserve(startindex + indexcount);
 
 #ifdef DEBUG
 		CM_Debug("Add part : " << (m_parts.size() - 1) << ", start index: " << startindex << ", index count: " << indexcount << ", start vertex: " << startvertex << ", vertex count: " << vertexcount);
 #endif  // DEBUG
+
 		// Normal and tangent matrix.
 		MT_Matrix4x4 nmat = mat.inverse().transposed();
 		nmat[0][3] = nmat[1][3] = nmat[2][3] = 0.0f;
@@ -105,14 +106,18 @@ public:
 		for (typename std::vector<Vertex>::iterator it = array->m_vertexes.begin(), end = array->m_vertexes.end(); it != end; ++it) {
 			// Copy the vertex.
 			Vertex vert = *it;
+			// Transform the vertex position, normal and tangent.
 			vert.Transform(mat, nmat);
+			// Add the vertex in the list.
 			m_vertexes.push_back(vert);
 		}
 
+		// Copy the indices of the merged array with as gap the first vertex index.
 		for (std::vector<unsigned int>::iterator it = array->m_indices.begin(), end = array->m_indices.end(); it != end; ++it) {
 			m_indices.push_back(startvertex + *it);
 		}
 
+		// Update the cache to avoid accessing dangling vertex pointer from GetVertex().
 		RAS_DisplayArray<Vertex>::UpdateCache();
 
 		return (m_parts.size() - 1);
@@ -133,17 +138,23 @@ public:
 #ifdef DEBUG
 		CM_Debug("Move indices from " << startindex << " to " << m_indices.size() - indexcount << ", shift of " << indexcount);
 #endif  // DEBUG
+
+		// Move the indices after the part to remove before of vertexcount places.
 		for (unsigned int i = startindex, size = m_indices.size() - indexcount; i < size; ++i) {
 			m_indices[i] = m_indices[i + indexcount] - vertexcount;
 		}
 
+		// Erase the end of the index.
 		m_indices.erase(m_indices.end() - indexcount, m_indices.end());
 
 #ifdef DEBUG
 		CM_Debug("Remove vertexes : start vertex: " << startvertex << ", end vertex: " << endvertex);
 #endif  // DEBUG
+
+		// Erase vertex of the part to remove.
 		m_vertexes.erase(m_vertexes.begin() + startvertex, m_vertexes.begin() + endvertex);
 
+		// Reduce start vertex and start index of the part after the removed part.
 		for (unsigned i = partIndex + 1, size = m_parts.size(); i < size; ++i) {
 			Part& nextPart = m_parts[i];
 			nextPart.m_startVertex -= vertexcount;
@@ -151,8 +162,10 @@ public:
 			nextPart.m_indexOffset = (void *)(nextPart.m_startIndex * sizeof(unsigned int));
 		}
 
+		// Remove the part info.
 		m_parts.erase(m_parts.begin() + partIndex);
 
+		// Update the cache to avoid accessing dangling vertex pointer from GetVertex().
 		UpdateCache();
 	}
 };

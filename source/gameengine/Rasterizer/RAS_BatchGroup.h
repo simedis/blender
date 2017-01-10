@@ -61,11 +61,13 @@ private:
 	/** Merge the display array of the passed mesh slot.
 	 * \param slot The mesh slot using the display array to merge.
 	 * \param mat The transform matrix to apply to vertices during merging.
+	 * \return false on failure.
 	 */
 	bool MergeMeshSlot(Batch& batch, RAS_MeshSlot *slot, const MT_Matrix4x4& mat);
 
 	/** Split the part representing the display array containing in the passed mesh slot.
 	 * \param slot The mesh slot using the display array to split.
+	 * \return false on failure.
 	 */
 	bool SplitMeshSlot(RAS_MeshSlot *slot);
 
@@ -82,8 +84,14 @@ public:
 	 * \param meshUser The mesh user to merge mesh slots from.
 	 * \param mat The object matrix to use in display array merging. It's not the matrix from
 	 * the mesh user because this one can be not updated.
+	 * \return false on failure.
 	 */
 	bool MergeMeshUser(RAS_MeshUser *meshUser, const MT_Matrix4x4& mat);
+
+	/** Split the display array of the mesh slots contained in the mesh user.
+	 * \param meshUser THe mesh user to merge mesh slots from.
+	 * \return false on failure.
+	 */
 	bool SplitMeshUser(RAS_MeshUser *meshUser);
 
 	/** Restore the display array (bucket) of all the mesh slots using this batch group.
