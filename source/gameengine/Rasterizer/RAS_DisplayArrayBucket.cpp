@@ -334,9 +334,6 @@ void RAS_DisplayArrayBucket::RunInstancingNode(const RAS_RenderNodeArguments& ar
 	RAS_IRasterizer *rasty = args.m_rasty;
 	RAS_IPolyMaterial *material = m_bucket->GetPolyMaterial();
 
-	// Update deformer and render settings.
-	UpdateActiveMeshSlots(rasty);
-
 	// Bind the instancing buffer to work on it.
 	m_instancingBuffer->Realloc(nummeshslots);
 
