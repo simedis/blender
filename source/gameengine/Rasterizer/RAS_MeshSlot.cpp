@@ -30,7 +30,9 @@
  */
 
 #include "RAS_MeshSlot.h"
+#include "RAS_MeshUser.h"
 #include "RAS_MaterialBucket.h"
+#include "RAS_IPolygonMaterial.h"
 #include "RAS_TexVert.h"
 #include "RAS_MeshObject.h"
 #include "RAS_Deformer.h"
@@ -171,5 +173,42 @@ void RAS_MeshSlot::GenerateTree(RAS_DisplayArrayUpwardNode *root, RAS_UpwardTree
 
 void RAS_MeshSlot::RunNode(const RAS_RenderNodeArguments& args)
 {
-	m_bucket->RenderMeshSlot(args.m_trans, args.m_rasty, this);
+	RAS_IRasterizer *rasty = args.m_rasty;
+	rasty->SetClientObject(m_meshUser->GetClientObject());
+	rasty->SetFrontFace(m_meshUser->GetFrontFace());
+
+	RAS_IPolyMaterial *material = m_bucket->GetPolyMaterial();
+
+	if (args.m_shaderOverride) {
+		// Set cull face without activating the material.
+		rasty->SetCullFace(material->IsCullFace());
+	}
+	else {
+		bool uselights = material->UsesLighting(rasty);
+		rasty->ProcessLighting(uselights, args.m_trans);
+		material->ActivateMeshSlot(this, rasty);
+	}
+
+	if (material->IsZSort() && rasty->GetDrawingMode() >= RAS_IRasterizer::RAS_SOLID) {
+		m_mesh->SortPolygons(this, args.m_trans * MT_Transform(m_meshUser->GetMatrix()));
+		m_displayArrayBucket->SetPolygonsModified(rasty);
+	}
+
+	rasty->PushMatrix();
+
+	const bool istext = material->IsText();
+	if ((!m_pDeformer || !m_pDeformer->SkipVertexTransform()) && !istext) {
+		float mat[16];
+		rasty->GetTransform(m_meshUser->GetMatrix(), material->GetDrawingMode(), mat);
+		rasty->MultMatrix(mat);
+	}
+
+	if (istext) {
+		rasty->IndexPrimitivesText(this);
+	}
+	else {
+		rasty->IndexPrimitives(this);
+	}
+
+	rasty->PopMatrix();
 }

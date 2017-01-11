@@ -58,7 +58,6 @@ public:
 	// Rendering
 	void ActivateMaterial(RAS_IRasterizer *rasty);
 	void DesactivateMaterial(RAS_IRasterizer *rasty);
-	void RenderMeshSlot(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, RAS_MeshSlot *ms);
 
 	// Render nodes.
 	void GenerateTree(RAS_ManagerDownwardNode *downwardRoot, RAS_ManagerUpwardNode *upwardRoot,

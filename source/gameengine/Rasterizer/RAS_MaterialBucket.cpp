@@ -173,44 +173,6 @@ void RAS_MaterialBucket::DesactivateMaterial(RAS_IRasterizer *rasty)
 	m_material->Desactivate(rasty);
 }
 
-void RAS_MaterialBucket::RenderMeshSlot(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, RAS_MeshSlot *ms)
-{
-	RAS_MeshUser *meshUser = ms->m_meshUser;
-	rasty->SetClientObject(meshUser->GetClientObject());
-	rasty->SetFrontFace(meshUser->GetFrontFace());
-
-	if (rasty->GetOverrideShader() == RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE) {
-		bool uselights = m_material->UsesLighting(rasty);
-		rasty->ProcessLighting(uselights, cameratrans);
-		m_material->ActivateMeshSlot(ms, rasty);
-	}
-	else {
-		// Set cull face without activating the material.
-		rasty->SetCullFace(m_material->IsCullFace());
-	}
-
-	if (IsZSort() && rasty->GetDrawingMode() >= RAS_IRasterizer::RAS_SOLID) {
-		ms->m_mesh->SortPolygons(ms, cameratrans * MT_Transform(meshUser->GetMatrix()));
-		ms->m_displayArrayBucket->SetPolygonsModified(rasty);
-	}
-
-	rasty->PushMatrix();
-	if ((!ms->m_pDeformer || !ms->m_pDeformer->SkipVertexTransform()) && !m_material->IsText()) {
-		float mat[16];
-		rasty->GetTransform(meshUser->GetMatrix(), m_material->GetDrawingMode(), mat);
-		rasty->MultMatrix(mat);
-	}
-
-	if (m_material->IsText()) {
-		rasty->IndexPrimitivesText(ms);
-	}
-	else {
-		rasty->IndexPrimitives(ms);
-	}
-
-	rasty->PopMatrix();
-}
-
 void RAS_MaterialBucket::GenerateTree(RAS_ManagerDownwardNode *downwardRoot, RAS_ManagerUpwardNode *upwardRoot,
 									  RAS_UpwardTreeLeafs *upwardLeafs, RAS_IRasterizer *rasty, bool sort)
 {

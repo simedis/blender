@@ -200,7 +200,7 @@ void RAS_DisplayArrayBucket::UpdateActiveMeshSlots(RAS_IRasterizer *rasty)
 		m_useDisplayList = false;
 	}
 
-	if (m_bucket->IsZSort() || m_bucket->UseInstancing() || !m_displayArray || material->UsesObjectColor()) {
+	if (material->IsZSort() || m_bucket->UseInstancing() || !m_displayArray || material->UsesObjectColor()) {
 		m_useDisplayList = false;
 		m_useVao = false;
 	}
@@ -316,7 +316,8 @@ void RAS_DisplayArrayBucket::RunDownwardNode(const RAS_RenderNodeArguments& args
 	rasty->BindPrimitives(this);
 
 	for (RAS_MeshSlot *ms : m_activeMeshSlots) {
-		m_bucket->RenderMeshSlot(args.m_trans, rasty, ms);
+		// Reuse the node function without spend time storing RAS_MeshSlot under nodes.
+		ms->RunNode(args);
 	}
 
 	rasty->UnbindPrimitives(this);
