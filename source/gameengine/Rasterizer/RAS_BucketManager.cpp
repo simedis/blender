@@ -100,7 +100,7 @@ void RAS_BucketManager::RenderSortedBuckets(const MT_Transform& cameratrans, RAS
 		bucket->GenerateTree(&m_downwardNode, &m_upwardNode, &leafs, rasty, true);
 	}
 
-	RAS_RenderNodeArguments args(cameratrans, rasty, false);
+	RAS_RenderNodeArguments args(cameratrans, rasty, false, rasty->GetOverrideShader() != RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE);
 	if (m_downwardNode.GetValid()) {
 		m_downwardNode.Execute(args);
 	}
@@ -131,7 +131,7 @@ void RAS_BucketManager::RenderBasicBuckets(const MT_Transform& cameratrans, RAS_
 	}
 
 	if (m_downwardNode.GetValid()) {
-		RAS_RenderNodeArguments args(cameratrans, rasty, false);
+		RAS_RenderNodeArguments args(cameratrans, rasty, false, rasty->GetOverrideShader() != RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE);
 		m_downwardNode.Execute(args);
 	}
 }

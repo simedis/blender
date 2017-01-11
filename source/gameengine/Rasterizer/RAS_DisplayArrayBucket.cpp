@@ -364,15 +364,7 @@ void RAS_DisplayArrayBucket::RunInstancingNode(const RAS_RenderNodeArguments& ar
 	m_instancingBuffer->Bind();
 
 	// Bind all vertex attributs for the used material and the given buffer offset.
-	if (rasty->GetOverrideShader() == RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE) {
-		material->ActivateInstancing(
-			rasty,
-			m_instancingBuffer->GetMatrixOffset(),
-			m_instancingBuffer->GetPositionOffset(),
-			m_instancingBuffer->GetColorOffset(),
-			m_instancingBuffer->GetStride());
-	}
-	else {
+	if (args.m_shaderOverride) {
 		rasty->ActivateOverrideShaderInstancing(
 			m_instancingBuffer->GetMatrixOffset(),
 			m_instancingBuffer->GetPositionOffset(),
@@ -380,6 +372,14 @@ void RAS_DisplayArrayBucket::RunInstancingNode(const RAS_RenderNodeArguments& ar
 
 		// Set cull face without activating the material.
 		rasty->SetCullFace(material->IsCullFace());
+	}
+	else {
+		material->ActivateInstancing(
+			rasty,
+			m_instancingBuffer->GetMatrixOffset(),
+			m_instancingBuffer->GetPositionOffset(),
+			m_instancingBuffer->GetColorOffset(),
+			m_instancingBuffer->GetStride());
 	}
 
 	/* It's a major issue of the geometry instancing : we can't manage face wise.
@@ -393,11 +393,11 @@ void RAS_DisplayArrayBucket::RunInstancingNode(const RAS_RenderNodeArguments& ar
 
 	rasty->IndexPrimitivesInstancing(this);
 	// Unbind vertex attributs.
-	if (rasty->GetOverrideShader() == RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE) {
-		material->DesactivateInstancing();
+	if (args.m_shaderOverride) {
+		rasty->DesactivateOverrideShaderInstancing();
 	}
 	else {
-		rasty->DesactivateOverrideShaderInstancing();
+		material->DesactivateInstancing();
 	}
 
 	rasty->UnbindPrimitives(this);

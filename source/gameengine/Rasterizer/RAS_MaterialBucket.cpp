@@ -165,16 +165,12 @@ RAS_MeshSlotList::iterator RAS_MaterialBucket::msEnd()
 
 void RAS_MaterialBucket::ActivateMaterial(RAS_IRasterizer *rasty)
 {
-	if (rasty->GetOverrideShader() == RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE) {
-		m_material->Activate(rasty);
-	}
+	m_material->Activate(rasty);
 }
 
 void RAS_MaterialBucket::DesactivateMaterial(RAS_IRasterizer *rasty)
 {
-	if (rasty->GetOverrideShader() == RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE) {
-		m_material->Desactivate(rasty);
-	}
+	m_material->Desactivate(rasty);
 }
 
 void RAS_MaterialBucket::RenderMeshSlot(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, RAS_MeshSlot *ms)
@@ -183,7 +179,6 @@ void RAS_MaterialBucket::RenderMeshSlot(const MT_Transform& cameratrans, RAS_IRa
 	rasty->SetClientObject(meshUser->GetClientObject());
 	rasty->SetFrontFace(meshUser->GetFrontFace());
 
-	// Inverse condition of in ActivateMaterial.
 	if (rasty->GetOverrideShader() == RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE) {
 		bool uselights = m_material->UsesLighting(rasty);
 		rasty->ProcessLighting(uselights, cameratrans);
@@ -237,12 +232,16 @@ void RAS_MaterialBucket::GenerateTree(RAS_ManagerDownwardNode *downwardRoot, RAS
 
 void RAS_MaterialBucket::BindNode(const RAS_RenderNodeArguments& args)
 {
-	ActivateMaterial(args.m_rasty);
+	if (!args.m_shaderOverride) {
+		ActivateMaterial(args.m_rasty);
+	}
 }
 
 void RAS_MaterialBucket::UnbindNode(const RAS_RenderNodeArguments& args)
 {
-	DesactivateMaterial(args.m_rasty);
+	if (!args.m_shaderOverride) {
+		DesactivateMaterial(args.m_rasty);
+	}
 }
 
 void RAS_MaterialBucket::SetDisplayArrayUnmodified()

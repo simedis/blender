@@ -27,11 +27,13 @@ public:
 	const MT_Transform& m_trans;
 	RAS_IRasterizer *m_rasty;
 	bool m_sort;
+	bool m_shaderOverride;
 
-	RAS_RenderNodeArguments(const MT_Transform& trans, RAS_IRasterizer *rasty, bool sort)
+	RAS_RenderNodeArguments(const MT_Transform& trans, RAS_IRasterizer *rasty, bool sort, bool shaderOverride)
 		:m_trans(trans),
 		m_rasty(rasty),
-		m_sort(sort)
+		m_sort(sort),
+		m_shaderOverride(shaderOverride)
 	{
 	}
 };
