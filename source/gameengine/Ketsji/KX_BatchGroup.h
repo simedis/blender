@@ -44,7 +44,7 @@ public:
 	KX_BatchGroup();
 	virtual ~KX_BatchGroup();
 
-	virtual STR_String& GetName();
+	virtual std::string GetName();
 
 	CListValue *GetObjects() const;
 

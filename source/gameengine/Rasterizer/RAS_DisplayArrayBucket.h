@@ -91,6 +91,7 @@ private:
 	RAS_DisplayArrayDownwardNode m_downwardNode;
 	RAS_DisplayArrayUpwardNode m_upwardNode;
 	RAS_DisplayArrayDownwardNode m_instancingNode;
+	RAS_DisplayArrayDownwardNode m_batchingNode;
 
 public:
 	RAS_DisplayArrayBucket(RAS_MaterialBucket *bucket, RAS_IDisplayArray *array, RAS_MeshObject *mesh, RAS_MeshMaterial *meshmat);

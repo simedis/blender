@@ -43,10 +43,9 @@ KX_BatchGroup::~KX_BatchGroup()
 	m_objects->Release();
 }
 
-STR_String& KX_BatchGroup::GetName()
+std::string KX_BatchGroup::GetName()
 {
-	static STR_String name = "KX_BatchGroup";
-	return name;
+	return "KX_BatchGroup";
 }
 
 CListValue *KX_BatchGroup::GetObjects() const
@@ -173,7 +172,7 @@ PyMethodDef KX_BatchGroup::Methods[] = {
 
 PyAttributeDef KX_BatchGroup::Attributes[] = {
 	KX_PYATTRIBUTE_RO_FUNCTION("objects", KX_BatchGroup, pyattr_get_objects),
-	{NULL} // Sentinel
+	KX_PYATTRIBUTE_NULL // Sentinel
 };
 
 PyObject *KX_BatchGroup::pyattr_get_objects(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)

@@ -103,9 +103,8 @@ public:
 		MT_Matrix4x4 nmat = mat.inverse().transposed();
 		nmat[0][3] = nmat[1][3] = nmat[2][3] = 0.0f;
 
-		for (typename std::vector<Vertex>::iterator it = array->m_vertexes.begin(), end = array->m_vertexes.end(); it != end; ++it) {
-			// Copy the vertex.
-			Vertex vert = *it;
+		// Copy the vertex by not using a reference in the loop.
+		for (Vertex vert : array->m_vertexes) {
 			// Transform the vertex position, normal and tangent.
 			vert.Transform(mat, nmat);
 			// Add the vertex in the list.
@@ -113,8 +112,8 @@ public:
 		}
 
 		// Copy the indices of the merged array with as gap the first vertex index.
-		for (std::vector<unsigned int>::iterator it = array->m_indices.begin(), end = array->m_indices.end(); it != end; ++it) {
-			m_indices.push_back(startvertex + *it);
+		for (unsigned int i : array->m_indices) {
+			m_indices.push_back(startvertex + i);
 		}
 
 		// Update the cache to avoid accessing dangling vertex pointer from GetVertex().

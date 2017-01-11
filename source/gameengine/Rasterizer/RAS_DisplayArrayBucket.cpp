@@ -62,7 +62,8 @@ RAS_DisplayArrayBucket::RAS_DisplayArrayBucket(RAS_MaterialBucket *bucket, RAS_I
 	m_instancingBuffer(NULL),
 	m_downwardNode(this, &RAS_DisplayArrayBucket::RunDownwardNode, NULL),
 	m_upwardNode(this, &RAS_DisplayArrayBucket::BindUpwardNode, &RAS_DisplayArrayBucket::UnbindUpwardNode),
-	m_instancingNode(this, &RAS_DisplayArrayBucket::RunInstancingNode, NULL)
+	m_instancingNode(this, &RAS_DisplayArrayBucket::RunInstancingNode, NULL),
+	m_batchingNode(this, &RAS_DisplayArrayBucket::RunBatchingNode, NULL)
 {
 	m_bucket->AddDisplayArrayBucket(this);
 }
@@ -120,6 +121,7 @@ void RAS_DisplayArrayBucket::ProcessReplica()
 	m_downwardNode = RAS_DisplayArrayDownwardNode(this, &RAS_DisplayArrayBucket::RunDownwardNode, NULL);
 	m_upwardNode = RAS_DisplayArrayUpwardNode(this, &RAS_DisplayArrayBucket::BindUpwardNode, &RAS_DisplayArrayBucket::UnbindUpwardNode);
 	m_instancingNode = RAS_DisplayArrayDownwardNode(this, &RAS_DisplayArrayBucket::RunInstancingNode, NULL);
+	m_batchingNode = RAS_DisplayArrayDownwardNode(this, &RAS_DisplayArrayBucket::RunBatchingNode, NULL);
 
 	m_bucket->AddDisplayArrayBucket(this);
 }
@@ -293,6 +295,10 @@ void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialDownwardNode *downwardRoot
 	if (instancing) {
 		downwardRoot->AddChild(&m_instancingNode);
 	}
+	else if (UseBatching()) {
+		std::cout << "add batching node" << std::endl;
+		downwardRoot->AddChild(&m_batchingNode);
+	}
 	else if (sort) {
 		for (RAS_MeshSlot *slot : m_activeMeshSlots) {
 			slot->GenerateTree(&m_upwardNode, upwardLeafs);
@@ -376,19 +382,23 @@ void RAS_DisplayArrayBucket::RunInstancingNode(const RAS_RenderNodeArguments& ar
 			m_instancingBuffer->GetPositionOffset(),
 			m_instancingBuffer->GetColorOffset(),
 			m_instancingBuffer->GetStride());
+
+		/* Because the geometry instancing use setting for all instances we use the original alpha blend.
+		 * This requierd that the user use "alpha blend" mode if he will mutate object color alpha.
+		 */
+		rasty->SetAlphaBlend(material->GetAlphaBlend());
 	}
 	else {
 		rasty->ActivateOverrideShaderInstancing(
 			m_instancingBuffer->GetMatrixOffset(),
 			m_instancingBuffer->GetPositionOffset(),
 			m_instancingBuffer->GetStride());
-
-		// Set cull face without activating the material.
-		rasty->SetCullFace(material->IsCullFace());
 	}
 
+	rasty->SetCullFace(material->IsCullFace());
+
 	/* It's a major issue of the geometry instancing : we can't manage face wise.
-	 * To be sure we don't use the old face wise we focre it to true. */
+	 * To be sure we don't use the old face wise we force it to true. */
 	rasty->SetFrontFace(true);
 
 	// Unbind the buffer to avoid conflict with the render after.
@@ -413,8 +423,8 @@ void RAS_DisplayArrayBucket::RunBatchingNode(const RAS_RenderNodeArguments& args
 	unsigned int nummeshslots = m_activeMeshSlots.size();
 
 	// We must use a int instead of unsigned size to match GLsizei type.
-	std::vector<int> counts;
-	std::vector<void *> indices;
+	std::vector<int> counts(nummeshslots);
+	std::vector<void *> indices(nummeshslots);
 
 	RAS_IBatchDisplayArray *batchArray = dynamic_cast<RAS_IBatchDisplayArray *>(m_displayArray);
 
@@ -422,29 +432,44 @@ void RAS_DisplayArrayBucket::RunBatchingNode(const RAS_RenderNodeArguments& args
 	 * This code share the code used in RAS_BucketManager to do the sort.
 	 */
 	if (args.m_sort) {
-		std::vector<RAS_BucketManager::sortedmeshslot> sortedMeshSlots(nummeshslots);
+		std::vector<RAS_BucketManager::SortedMeshSlot> sortedMeshSlots(nummeshslots);
 
 		const MT_Vector3 pnorm(args.m_trans.getBasis()[2]);
-		std::transform(m_activeMeshSlots.begin(), m_activeMeshSlots.end(), sortedMeshSlots.begin(),
-				[](RAS_MeshSlot)
-		)
+		std::transform(m_activeMeshSlots.begin(), m_activeMeshSlots.end(), sortedMeshSlots.end(),
+					   [&pnorm](RAS_MeshSlot *slot) { return RAS_BucketManager::SortedMeshSlot(slot, pnorm); });
+
 		std::sort(sortedMeshSlots.begin(), sortedMeshSlots.end(), RAS_BucketManager::backtofront());
 		RAS_MeshSlotList meshSlots(nummeshslots);
 		for (unsigned int i = 0; i < nummeshslots; ++i) {
 			const short index = sortedMeshSlots[i].m_ms->m_batchPartIndex;
-			indices.push_back(batchArray->GetPartIndexOffset(index));
-			counts.push_back(batchArray->GetPartIndexCount(index));
+			indices[i] = batchArray->GetPartIndexOffset(index);
+			counts[i] = batchArray->GetPartIndexCount(index);
 		}
 	}
 	else {
-		for (RAS_MeshSlotList::iterator it = m_activeMeshSlots.begin(), end = m_activeMeshSlots.end(); it != end; ++it) {
-			const short index = (*it)->m_batchPartIndex;
-			indices.push_back(batchArray->GetPartIndexOffset(index));
-			counts.push_back(batchArray->GetPartIndexCount(index));
+		for (unsigned int i = 0; i < nummeshslots; ++i) {
+			const short index = m_activeMeshSlots[i]->m_batchPartIndex;
+			indices[i] = batchArray->GetPartIndexOffset(index);
+			counts[i] = batchArray->GetPartIndexCount(index);
 		}
 	}
 
 	RAS_IRasterizer *rasty = args.m_rasty;
+	RAS_IPolyMaterial *material = m_bucket->GetPolyMaterial();
+
+	rasty->SetCullFace(material->IsCullFace());
+
+	if (rasty->GetOverrideShader() == RAS_IRasterizer::RAS_OVERRIDE_SHADER_NONE) {
+		/* Because the batching use setting for all instances we use the original alpha blend.
+		 * This requierd that the user use "alpha blend" mode if he will mutate object color alpha.
+		 */
+		rasty->SetAlphaBlend(material->GetAlphaBlend());
+	}
+
+	/* It's a major issue of the batching : we can't manage face wise.
+	 * To be sure we don't use the old face wise we force it to true. */
+	rasty->SetFrontFace(true);
+
 	rasty->BindPrimitives(this);
 
 	rasty->IndexPrimitivesBatching(this, indices, counts);
