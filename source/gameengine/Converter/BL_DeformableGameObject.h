@@ -75,7 +75,7 @@ public:
 	virtual ~BL_DeformableGameObject();
 	bool SetActiveAction(short priority, double curtime);
 
-	bool GetShape(std::vector<float> &shape);
+	virtual bool GetShape(std::vector<float> &shape);
 	
 	virtual void	SetDeformer(class RAS_Deformer* deformer);
 	virtual class RAS_Deformer* GetDeformer()

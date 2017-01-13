@@ -38,6 +38,7 @@
 
 #include "BL_ShapeDeformer.h"
 #include "BL_DeformableGameObject.h"
+#include "BL_LatticeObject.h"
 #include <vector>
 
 class RAS_MeshObject;
@@ -49,6 +50,7 @@ class BL_ModifierDeformer : public BL_ShapeDeformer
 public:
 	static bool HasCompatibleDeformer(Object *ob);
 	static bool HasArmatureDeformer(Object *ob);
+	static Object *GetLatticeDeformer(Object *obj);
 
 	BL_ModifierDeformer(BL_DeformableGameObject *gameobj,
 						Scene *scene,
@@ -57,7 +59,9 @@ public:
 		:BL_ShapeDeformer(gameobj, bmeshobj, mesh),
 		m_lastModifierUpdate(-1.0),
 		m_scene(scene),
-		m_dm(NULL)
+		m_dm(NULL),
+		m_latticeObj(NULL),
+		m_lastLatticeUpdate(-1.0)
 	{
 		m_recalcNormal = false;
 	}
@@ -68,17 +72,15 @@ public:
 						Object *bmeshobj_old,
 						Object *bmeshobj_new,
 						RAS_MeshObject *mesh,
-						bool release_object,
-						BL_ArmatureObject *arma = NULL)
-		:BL_ShapeDeformer(gameobj, bmeshobj_old, bmeshobj_new, mesh, release_object, false, arma),
-		m_lastModifierUpdate(-1),
-		m_scene(scene),
-		m_dm(NULL)
-	{
-	}
+						BL_ArmatureObject *arma = NULL,
+	                    BL_LatticeObject *lattice = NULL);
 
+	void SetLattice(BL_LatticeObject *latticeObj);
+
+	virtual void Relink(std::map<void *, void *>& map);
 	virtual void ProcessReplica();
 	virtual RAS_Deformer *GetReplica();
+	virtual bool UnlinkObject(SCA_IObject* clientobj);
 	virtual ~BL_ModifierDeformer();
 	virtual bool UseVertexArray()
 	{
@@ -98,10 +100,32 @@ public:
 	// The derived mesh returned by this function must be released!
 	virtual DerivedMesh *GetPhysicsMesh();
 
+	bool LatticeUpdated()
+	{
+		if (m_latticeObj && m_lastLatticeUpdate != m_latticeObj->GetLastFrame()) {
+			m_bDynamic = true;
+			return true;
+		}
+		return false;
+	}
+	virtual bool IsDependent()
+	{
+		if (m_latticeObj)
+			return true;
+		return BL_SkinDeformer::IsDependent();
+	}
+	BL_LatticeObject *GetLatticeObject()
+	{
+		return m_latticeObj;
+	}
+
 protected:
 	double m_lastModifierUpdate;
 	Scene *m_scene;
 	DerivedMesh *m_dm;
+	BL_LatticeObject *m_latticeObj;
+	double m_lastLatticeUpdate;
+
 
 #ifdef WITH_CXX_GUARDEDALLOC
 	MEM_CXX_CLASS_ALLOC_FUNCS("GE:BL_ModifierDeformer")

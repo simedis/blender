@@ -131,6 +131,7 @@
 #include "DNA_actuator_types.h"
 #include "DNA_mesh_types.h"
 #include "DNA_meshdata_types.h"
+#include "DNA_lattice_types.h"
 #include "DNA_view3d_types.h"
 #include "DNA_world_types.h"
 #include "DNA_sound_types.h"
@@ -181,6 +182,7 @@ extern Material defmaterial;	/* material.c */
 
 #include "BL_ArmatureObject.h"
 #include "BL_DeformableGameObject.h"
+#include "BL_LatticeObject.h"
 
 #include "KX_NavMeshObject.h"
 #include "KX_ObstacleSimulation.h"
@@ -1012,6 +1014,44 @@ static KX_GameObject *gameobject_from_blenderobject(
 		break;
 	}
 	
+	case OB_LATTICE:
+	{
+		Lattice* lattice = static_cast<Lattice*>(ob->data);
+
+		// lattice object makes only sense if it is used in a lattice modified by other meshes
+		// and only if itself has shape keys (otherwise it is a static lattice that cannot be
+		// animated and don't need to be computed in the BGE.
+		// Note that we only support shape key deformation at this stage because armature
+		// deform is rather pointless: it can just as well be applied on the mesh.
+		bool bHasShapeKey = lattice->key != NULL && lattice->key->type==KEY_RELATIVE;
+		bool bHasDvert = lattice->dvert != NULL && ob->defbase.first;
+		bool bHasArmature = (BL_ModifierDeformer::HasArmatureDeformer(ob) && ob->parent && ob->parent->type == OB_ARMATURE && bHasDvert);
+
+		gameobj = new BL_LatticeObject(ob,kxscene,KX_Scene::m_callbacks);
+
+		// for all objects: check whether they want to
+		// respond to updates
+		bool ignoreActivityCulling =
+			((ob->gameflag2 & OB_NEVER_DO_ACTIVITY_CULLING)!=0);
+		gameobj->SetIgnoreActivityCulling(ignoreActivityCulling);
+
+		RAS_Deformer *deformer = NULL;
+		BL_LatticeObject *latticeGameObj = (BL_LatticeObject *)gameobj;
+
+		if (bHasShapeKey) {
+			// note that we can have shape keys without dvert!
+			deformer = new BL_ShapeDeformer(latticeGameObj, ob, NULL, false, false);
+		}
+		else if (bHasArmature) {
+			deformer = new BL_SkinDeformer(latticeGameObj, ob, NULL, false, false);
+		}
+
+		if (deformer) {
+			latticeGameObj->SetDeformer(deformer);
+		}
+		break;
+	}
+
 	case OB_MESH:
 	{
 		Mesh* mesh = static_cast<Mesh*>(ob->data);
@@ -1634,13 +1674,33 @@ void BL_ConvertBlenderObjects(struct Main* maggie,
 	for (oit=allblobj.begin(); oit!=allblobj.end(); oit++)
 	{
 		Object* blenderobj = *oit;
+		Object* deformer;
 		if (blenderobj->type==OB_MESH) {
 			Mesh *me = (Mesh*)blenderobj->data;
-	
-			if (me->dvert) {
-				BL_DeformableGameObject *obj = (BL_DeformableGameObject*)converter->FindGameObject(blenderobj);
-
-				if (obj && BL_ModifierDeformer::HasArmatureDeformer(blenderobj) && blenderobj->parent && blenderobj->parent->type==OB_ARMATURE) {
+			KX_GameObject *obj = converter->FindGameObject(blenderobj);
+			if (obj)
+			{
+				if (me->dvert && BL_ModifierDeformer::HasArmatureDeformer(blenderobj) && blenderobj->parent && blenderobj->parent->type==OB_ARMATURE) {
+					KX_GameObject *par = converter->FindGameObject(blenderobj->parent);
+					if (par && obj->GetDeformer())
+					{
+						((BL_SkinDeformer*)obj->GetDeformer())->SetArmature((BL_ArmatureObject*) par);
+					}
+				}
+				if ((deformer = BL_ModifierDeformer::GetLatticeDeformer(blenderobj)) != NULL) {
+					// only true if the object parent is also the lattice object, so we know we have a parent
+					KX_GameObject *par = converter->FindGameObject(deformer);
+					if (par && obj->GetDeformer())
+						((BL_ModifierDeformer*)obj->GetDeformer())->SetLattice((BL_LatticeObject*) par);
+				}
+			}
+		}
+		else if (blenderobj->type==OB_LATTICE) {
+			Lattice *lt = (Lattice*)blenderobj->data;
+			KX_GameObject *obj = converter->FindGameObject(blenderobj);
+			if (obj)
+			{
+				if (lt->dvert && BL_ModifierDeformer::HasArmatureDeformer(blenderobj) && blenderobj->parent && blenderobj->parent->type==OB_ARMATURE) {
 					KX_GameObject *par = converter->FindGameObject(blenderobj->parent);
 					if (par && obj->GetDeformer())
 						((BL_SkinDeformer*)obj->GetDeformer())->SetArmature((BL_ArmatureObject*) par);

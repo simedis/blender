@@ -45,6 +45,8 @@
 
 struct Object;
 struct Mesh;
+struct Lattice;
+class SCA_IObject;
 class BL_DeformableGameObject;
 class RAS_MeshObject;
 class RAS_IPolyMaterial;
@@ -55,6 +57,10 @@ public:
 	void VerifyStorage();
 	void RecalcNormals();
 	virtual void Relink(std::map<void *, void *>& map);
+	virtual SCA_IObject* GetParent()
+	{
+		return (SCA_IObject*)m_gameobj;
+	}
 
 	BL_MeshDeformer(BL_DeformableGameObject *gameobj, Object *obj, RAS_MeshObject *meshobj);
 	virtual ~BL_MeshDeformer();
@@ -90,6 +96,8 @@ public:
 
 protected:
 	Mesh *m_bmesh;
+	Lattice *m_lattice;
+	int m_totvert;
 
 	// this is so m_transverts doesn't need to be converted
 	// before deformation

@@ -43,6 +43,7 @@ class SCA_IObject;
 class SCA_ISensor;
 class SCA_IController;
 class SCA_IActuator;
+class RAS_Deformer;
 
 #ifdef WITH_PYTHON
 template<class T> T PyVecTo(PyObject *);
@@ -52,6 +53,7 @@ typedef std::vector<SCA_ISensor *>       SCA_SensorList;
 typedef std::vector<SCA_IController *>   SCA_ControllerList;
 typedef std::vector<SCA_IActuator *>     SCA_ActuatorList;
 typedef std::vector<SCA_IObject *>		 SCA_ObjectList;
+typedef std::vector<RAS_Deformer *>		 SCA_DeformerList;
 
 class SCA_IObject :	public CValue
 {
@@ -67,6 +69,7 @@ protected:
 	SCA_ActuatorList       m_actuators;
 	SCA_ActuatorList       m_registeredActuators;	// actuators that use a pointer to this object
 	SCA_ObjectList		   m_registeredObjects;		// objects that hold reference to this object
+	SCA_DeformerList	   m_registeredDeformers;
 
 	// SG_Dlist: element of objects with active actuators
 	//           Head: SCA_LogicManager::m_activeActuators
@@ -128,6 +131,11 @@ public:
 	{
 		return m_actuators;
 	}
+	SCA_DeformerList& GetRegisteredDeformers()
+	{
+		return m_registeredDeformers;
+	}
+
 	SG_QList& GetActiveActuators()
 	{
 		return m_activeActuators;
@@ -153,6 +161,10 @@ public:
 	
 	void RegisterObject(SCA_IObject* objs);
 	void UnregisterObject(SCA_IObject* objs);
+
+	void RegisterDeformer(RAS_Deformer* deformer);
+	void UnregisterDeformer(RAS_Deformer* deformer);
+
 	/**
 	 * UnlinkObject(...)
 	 * this object is informed that one of the object to which it holds a reference is deleted
@@ -223,7 +235,8 @@ public:
 		OBJ_ARMATURE=0,
 		OBJ_CAMERA=1,
 		OBJ_LIGHT=2,
-		OBJ_TEXT=3
+		OBJ_TEXT=3,
+		OBJ_LATTICE=4,
 	} ObjectTypes;
 
 };

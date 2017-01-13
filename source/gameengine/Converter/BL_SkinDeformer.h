@@ -60,19 +60,20 @@ public:
 	BL_SkinDeformer(BL_DeformableGameObject *gameobj,
 					Object *bmeshobj,
 					RAS_MeshObject *mesh,
-					BL_ArmatureObject *arma = NULL);
+					bool recalc_normal = true,
+					bool use_vertex_array = true);
 
 	/* this second constructor is needed for making a mesh deformable on the fly. */
 	BL_SkinDeformer(BL_DeformableGameObject *gameobj,
 					Object *bmeshobj_old,
 					Object *bmeshobj_new,
 					RAS_MeshObject *mesh,
-					bool release_object,
 					bool recalc_normal,
 					BL_ArmatureObject *arma = NULL);
 
 	virtual RAS_Deformer *GetReplica();
 	virtual void ProcessReplica();
+	virtual bool UnlinkObject(SCA_IObject* clientobj);
 
 	virtual ~BL_SkinDeformer();
 	bool Update();
@@ -90,6 +91,13 @@ public:
 		}
 		return false;
 	}
+	virtual bool IsDependent()
+	{
+		if (m_armobj)
+			return true;
+		return BL_MeshDeformer::IsDependent();
+	}
+
 
 	void ForceUpdate()
 	{
@@ -99,18 +107,26 @@ public:
 	{
 		return false;
 	}
+	virtual bool UseVertexArray()
+	{
+		return m_useVertexArray;
+	}
+	BL_ArmatureObject* GetArmatureObject()
+	{
+		return m_armobj;
+	}
 
 protected:
 	BL_ArmatureObject *m_armobj; // Our parent object
 	float m_time;
 	double m_lastArmaUpdate;
 	float m_obmat[4][4]; // the reference matrix for skeleton deform
-	bool m_releaseobject;
 	bool m_poseApplied;
 	bool m_recalcNormal;
 	bool m_copyNormals; // dirty flag so we know if Apply() needs to copy normal information (used for BGEDeformVerts())
 	bPoseChannel **m_dfnrToPC;
 	short m_deformflags;
+	bool m_useVertexArray;
 
 	void BlenderDeformVerts();
 	void BGEDeformVerts();

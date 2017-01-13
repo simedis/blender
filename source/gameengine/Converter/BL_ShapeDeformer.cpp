@@ -45,6 +45,7 @@
 #include "DNA_key_types.h"
 #include "DNA_mesh_types.h"
 #include "DNA_meshdata_types.h"
+#include "DNA_lattice_types.h"
 #include "BKE_armature.h"
 #include "BKE_action.h"
 #include "BKE_global.h"
@@ -68,12 +69,18 @@ extern "C" {
 
 BL_ShapeDeformer::BL_ShapeDeformer(BL_DeformableGameObject *gameobj,
                                    Object *bmeshobj,
-                                   RAS_MeshObject *mesh)
-	:BL_SkinDeformer(gameobj, bmeshobj, mesh),
+                                   RAS_MeshObject *mesh,
+                                   bool recalc_normal,
+                                   bool use_vertex_array)
+	:BL_SkinDeformer(gameobj, bmeshobj, mesh, recalc_normal, use_vertex_array),
 	m_useShapeDrivers(false),
-	m_lastShapeUpdate(-1)
+	m_lastShapeUpdate(-1),
+	m_key(NULL)
 {
-	m_key = m_bmesh->key ? BKE_key_copy(G.main, m_bmesh->key) : NULL;
+	if (m_bmesh)
+		m_key = m_bmesh->key ? BKE_key_copy(G.main, m_bmesh->key) : NULL;
+	else if (m_lattice)
+		m_key = m_lattice->key ? BKE_key_copy(G.main, m_lattice->key) : NULL;
 }
 
 /* this second constructor is needed for making a mesh deformable on the fly. */
@@ -81,10 +88,9 @@ BL_ShapeDeformer::BL_ShapeDeformer(BL_DeformableGameObject *gameobj,
                                    Object *bmeshobj_old,
                                    Object *bmeshobj_new,
                                    RAS_MeshObject *mesh,
-                                   bool release_object,
                                    bool recalc_normal,
                                    BL_ArmatureObject *arma)
-	:BL_SkinDeformer(gameobj, bmeshobj_old, bmeshobj_new, mesh, release_object, recalc_normal, arma),
+	:BL_SkinDeformer(gameobj, bmeshobj_old, bmeshobj_new, mesh, recalc_normal, arma),
 	m_useShapeDrivers(false),
 	m_lastShapeUpdate(-1)
 {
@@ -188,7 +194,7 @@ bool BL_ShapeDeformer::Update()
 			VerifyStorage();
 
 			per_keyblock_weights = BKE_keyblock_get_per_block_weights(blendobj, m_key, &cache);
-			BKE_key_evaluate_relative(0, m_bmesh->totvert, m_bmesh->totvert, (char *)(float *)m_transverts,
+			BKE_key_evaluate_relative(0, m_totvert, m_totvert, (char *)(float *)m_transverts,
 			                          m_key, NULL, per_keyblock_weights, 0); /* last arg is ignored */
 			BKE_keyblock_free_per_block_weights(m_key, per_keyblock_weights, &cache);
 

@@ -1070,6 +1070,32 @@ void BKE_lattice_modifiers_calc(Scene *scene, Object *ob)
 	}
 }
 
+float  (*BKE_lattice_cache_vertexcos_swap(Object *ob, float (*newVerts)[3]))[3]
+{
+	float (*vertexCos)[3];
+	DispList *dl;
+	int numVerts;
+
+	if (ob->curve_cache == NULL) {
+		ob->curve_cache = MEM_callocN(sizeof(CurveCache), "CurveCache for lattice");
+	}
+	dl = BKE_displist_find(&ob->curve_cache->disp, DL_VERTS);
+	if (dl == NULL) {
+		dl = MEM_callocN(sizeof(*dl), "lt_dl");
+		vertexCos = BKE_lattice_vertexcos_get(ob, &numVerts);
+		dl->type = DL_VERTS;
+		dl->parts = 1;
+		dl->nr = numVerts;
+		dl->verts = (float *) vertexCos;
+		BLI_addtail(&ob->curve_cache->disp, dl);
+	}
+	else {
+		vertexCos = (float (*)[3])dl->verts;
+	}
+	dl->verts = (float *)newVerts;
+	return vertexCos;
+}
+
 struct MDeformVert *BKE_lattice_deform_verts_get(struct Object *oblatt)
 {
 	Lattice *lt = (Lattice *)oblatt->data;

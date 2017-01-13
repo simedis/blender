@@ -86,15 +86,16 @@ static short get_deformflags(Object *bmeshobj)
 BL_SkinDeformer::BL_SkinDeformer(BL_DeformableGameObject *gameobj,
 								 Object *bmeshobj,
 								 RAS_MeshObject *mesh,
-								 BL_ArmatureObject *arma)
+								 bool recalc_normal,
+								 bool use_vertex_array)
 	:BL_MeshDeformer(gameobj, bmeshobj, mesh),
-	m_armobj(arma),
+	m_armobj(NULL),
 	m_lastArmaUpdate(-1),
-	m_releaseobject(false),
 	m_poseApplied(false),
-	m_recalcNormal(true),
+	m_recalcNormal(recalc_normal),
 	m_copyNormals(false),
-	m_dfnrToPC(NULL)
+	m_dfnrToPC(NULL),
+	m_useVertexArray(use_vertex_array)
 {
 	copy_m4_m4(m_obmat, bmeshobj->obmat);
 	m_deformflags = get_deformflags(bmeshobj);
@@ -105,16 +106,15 @@ BL_SkinDeformer::BL_SkinDeformer(
 	Object *bmeshobj_old, // Blender object that owns the new mesh
 	Object *bmeshobj_new, // Blender object that owns the original mesh
 	RAS_MeshObject *mesh,
-	bool release_object,
 	bool recalc_normal,
 	BL_ArmatureObject *arma)
 	:BL_MeshDeformer(gameobj, bmeshobj_old, mesh),
 	m_armobj(arma),
 	m_lastArmaUpdate(-1),
-	m_releaseobject(release_object),
 	m_recalcNormal(recalc_normal),
 	m_copyNormals(false),
-	m_dfnrToPC(NULL)
+	m_dfnrToPC(NULL),
+	m_useVertexArray(true)
 {
 	// this is needed to ensure correct deformation of mesh:
 	// the deformation is done with Blender's armature_deform_verts() function
@@ -123,22 +123,27 @@ BL_SkinDeformer::BL_SkinDeformer(
 	// simulate a pure replacement of the mesh.
 	copy_m4_m4(m_obmat, bmeshobj_new->obmat);
 	m_deformflags = get_deformflags(bmeshobj_new);
+	if (m_armobj)
+		m_armobj->RegisterDeformer(this);
 }
 
 BL_SkinDeformer::~BL_SkinDeformer()
 {
-	if (m_releaseobject && m_armobj)
-		m_armobj->Release();
+	if (m_armobj)
+		m_armobj->UnregisterDeformer(this);
 	if (m_dfnrToPC)
 		delete [] m_dfnrToPC;
 }
 
 void BL_SkinDeformer::Relink(std::map<void *, void *>& map)
 {
-	if (m_armobj) {
-		m_armobj = (BL_ArmatureObject *)map[m_armobj];
+	void *armobj = map[m_armobj];
+	if (armobj) {
+		if (m_armobj)
+			m_armobj->UnregisterDeformer(this);
+		m_armobj = (BL_ArmatureObject *)armobj;
+		m_armobj->RegisterDeformer(this);
 	}
-
 	BL_MeshDeformer::Relink(map);
 }
 
@@ -188,12 +193,24 @@ RAS_Deformer *BL_SkinDeformer::GetReplica()
 
 void BL_SkinDeformer::ProcessReplica()
 {
-	BL_MeshDeformer::ProcessReplica();
 	m_lastArmaUpdate = -1.0;
-	m_releaseobject = false;
 	m_dfnrToPC = NULL;
+	if (m_armobj)
+		m_armobj->RegisterDeformer(this);
+	BL_MeshDeformer::ProcessReplica();
 }
 
+bool BL_SkinDeformer::UnlinkObject(SCA_IObject* clientobj)
+{
+	if (m_armobj == clientobj)
+	{
+		m_armobj = NULL;
+		return true;
+	}
+	return BL_MeshDeformer::UnlinkObject(clientobj);
+}
+
+// this works also if m_objMesh is a lattice
 void BL_SkinDeformer::BlenderDeformVerts()
 {
 	float obmat[4][4];  // the original object matrix
@@ -204,7 +221,7 @@ void BL_SkinDeformer::BlenderDeformVerts()
 	// set reference matrix
 	copy_m4_m4(m_objMesh->obmat, m_obmat);
 
-	armature_deform_verts(par_arma, m_objMesh, NULL, m_transverts, NULL, m_bmesh->totvert, m_deformflags, NULL, NULL);
+	armature_deform_verts(par_arma, m_objMesh, NULL, m_transverts, NULL, m_totvert, m_deformflags, NULL, NULL);
 
 	// restore matrix
 	copy_m4_m4(m_objMesh->obmat, obmat);
@@ -383,7 +400,7 @@ bool BL_SkinDeformer::UpdateInternal(bool shape_applied)
 
 		m_armobj->ApplyPose();
 
-		if (m_armobj->GetVertDeformType() == ARM_VDEF_BGE_CPU)
+		if (m_bmesh && m_armobj->GetVertDeformType() == ARM_VDEF_BGE_CPU)
 			BGEDeformVerts();
 		else
 			BlenderDeformVerts();
@@ -416,4 +433,5 @@ void BL_SkinDeformer::SetArmature(BL_ArmatureObject *armobj)
 {
 	// only used to set the object now
 	m_armobj = armobj;
+	m_armobj->RegisterDeformer(this);
 }

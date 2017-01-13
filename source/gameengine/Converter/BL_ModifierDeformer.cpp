@@ -66,8 +66,28 @@ extern "C" {
 #include "BLI_blenlib.h"
 #include "BLI_math.h"
 
+BL_ModifierDeformer::BL_ModifierDeformer(BL_DeformableGameObject *gameobj,
+						Scene *scene,
+						Object *bmeshobj_old,
+						Object *bmeshobj_new,
+						RAS_MeshObject *mesh,
+						BL_ArmatureObject *arma,
+						BL_LatticeObject *lattice)
+	:BL_ShapeDeformer(gameobj, bmeshobj_old, bmeshobj_new, mesh, false, arma),
+	m_lastModifierUpdate(-1),
+	m_scene(scene),
+	m_dm(NULL),
+	m_latticeObj(lattice),
+	m_lastLatticeUpdate(-1.0)
+{
+	if (m_latticeObj)
+		m_latticeObj->RegisterDeformer(this);
+}
+
 BL_ModifierDeformer::~BL_ModifierDeformer()
 {
+	if (m_latticeObj)
+		m_latticeObj->UnregisterDeformer(this);
 	if (m_dm) {
 		// deformedOnly is used as a user counter
 		if (--m_dm->deformedOnly == 0) {
@@ -96,6 +116,30 @@ void BL_ModifierDeformer::ProcessReplica()
 	}
 	// this will force an update and if the mesh cannot be reused, a new one will be created
 	m_lastModifierUpdate = -1.0;
+	if (m_latticeObj)
+		m_latticeObj->RegisterDeformer(this);
+}
+
+void BL_ModifierDeformer::Relink(std::map<void *, void *>& map)
+{
+	void *latobj = map[m_latticeObj];
+	if (latobj) {
+		if (m_latticeObj)
+			m_latticeObj->UnregisterDeformer(this);
+		m_latticeObj = (BL_LatticeObject *)latobj;
+		m_latticeObj->RegisterDeformer(this);
+	}
+	BL_ShapeDeformer::Relink(map);
+}
+
+bool BL_ModifierDeformer::UnlinkObject(SCA_IObject* clientobj)
+{
+	if (m_latticeObj == clientobj)
+	{
+		m_latticeObj = NULL;
+		return true;
+	}
+	return BL_SkinDeformer::UnlinkObject(clientobj);
 }
 
 bool BL_ModifierDeformer::HasCompatibleDeformer(Object *ob)
@@ -131,6 +175,28 @@ bool BL_ModifierDeformer::HasArmatureDeformer(Object *ob)
 	return false;
 }
 
+Object *BL_ModifierDeformer::GetLatticeDeformer(Object *ob)
+{
+	if (!ob->modifiers.first)
+		return NULL;
+
+	ModifierData *md = (ModifierData *)ob->modifiers.first;
+	while (md)
+	{
+		if (md->type == eModifierType_Lattice)
+		{
+			LatticeModifierData *lmd = (LatticeModifierData *)md;
+			return lmd->object;
+			//if (ob->parent && ob->parent->type==OB_LATTICE && ob->parent == lmd->object)
+			//	return true;
+			//return false;
+		}
+		md = md->next;
+	}
+	return NULL;
+	//return false;
+}
+
 // return a deformed mesh that supports mapping (with a valid CD_ORIGINDEX layer)
 DerivedMesh *BL_ModifierDeformer::GetPhysicsMesh()
 {
@@ -163,6 +229,9 @@ bool BL_ModifierDeformer::Update(void)
 {
 	bool bShapeUpdate = BL_ShapeDeformer::Update();
 
+	if (!bShapeUpdate)
+		bShapeUpdate = LatticeUpdated();
+
 	if (bShapeUpdate || m_lastModifierUpdate != m_gameobj->GetLastFrame()) {
 		// static derived mesh are not updated
 		if (m_dm == NULL || m_bDynamic) {
@@ -174,8 +243,15 @@ bool BL_ModifierDeformer::Update(void)
 			 * It may not be the case here because of replace mesh actuator */
 			Mesh *oldmesh = (Mesh *)blendobj->data;
 			blendobj->data = m_bmesh;
+			if (m_latticeObj)
+				m_latticeObj->SwapLatticeCache();
 			/* execute the modifiers */
 			DerivedMesh *dm = mesh_create_derived_no_virtual(m_scene, blendobj, m_transverts, CD_MASK_MESH);
+			if (m_latticeObj)
+			{
+				m_latticeObj->RestoreLatticeCache();
+				m_lastLatticeUpdate = m_latticeObj->GetLastFrame();
+			}
 			/* restore object data */
 			blendobj->data = oldmesh;
 			/* free the current derived mesh and replace, (dm should never be NULL) */
@@ -228,4 +304,10 @@ bool BL_ModifierDeformer::Apply(RAS_IPolyMaterial *polymat, RAS_MeshMaterial *me
 		return false;
 
 	return true;
+}
+
+void BL_ModifierDeformer::SetLattice(BL_LatticeObject *latticeObj)
+{
+	m_latticeObj = latticeObj;
+	m_latticeObj->RegisterDeformer(this);
 }
