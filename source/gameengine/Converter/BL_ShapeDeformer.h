@@ -42,6 +42,7 @@
 
 struct Object;
 struct Key;
+struct Lattice;
 class RAS_MeshObject;
 
 class BL_ShapeDeformer : public BL_SkinDeformer
@@ -49,14 +50,15 @@ class BL_ShapeDeformer : public BL_SkinDeformer
 public:
 	BL_ShapeDeformer(BL_DeformableGameObject *gameobj,
 	                 Object *bmeshobj,
-	                 RAS_MeshObject *mesh);
+	                 RAS_MeshObject *mesh,
+	                 bool recalc_normal = true,
+	                 bool use_vertex_array = true);
 
 	/* this second constructor is needed for making a mesh deformable on the fly. */
 	BL_ShapeDeformer(BL_DeformableGameObject *gameobj,
 					 Object *bmeshobj_old,
 					 Object *bmeshobj_new,
 					 RAS_MeshObject *mesh,
-					 bool release_object,
 					 bool recalc_normal,
 					 BL_ArmatureObject *arma = NULL);
 

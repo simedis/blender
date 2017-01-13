@@ -45,6 +45,8 @@
 #include "RAS_Polygon.h"
 #include "DNA_mesh_types.h"
 #include "DNA_meshdata_types.h"
+#include "DNA_lattice_types.h"
+#include "DNA_curve_types.h"
 
 #include <string>
 #include "BLI_math.h"
@@ -52,7 +54,7 @@
 bool BL_MeshDeformer::Apply(RAS_IPolyMaterial *UNUSED(polymat), RAS_MeshMaterial *UNUSED(meshmat))
 {
 	// only apply once per frame if the mesh is actually modified
-	if (m_lastDeformUpdate != m_gameobj->GetLastFrame()) {
+	if (m_mesh && m_lastDeformUpdate != m_gameobj->GetLastFrame()) {
 		// For each material
 		for (std::vector<RAS_MeshMaterial *>::iterator mit = m_mesh->GetFirstMaterial();
 		     mit != m_mesh->GetLastMaterial(); ++mit)
@@ -86,7 +88,7 @@ bool BL_MeshDeformer::Apply(RAS_IPolyMaterial *UNUSED(polymat), RAS_MeshMaterial
 
 BL_MeshDeformer::BL_MeshDeformer(BL_DeformableGameObject *gameobj, Object *obj, RAS_MeshObject *meshobj)
 	:RAS_Deformer(meshobj),
-	m_bmesh((Mesh *)(obj->data)),
+	m_bmesh(NULL),
 	m_transverts(NULL),
 	m_transnors(NULL),
 	m_objMesh(obj),
@@ -97,8 +99,20 @@ BL_MeshDeformer::BL_MeshDeformer(BL_DeformableGameObject *gameobj, Object *obj, 
 	KX_Scene *scene = m_gameobj->GetScene();
 	RAS_BoundingBoxManager *boundingBoxManager = scene->GetBoundingBoxManager();
 	m_boundingBox = boundingBoxManager->CreateBoundingBox();
-	// Set AABB default to mesh bounding box AABB.
-	m_boundingBox->CopyAabb(m_mesh->GetBoundingBox());
+	if (m_mesh)
+		// Set AABB default to mesh bounding box AABB.
+		m_boundingBox->CopyAabb(m_mesh->GetBoundingBox());
+	switch (obj->type)
+	{
+	case OB_MESH:
+		m_bmesh = (Mesh *)(obj->data);
+		m_totvert = m_bmesh->totvert;
+		break;
+	case OB_LATTICE:
+		m_lattice = (Lattice *)(obj->data);
+		m_totvert = m_lattice->pntsu * m_lattice->pntsv * m_lattice->pntsw;
+		break;
+	}
 }
 
 BL_MeshDeformer::~BL_MeshDeformer()
@@ -141,7 +155,7 @@ void BL_MeshDeformer::RecalcNormals()
 	std::vector<RAS_MeshMaterial *>::iterator mit;
 
 	/* set vertex normals to zero */
-	memset(m_transnors, 0, sizeof(float) * 3 * m_bmesh->totvert);
+	memset(m_transnors, 0, sizeof(float) * 3 * m_totvert);
 
 	for (unsigned int i = 0, numpoly = m_mesh->NumPolygons(); i < numpoly; ++i) {
 		RAS_Polygon *poly = m_mesh->GetPolygon(i);
@@ -213,20 +227,35 @@ void BL_MeshDeformer::RecalcNormals()
 void BL_MeshDeformer::VerifyStorage()
 {
 	/* Ensure that we have the right number of verts assigned */
-	if (m_tvtot != m_bmesh->totvert) {
-		if (m_transverts)
-			delete[] m_transverts;
-		if (m_transnors)
-			delete[] m_transnors;
+	if (m_bmesh)
+	{
+		if (m_tvtot != m_totvert) {
+			if (m_transverts)
+				delete[] m_transverts;
+			if (m_transnors)
+				delete[] m_transnors;
 
-		m_transverts = new float[m_bmesh->totvert][3];
-		m_transnors = new float[m_bmesh->totvert][3];
-		m_tvtot = m_bmesh->totvert;
+			m_transverts = new float[m_totvert][3];
+			m_transnors = new float[m_totvert][3];
+			m_tvtot = m_totvert;
+		}
+
+		for (unsigned int v = 0; v < m_totvert; v++) {
+			copy_v3_v3(m_transverts[v], m_bmesh->mvert[v].co);
+			normal_short_to_float_v3(m_transnors[v], m_bmesh->mvert[v].no);
+		}
 	}
-
-	for (unsigned int v = 0; v < m_bmesh->totvert; v++) {
-		copy_v3_v3(m_transverts[v], m_bmesh->mvert[v].co);
-		normal_short_to_float_v3(m_transnors[v], m_bmesh->mvert[v].no);
+	else if (m_lattice)
+	{
+		if (m_tvtot != m_totvert) {
+			if (m_transverts)
+				delete[] m_transverts;
+			m_transverts = new float[m_totvert][3];
+			m_tvtot = m_totvert;
+		}
+		for (unsigned int v = 0; v < m_totvert; v++) {
+			copy_v3_v3(m_transverts[v], m_lattice->def[v].vec);
+		}
 	}
 }
 

@@ -36,6 +36,7 @@
 #include "SCA_ISensor.h"
 #include "SCA_IController.h"
 #include "SCA_IActuator.h"
+#include "RAS_Deformer.h"
 #include "MT_Vector3.h"
 #include "EXP_ListValue.h"
 
@@ -83,6 +84,11 @@ SCA_IObject::~SCA_IObject()
 		(*ito)->UnlinkObject(this);
 	}
 
+	SCA_DeformerList::iterator itd;
+	for (itd = m_registeredDeformers.begin(); !(itd==m_registeredDeformers.end()); ++itd)
+	{
+		(*itd)->UnlinkObject(this);
+	}
 	//T_InterpolatorList::iterator i;
 	//for (i = m_interpolators.begin(); !(i == m_interpolators.end()); ++i) {
 	//	delete *i;
@@ -150,6 +156,26 @@ void SCA_IObject::UnregisterObject(SCA_IObject* obj)
 	}
 }
 
+void SCA_IObject::RegisterDeformer(RAS_Deformer* deformer)
+{
+	// one object may be registered multiple times via constraint target
+	// store multiple reference, this will serve as registration counter
+	m_registeredDeformers.push_back(deformer);
+}
+
+void SCA_IObject::UnregisterDeformer(RAS_Deformer* deformer)
+{
+	SCA_DeformerList::iterator ito;
+	for (ito = m_registeredDeformers.begin(); ito != m_registeredDeformers.end(); ++ito)
+	{
+		if ((*ito) == deformer) {
+			(*ito) = m_registeredDeformers.back();
+			m_registeredDeformers.pop_back();
+			break;
+		}
+	}
+}
+
 void SCA_IObject::ReParentLogic()
 {
 	SCA_ActuatorList& oldactuators  = GetActuators();
@@ -193,6 +219,7 @@ void SCA_IObject::ReParentLogic()
 	// a new object cannot be client of any actuator
 	m_registeredActuators.clear();
 	m_registeredObjects.clear();
+	m_registeredDeformers.clear();
 }
 
 

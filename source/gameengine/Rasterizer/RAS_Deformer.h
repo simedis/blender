@@ -50,6 +50,7 @@ struct DerivedMesh;
 class RAS_MeshObject;
 class RAS_IPolyMaterial;
 class RAS_MeshMaterial;
+class SCA_IObject;
 
 class RAS_Deformer
 {
@@ -86,6 +87,11 @@ public:
 	{
 		return true;
 	}
+	// true when deformer depends on another object (armature or lattice)
+	virtual bool IsDependent()
+	{
+		return false;
+	}
 	// true when deformer produces varying vertex (shape or armature)
 	bool IsDynamic()
 	{
@@ -102,6 +108,20 @@ public:
 	virtual class RAS_MeshObject* GetRasMesh()
 	{
 		return NULL;
+	}
+	virtual class SCA_IObject* GetParent()
+	{
+		return NULL;
+	}
+
+	/**
+	 * UnlinkObject(...)
+	 * this object is informed that one of the object to which it holds a reference is deleted
+	 * returns true if there was indeed a reference.
+	 */
+	virtual bool UnlinkObject(SCA_IObject* clientobj)
+	{
+		return false;
 	}
 	virtual float (* GetTransVerts(int *tot))[3]	{	*tot= 0; return NULL; }
 

@@ -90,6 +90,8 @@
 #include "BL_ModifierDeformer.h"
 #include "BL_ShapeDeformer.h"
 #include "BL_DeformableGameObject.h"
+#include "BL_LatticeObject.h"
+#include "BL_LatticeObject.h"
 #include "KX_ObstacleSimulation.h"
 
 #ifdef WITH_BULLET
@@ -1155,7 +1157,7 @@ void KX_Scene::ReplaceMesh(class CValue* obj,void* meshobj, bool use_gfx, bool u
 	KX_GameObject* gameobj = static_cast<KX_GameObject*>(obj);
 	RAS_MeshObject* mesh = static_cast<RAS_MeshObject*>(meshobj);
 
-	if (!gameobj) {
+	if (!gameobj || gameobj->GetGameObjectType() == SCA_IObject::OBJ_LATTICE) {
 		CM_FunctionWarning("invalid object, doing nothing");
 		return;
 	}
@@ -1168,9 +1170,20 @@ void KX_Scene::ReplaceMesh(class CValue* obj,void* meshobj, bool use_gfx, bool u
 	if (gameobj->IsDeformable())
 	{
 		BL_DeformableGameObject* newobj = static_cast<BL_DeformableGameObject*>( gameobj );
+		BL_LatticeObject *latobj = NULL;
+		BL_ArmatureObject *armobj = NULL;
+		RAS_Deformer *deformer = newobj->GetDeformer();
 		
-		if (newobj->GetDeformer())
+		if (deformer)
 		{
+			if (dynamic_cast<BL_ModifierDeformer*>(deformer))
+			{
+				latobj = static_cast<BL_ModifierDeformer*>(deformer)->GetLatticeObject();
+			}
+			if (dynamic_cast<BL_SkinDeformer*>(deformer))
+			{
+				armobj = static_cast<BL_SkinDeformer*>(deformer)->GetArmatureObject();
+			}
 			delete newobj->GetDeformer();
 			newobj->SetDeformer(NULL);
 		}
@@ -1189,17 +1202,13 @@ void KX_Scene::ReplaceMesh(class CValue* obj,void* meshobj, bool use_gfx, bool u
 			bool bHasShapeKey = blendmesh->key != NULL && blendmesh->key->type==KEY_RELATIVE;
 			bool bHasDvert = blendmesh->dvert != NULL;
 			bool bHasArmature = 
-				BL_ModifierDeformer::HasArmatureDeformer(blendobj) &&
-				parentobj &&								// current parent is armature
-				parentobj->GetGameObjectType() == SCA_IObject::OBJ_ARMATURE &&
-				oldblendobj &&								// needed for mesh deform
-				blendobj->parent &&							// original object had armature (not sure this test is needed)
-				blendobj->parent->type == OB_ARMATURE &&
-				blendmesh->dvert!=NULL;						// mesh has vertex group
+			        armobj &&									// object is armature deform
+					oldblendobj &&								// needed for mesh deform
+					blendmesh->dvert!=NULL;						// mesh has vertex group
 #ifdef WITH_BULLET
 			bool bHasSoftBody = (!parentobj && (blendobj->gameflag & OB_SOFT_BODY));
 #endif
-			
+
 			if (oldblendobj==NULL) {
 				if (bHasModifier || bHasShapeKey || bHasDvert || bHasArmature) {
 					CM_FunctionWarning("new mesh is not used in an object from the current scene, you will get incorrect behavior");
@@ -1217,10 +1226,10 @@ void KX_Scene::ReplaceMesh(class CValue* obj,void* meshobj, bool use_gfx, bool u
 						m_blenderScene,
 						oldblendobj, blendobj,
 						mesh,
-						true,
-						static_cast<BL_ArmatureObject*>( parentobj->AddRef() )
+						armobj,
+						latobj
 					);
-					modifierDeformer->LoadShapeDrivers(parentobj);
+					modifierDeformer->LoadShapeDrivers(armobj);
 				}
 				else
 				{
@@ -1229,8 +1238,8 @@ void KX_Scene::ReplaceMesh(class CValue* obj,void* meshobj, bool use_gfx, bool u
 						m_blenderScene,
 						oldblendobj, blendobj,
 						mesh,
-						false,
-						NULL
+						NULL,
+					    latobj
 					);
 				}
 				newobj->SetDeformer(modifierDeformer);
@@ -1244,10 +1253,9 @@ void KX_Scene::ReplaceMesh(class CValue* obj,void* meshobj, bool use_gfx, bool u
 						oldblendobj, blendobj,
 						mesh,
 						true,
-						true,
-						static_cast<BL_ArmatureObject*>( parentobj->AddRef() )
+						armobj
 					);
-					shapeDeformer->LoadShapeDrivers(parentobj);
+					shapeDeformer->LoadShapeDrivers(armobj);
 				}
 				else
 				{
@@ -1255,7 +1263,6 @@ void KX_Scene::ReplaceMesh(class CValue* obj,void* meshobj, bool use_gfx, bool u
 						newobj,
 						oldblendobj, blendobj,
 						mesh,
-						false,
 						true,
 						NULL
 					);
@@ -1269,8 +1276,7 @@ void KX_Scene::ReplaceMesh(class CValue* obj,void* meshobj, bool use_gfx, bool u
 					oldblendobj, blendobj,
 					mesh,
 					true,
-					true,
-					static_cast<BL_ArmatureObject*>( parentobj->AddRef() )
+					armobj
 				);
 				newobj->SetDeformer(skinDeformer);
 			}
@@ -1539,8 +1545,10 @@ void KX_Scene::AddAnimatedObject(CValue* gameobj)
 
 static void update_anim_thread_func(TaskPool *pool, void *taskdata, int UNUSED(threadid))
 {
-	KX_GameObject *gameobj, *child, *parent;
+	KX_GameObject *gameobj, *child;
 	CListValue *children;
+	RAS_Deformer *deformer;
+
 	bool needs_update;
 	double curtime = *(double*)BLI_task_pool_userdata(pool);
 
@@ -1584,23 +1592,33 @@ static void update_anim_thread_func(TaskPool *pool, void *taskdata, int UNUSED(t
 	gameobj->UpdateActionManager(curtime, needs_update);
 
 	if (needs_update) {
-		children = gameobj->GetChildren();
-		parent = gameobj->GetParent();
+		deformer = gameobj->GetDeformer();
+		SCA_DeformerList& deformChildren = gameobj->GetRegisteredDeformers();
 
-		// Only do deformers here if they are not parented to an armature, otherwise the armature will
-		// handle updating its children
-		if (gameobj->GetDeformer() && (!parent || parent->GetGameObjectType() != SCA_IObject::OBJ_ARMATURE))
-			gameobj->GetDeformer()->Update();
+		// Only do deformers here if they are not parented to an armature or lattice, otherwise they will
+		// handle updating their children
+		if (deformer && !deformer->IsDependent())
+			deformer->Update();
 
-		for (CListValue::iterator<KX_GameObject> it = children->GetBegin(), end = children->GetEnd(); it != end; ++it) {
-			child = *it;
+		// follow the list of dependent objects and update
+		for (SCA_DeformerList::iterator it = deformChildren.begin(), end=deformChildren.end(); it != end; ++it)
+		{
+			deformer = *it;
+			deformer->Update();
+			child = static_cast<KX_GameObject*>(deformer->GetParent());
 
-			if (child->GetDeformer()) {
-				child->GetDeformer()->Update();
+			// support 2 levels of dependency for the case where an armature deforms a lattice that deforms a mesh
+			if (child->GetGameObjectType() == SCA_IObject::OBJ_LATTICE)
+			{
+				BL_LatticeObject *latticeObj = static_cast<BL_LatticeObject*>(child);
+				latticeObj->UpdateLastFrame(curtime);
+				SCA_DeformerList& deformChildren2 = gameobj->GetRegisteredDeformers();
+				for (SCA_DeformerList::iterator it2 = deformChildren2.begin(), end2=deformChildren2.end(); it2 != end2; ++it2)
+				{
+					(*it2)->Update();
+				}
 			}
 		}
-
-		children->Release();
 	}
 }
 
@@ -1941,7 +1959,8 @@ static void MergeScene_GameObject(KX_GameObject* gameobj, KX_Scene *to, KX_Scene
 		((KX_LightObject*)gameobj)->UpdateScene(to);
 
 	// All armatures should be in the animated object list to be umpdated.
-	if (gameobj->GetGameObjectType() == SCA_IObject::OBJ_ARMATURE)
+	if (gameobj->GetGameObjectType() == SCA_IObject::OBJ_ARMATURE ||
+	    gameobj->GetGameObjectType() == SCA_IObject::OBJ_LATTICE)
 		to->AddAnimatedObject(gameobj);
 
 	/* Add the object to the scene's logic manager */

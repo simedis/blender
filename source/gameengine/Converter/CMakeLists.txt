@@ -71,6 +71,7 @@ set(SRC
 	BL_ArmatureObject.cpp
 	BL_BlenderDataConversion.cpp
 	BL_DeformableGameObject.cpp
+	BL_LatticeObject.cpp
 	BL_MeshDeformer.cpp
 	BL_ModifierDeformer.cpp
 	BL_ShapeDeformer.cpp
@@ -91,6 +92,7 @@ set(SRC
 	BL_ArmatureObject.h
 	BL_BlenderDataConversion.h
 	BL_DeformableGameObject.h
+	BL_LatticeObject.h
 	BL_MeshDeformer.h
 	BL_ModifierDeformer.h
 	BL_ShapeDeformer.h
