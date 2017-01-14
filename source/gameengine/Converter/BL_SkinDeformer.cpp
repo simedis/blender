@@ -412,8 +412,6 @@ bool BL_SkinDeformer::UpdateInternal(bool shape_applied)
 		/* dynamic vertex, cannot use display list */
 		m_bDynamic = true;
 
-		UpdateTransverts();
-
 		m_poseApplied = false;
 
 		/* indicate that the m_transverts and normals are up to date */
@@ -425,7 +423,10 @@ bool BL_SkinDeformer::UpdateInternal(bool shape_applied)
 
 bool BL_SkinDeformer::Update(void)
 {
-	return UpdateInternal(false);
+	bool ret = UpdateInternal(false);
+	if (ret)
+		UpdateTransverts();
+	return ret;
 }
 
 /* XXX note: I propose to drop this function */

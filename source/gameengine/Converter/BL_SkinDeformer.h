@@ -76,8 +76,8 @@ public:
 	virtual bool UnlinkObject(SCA_IObject* clientobj);
 
 	virtual ~BL_SkinDeformer();
+	virtual bool UpdateInternal(bool shape_applied);
 	bool Update();
-	bool UpdateInternal(bool shape_applied);
 	bool Apply(RAS_IPolyMaterial *polymat, RAS_MeshMaterial *meshmat);
 	bool UpdateBuckets()
 	{

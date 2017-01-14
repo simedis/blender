@@ -345,6 +345,7 @@ bool          modifier_unique_name(struct ListBase *modifiers, struct ModifierDa
 void          modifier_copyData_generic(const struct ModifierData *md, struct ModifierData *target);
 void          modifier_copyData(struct ModifierData *md, struct ModifierData *target);
 bool          modifier_dependsOnTime(struct ModifierData *md);
+bool          modifier_isOnlyDeform(struct ModifierData *md);
 bool          modifier_supportsMapping(struct ModifierData *md);
 bool          modifier_supportsCage(struct Scene *scene, struct ModifierData *md);
 bool          modifier_couldBeCage(struct Scene *scene, struct ModifierData *md);
