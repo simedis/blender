@@ -180,9 +180,13 @@ bool BL_ShapeDeformer::UpdateInternal(bool shape_applied)
 	ExecuteShapeDrivers();
 
 	/* See if the object shape has changed */
-	if (m_lastShapeUpdate != m_gameobj->GetLastFrame()) {
+	if (m_lastShapeUpdate != m_gameobj->GetLastFrameAction()) {
 		/* the key coefficient have been set already, we just need to blend the keys */
 		Object *blendobj = m_gameobj->GetBlendObject();
+
+		/* reset verts if not already done */
+		if (!shape_applied)
+			VerifyStorage();
 
 		/* we will blend the key directly in m_transverts array: it is used by armature as the start position */
 		/* m_key can be NULL in case of Modifier deformer */
@@ -190,9 +194,6 @@ bool BL_ShapeDeformer::UpdateInternal(bool shape_applied)
 			WeightsArrayCache cache = {0, NULL};
 			float **per_keyblock_weights;
 
-			/* store verts locally */
-			if (!shape_applied)
-				VerifyStorage();
 
 			per_keyblock_weights = BKE_keyblock_get_per_block_weights(blendobj, m_key, &cache);
 			BKE_key_evaluate_relative(0, m_totvert, m_totvert, (char *)(float *)m_transverts,
@@ -206,7 +207,7 @@ bool BL_ShapeDeformer::UpdateInternal(bool shape_applied)
 		// The weight array are ultimately deleted when the skin mesh is destroyed
 
 		/* Update the current frame */
-		m_lastShapeUpdate = m_gameobj->GetLastFrame();
+		m_lastShapeUpdate = m_gameobj->GetLastFrameAction();
 
 		// As we have changed, the mesh, the skin deformer must update as well.
 		// This will force the update
@@ -214,7 +215,7 @@ bool BL_ShapeDeformer::UpdateInternal(bool shape_applied)
 		bShapeUpdate = true;
 	}
 	// check for armature deform
-	bSkinUpdate = BL_SkinDeformer::UpdateInternal(bShapeUpdate && m_bDynamic);
+	bSkinUpdate = BL_SkinDeformer::UpdateInternal(bShapeUpdate);
 
 	// non dynamic deformer = Modifer without armature and shape keys, no need to create storage
 	if (!bSkinUpdate && bShapeUpdate && m_bDynamic) {

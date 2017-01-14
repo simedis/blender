@@ -207,7 +207,6 @@ BL_ArmatureObject::BL_ArmatureObject(void *sgReplicationInfo,
                                      int vert_deform_type)
 	:KX_GameObject(sgReplicationInfo, callbacks),
 	m_scene(scene),
-	m_lastframe(0.0),
 	m_timestep(0.040),
 	m_vert_deform_type(vert_deform_type),
 	m_drawDebug(false),
@@ -436,7 +435,7 @@ void BL_ArmatureObject::ApplyPose()
 	// in the GE, we use ctime to store the timestep
 	m_pose->ctime = (float)m_timestep;
 	//m_scene->r.cfra++;
-	if (m_lastapplyframe != m_lastframe) {
+	if (m_lastapplyframe != m_lastFrameAction) {
 		// update the constraint if any, first put them all off so that only the active ones will be updated
 		for (CListValue::iterator<BL_ArmatureConstraint> it = m_controlledConstraints->GetBegin(), end = m_controlledConstraints->GetEnd();
 			 it != end; ++it)
@@ -454,7 +453,7 @@ void BL_ArmatureObject::ApplyPose()
 		{
 			(*it)->RestoreTarget();
 		}
-		m_lastapplyframe = m_lastframe;
+		m_lastapplyframe = m_lastFrameAction;
 	}
 }
 
@@ -487,12 +486,11 @@ void BL_ArmatureObject::BlendInPose(bPose *blend_pose, float weight, short mode)
 
 bool BL_ArmatureObject::UpdateTimestep(double curtime)
 {
-	if (curtime != m_lastframe) {
+	if (curtime != m_lastFrameAction) {
 		// compute the timestep for the underlying IK algorithm
-		m_timestep = curtime - m_lastframe;
-		m_lastframe = curtime;
+		m_timestep = curtime - m_lastFrameAction;
+		m_lastFrameAction = curtime;
 	}
-
 	return false;
 }
 
@@ -549,11 +547,6 @@ void BL_ArmatureObject::GetPose(bPose **pose)
 bPose *BL_ArmatureObject::GetOrigPose()
 {
 	return m_pose;
-}
-
-double BL_ArmatureObject::GetLastFrame()
-{
-	return m_lastframe;
 }
 
 bool BL_ArmatureObject::GetBoneMatrix(Bone *bone, MT_Matrix4x4& matrix)

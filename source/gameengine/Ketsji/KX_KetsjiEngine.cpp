@@ -867,12 +867,14 @@ void KX_KetsjiEngine::RenderShadowBuffers(KX_Scene *scene)
 			/* binds framebuffer object, sets up camera .. */
 			raslight->BindShadowBuffer(m_canvas, cam, camtrans);
 
-			/* update scene */
-			scene->CalculateVisibleMeshes(m_rasterizer, cam, raslight->GetShadowLayer());
-
 			m_logger->StartLog(tc_animations, m_kxsystem->GetTimeInSeconds(), true);
 			SG_SetActiveStage(SG_STAGE_ANIMATION_UPDATE);
 			UpdateAnimations(scene);
+
+			m_logger->StartLog(tc_scenegraph, m_kxsystem->GetTimeInSeconds(), true);
+			SG_SetActiveStage(SG_STAGE_CULLING);
+			scene->CalculateVisibleMeshes(m_rasterizer, cam, raslight->GetShadowLayer());
+
 			m_logger->StartLog(tc_rasterizer, m_kxsystem->GetTimeInSeconds(), true);
 			SG_SetActiveStage(SG_STAGE_RENDER);
 
@@ -1028,6 +1030,10 @@ void KX_KetsjiEngine::RenderFrame(KX_Scene *scene, KX_Camera *cam, unsigned shor
 	// and this call though. Visibility is imparted when this call
 	// runs through the individual objects.
 
+	m_logger->StartLog(tc_animations, m_kxsystem->GetTimeInSeconds(), true);
+	SG_SetActiveStage(SG_STAGE_ANIMATION_UPDATE);
+	UpdateAnimations(scene);
+
 	m_logger->StartLog(tc_scenegraph, m_kxsystem->GetTimeInSeconds(), true);
 	SG_SetActiveStage(SG_STAGE_CULLING);
 
@@ -1035,10 +1041,6 @@ void KX_KetsjiEngine::RenderFrame(KX_Scene *scene, KX_Camera *cam, unsigned shor
 
 	// update levels of detail
 	scene->UpdateObjectLods(cam);
-
-	m_logger->StartLog(tc_animations, m_kxsystem->GetTimeInSeconds(), true);
-	SG_SetActiveStage(SG_STAGE_ANIMATION_UPDATE);
-	UpdateAnimations(scene);
 
 	m_logger->StartLog(tc_rasterizer, m_kxsystem->GetTimeInSeconds(), true);
 	SG_SetActiveStage(SG_STAGE_RENDER);

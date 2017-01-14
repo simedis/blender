@@ -320,6 +320,9 @@ bool KX_IpoSGController::Update(double currentTime)
 				m_game_object->NodeSetLocalScale(newScale);
 		}
 		m_modified = false;
+		// Update IPO timestamp to trigger dependency refresh (in case a deformer depends on this object)
+		// Can't use currentTime because it is a local time.
+		m_game_object->UpdateFrameIPO();
 	}
 	return false;
 }

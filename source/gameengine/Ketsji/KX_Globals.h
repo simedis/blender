@@ -43,6 +43,7 @@ KX_KetsjiEngine *KX_GetActiveEngine();
 KX_Scene *KX_GetActiveScene();
 const std::string& KX_GetMainPath();
 const std::string& KX_GetOrigPath();
+double KX_GetFrameTime();
 
 void KX_RasterizerDrawDebugLine(const MT_Vector3 &from,const MT_Vector3 &to,const MT_Vector4 &color);
 void KX_RasterizerDrawDebugCircle(const MT_Vector3 &center, const MT_Scalar radius, const MT_Vector4 &color,

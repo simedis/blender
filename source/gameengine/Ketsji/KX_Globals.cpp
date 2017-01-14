@@ -83,6 +83,11 @@ const std::string& KX_GetOrigPath()
 	return g_origPath;
 }
 
+double KX_GetFrameTime()
+{
+	return g_engine->GetFrameTime();
+}
+
 void KX_RasterizerDrawDebugLine(const MT_Vector3& from,const MT_Vector3& to,const MT_Vector4& color)
 {
 	g_engine->GetRasterizer()->DrawDebugLine(g_scene, from, to, color);
