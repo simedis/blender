@@ -66,6 +66,47 @@ extern "C" {
 #include "BLI_blenlib.h"
 #include "BLI_math.h"
 
+// returns true if the modifier stack only contains deformer modifier
+// (i.e. modifiers that don't change the vertex count)
+static bool modifiersOnlyDeform(Object *ob)
+{
+	if (!ob->modifiers.first)
+		return true;
+
+	ModifierData *md;
+	for (md = (ModifierData *)ob->modifiers.first; md; md = md->next)
+	{
+		if (modifier_dependsOnTime(md))
+			continue;
+		if (!(md->mode & eModifierMode_Realtime))
+			continue;
+		/* armature modifier are handled by SkinDeformer, not ModifierDeformer */
+		if (md->type == eModifierType_Armature)
+			continue;
+		if (!modifier_isOnlyDeform(md))
+			return false;
+	}
+	return true;
+}
+
+
+BL_ModifierDeformer::BL_ModifierDeformer(BL_DeformableGameObject *gameobj,
+                                         Scene *scene,
+                                         Object *bmeshobj,
+                                         RAS_MeshObject *mesh)
+	:BL_ShapeDeformer(gameobj, bmeshobj, mesh),
+	m_lastModifierUpdate(-1.0),
+	m_scene(scene),
+	m_dm(NULL),
+	m_latticeObj(NULL),
+	m_lastLatticeUpdate(-1.0)
+{
+	m_recalcNormal = false;
+	// if all modifiers only deform the mesh, skip the expensive mesh drawing function,
+	// and use bge vertex array instead
+	m_useVertexArray = modifiersOnlyDeform(bmeshobj);
+}
+
 BL_ModifierDeformer::BL_ModifierDeformer(BL_DeformableGameObject *gameobj,
 						Scene *scene,
 						Object *bmeshobj_old,
@@ -82,6 +123,7 @@ BL_ModifierDeformer::BL_ModifierDeformer(BL_DeformableGameObject *gameobj,
 {
 	if (m_latticeObj)
 		m_latticeObj->RegisterDeformer(this);
+	m_useVertexArray = modifiersOnlyDeform(bmeshobj_new);
 }
 
 BL_ModifierDeformer::~BL_ModifierDeformer()
@@ -225,9 +267,9 @@ DerivedMesh *BL_ModifierDeformer::GetPhysicsMesh()
 	return dm;
 }
 
-bool BL_ModifierDeformer::Update(void)
+bool BL_ModifierDeformer::UpdateInternal(bool shape_applied)
 {
-	bool bShapeUpdate = BL_ShapeDeformer::Update();
+	bool bShapeUpdate = BL_ShapeDeformer::UpdateInternal(shape_applied);
 
 	if (!bShapeUpdate)
 		bShapeUpdate = LatticeUpdated();
@@ -280,9 +322,24 @@ bool BL_ModifierDeformer::Update(void)
 				m_dm->getMinMax(m_dm, min, max);
 				m_boundingBox->SetAabb(MT_Vector3(min), MT_Vector3(max));
 			}
+			if (m_useVertexArray)
+			{
+				// this means that the modifier stack only deformed the mesh
+				// => the new vertex positions are already in m_transverts
+				// Normal were calculated, retrieve them
+				MVert *mvert = m_dm->getVertArray(m_dm);
+				float (*nor)[3] = m_transnors;
+				for (int i=0; i<m_totvert; ++i, ++mvert, ++nor)
+				{
+					memcpy(nor, mvert->no, 3*sizeof(float));
+				}
+				m_dm->needsFree = 1;
+				m_dm->release(m_dm);
+				m_dm = NULL;
+			}
+			bShapeUpdate = true;
 		}
 		m_lastModifierUpdate = m_gameobj->GetLastFrame();
-		bShapeUpdate = true;
 
 		int nmat = m_mesh->NumMaterials();
 		for (int imat = 0; imat < nmat; imat++) {
@@ -296,6 +353,14 @@ bool BL_ModifierDeformer::Update(void)
 	}
 
 	return bShapeUpdate;
+}
+
+bool BL_ModifierDeformer::Update()
+{
+	bool ret = UpdateInternal(false);
+	if (ret)
+		UpdateTransverts();
+	return ret;
 }
 
 bool BL_ModifierDeformer::Apply(RAS_IPolyMaterial *polymat, RAS_MeshMaterial *meshmat)

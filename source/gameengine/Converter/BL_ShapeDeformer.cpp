@@ -172,7 +172,7 @@ bool BL_ShapeDeformer::ExecuteShapeDrivers()
 	return false;
 }
 
-bool BL_ShapeDeformer::Update()
+bool BL_ShapeDeformer::UpdateInternal(bool shape_applied)
 {
 	bool bShapeUpdate = false;
 	bool bSkinUpdate = false;
@@ -191,7 +191,8 @@ bool BL_ShapeDeformer::Update()
 			float **per_keyblock_weights;
 
 			/* store verts locally */
-			VerifyStorage();
+			if (!shape_applied)
+				VerifyStorage();
 
 			per_keyblock_weights = BKE_keyblock_get_per_block_weights(blendobj, m_key, &cache);
 			BKE_key_evaluate_relative(0, m_totvert, m_totvert, (char *)(float *)m_transverts,
@@ -225,12 +226,19 @@ bool BL_ShapeDeformer::Update()
 			RecalcNormals();
 #endif
 
-		// We also need to handle transverts now (used to be in BL_SkinDeformer::Apply())
-		UpdateTransverts();
 		bSkinUpdate = true;
 	}
 
 	return bSkinUpdate;
+}
+
+bool BL_ShapeDeformer::Update()
+{
+	bool ret = UpdateInternal(false);
+	if (ret)
+		// indicates that m_transverts was updated, refresh the vertex array
+		UpdateTransverts();
+	return ret;
 }
 
 Key *BL_ShapeDeformer::GetKey()

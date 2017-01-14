@@ -55,16 +55,7 @@ public:
 	BL_ModifierDeformer(BL_DeformableGameObject *gameobj,
 						Scene *scene,
 						Object *bmeshobj,
-						RAS_MeshObject *mesh)
-		:BL_ShapeDeformer(gameobj, bmeshobj, mesh),
-		m_lastModifierUpdate(-1.0),
-		m_scene(scene),
-		m_dm(NULL),
-		m_latticeObj(NULL),
-		m_lastLatticeUpdate(-1.0)
-	{
-		m_recalcNormal = false;
-	}
+						RAS_MeshObject *mesh);
 
 	/* this second constructor is needed for making a mesh deformable on the fly. */
 	BL_ModifierDeformer(BL_DeformableGameObject *gameobj,
@@ -82,12 +73,9 @@ public:
 	virtual RAS_Deformer *GetReplica();
 	virtual bool UnlinkObject(SCA_IObject* clientobj);
 	virtual ~BL_ModifierDeformer();
-	virtual bool UseVertexArray()
-	{
-		return false;
-	}
 
 	bool Update();
+	bool UpdateInternal(bool shape_applied);
 	virtual bool Apply(RAS_IPolyMaterial *polymat, RAS_MeshMaterial *meshmat);
 	void ForceUpdate()
 	{

@@ -160,6 +160,14 @@ bool modifier_dependsOnTime(ModifierData *md)
 	return mti->dependsOnTime && mti->dependsOnTime(md);
 }
 
+bool modifier_isOnlyDeform(ModifierData *md)
+{
+	const ModifierTypeInfo *mti = modifierType_getInfo(md->type);
+
+	return mti->type == eModifierTypeType_OnlyDeform;
+}
+
+
 bool modifier_supportsMapping(ModifierData *md)
 {
 	const ModifierTypeInfo *mti = modifierType_getInfo(md->type);
