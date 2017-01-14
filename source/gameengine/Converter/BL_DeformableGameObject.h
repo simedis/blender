@@ -48,10 +48,6 @@ class BL_DeformableGameObject : public KX_GameObject
 public:
 	CValue*		GetReplica();
 
-	double GetLastFrame ()
-	{
-		return m_lastframe;
-	}
 	Object* GetBlendObject()
 	{
 		return m_blendobj;
@@ -67,7 +63,6 @@ public:
 	BL_DeformableGameObject(Object* blendobj, void* sgReplicationInfo, SG_Callbacks callbacks) :
 		KX_GameObject(sgReplicationInfo,callbacks),
 		m_pDeformer(NULL),
-		m_lastframe(0.0),
 		m_blendobj(blendobj),
 		m_activePriority(9999)
 	{
@@ -93,7 +88,6 @@ protected:
 	
 	RAS_Deformer		*m_pDeformer;
 
-	double		m_lastframe;
 	Object*		m_blendobj;
 	short		m_activePriority;
 

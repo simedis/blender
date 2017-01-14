@@ -111,6 +111,8 @@ KX_GameObject::KX_GameObject(
       m_meshUser(NULL),
       m_pBlenderObject(NULL),
       m_pBlenderGroupObject(NULL),
+      m_lastFrameIPO(0.0),
+      m_lastFrameAction(0.0),
       m_bIsNegativeScaling(false),
       m_objectColor(1.0f, 1.0f, 1.0f, 1.0f),
       m_bVisible(true),
@@ -434,7 +436,11 @@ BL_ActionManager* KX_GameObject::GetActionManager()
 	// We only want to create an action manager if we need it
 	if (!m_actionManager)
 	{
+		RAS_Deformer *deformer = GetDeformer();
 		GetScene()->AddAnimatedObject(this);
+		// make sure the object of which this object depends on are also animated
+		if (deformer)
+			deformer->AddAnimatedParent();
 		m_actionManager = new BL_ActionManager(this);
 	}
 	return m_actionManager;
@@ -884,6 +890,11 @@ void KX_GameObject::UpdateIPO(float curframetime,
 	GetSGNode()->SetSimulatedTime(curframetime,recurse);
 	GetSGNode()->UpdateWorldData(curframetime);
 	UpdateTransform();
+}
+
+void KX_GameObject::UpdateFrameIPO()
+{
+	m_lastFrameIPO = KX_GetFrameTime();
 }
 
 bool

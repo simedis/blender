@@ -46,7 +46,6 @@ public:
 	virtual int GetGameObjectType();
 	virtual CValue*	GetReplica();
 	virtual void ProcessReplica();
-	void UpdateLastFrame(double curtime);
 	virtual bool GetShape(std::vector<float> &shape);
 	// These functions must always be called in pair
 	// Replace lattice cache with given vertices.

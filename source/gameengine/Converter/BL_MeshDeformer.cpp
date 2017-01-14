@@ -43,6 +43,7 @@
 #include "RAS_BoundingBoxManager.h"
 #include "RAS_MeshObject.h"
 #include "RAS_Polygon.h"
+#include "KX_Globals.h"
 #include "DNA_mesh_types.h"
 #include "DNA_meshdata_types.h"
 #include "DNA_lattice_types.h"
@@ -54,7 +55,7 @@
 bool BL_MeshDeformer::Apply(RAS_IPolyMaterial *UNUSED(polymat), RAS_MeshMaterial *UNUSED(meshmat))
 {
 	// only apply once per frame if the mesh is actually modified
-	if (m_mesh && m_lastDeformUpdate != m_gameobj->GetLastFrame()) {
+	if (m_mesh && m_lastDeformUpdate != KX_GetFrameTime()) {
 		// For each material
 		for (std::vector<RAS_MeshMaterial *>::iterator mit = m_mesh->GetFirstMaterial();
 		     mit != m_mesh->GetLastMaterial(); ++mit)
@@ -78,7 +79,7 @@ bool BL_MeshDeformer::Apply(RAS_IPolyMaterial *UNUSED(polymat), RAS_MeshMaterial
 			}
 		}
 
-		m_lastDeformUpdate = m_gameobj->GetLastFrame();
+		m_lastDeformUpdate = KX_GetFrameTime();
 
 		return true;
 	}

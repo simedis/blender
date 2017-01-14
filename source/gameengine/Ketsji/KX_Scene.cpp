@@ -1597,25 +1597,29 @@ static void update_anim_thread_func(TaskPool *pool, void *taskdata, int UNUSED(t
 
 		// Only do deformers here if they are not parented to an armature or lattice, otherwise they will
 		// handle updating their children
-		if (deformer && !deformer->IsDependent())
+		if (deformer)
 			deformer->Update();
 
 		// follow the list of dependent objects and update
 		for (SCA_DeformerList::iterator it = deformChildren.begin(), end=deformChildren.end(); it != end; ++it)
 		{
 			deformer = *it;
-			deformer->Update();
 			child = static_cast<KX_GameObject*>(deformer->GetParent());
+			child->UpdateActionManager(curtime, true);
+			deformer->Update();
 
 			// support 2 levels of dependency for the case where an armature deforms a lattice that deforms a mesh
 			if (child->GetGameObjectType() == SCA_IObject::OBJ_LATTICE)
 			{
 				BL_LatticeObject *latticeObj = static_cast<BL_LatticeObject*>(child);
-				latticeObj->UpdateLastFrame(curtime);
-				SCA_DeformerList& deformChildren2 = gameobj->GetRegisteredDeformers();
+				latticeObj->SetActiveAction(0, curtime);
+				SCA_DeformerList& deformChildren2 = latticeObj->GetRegisteredDeformers();
 				for (SCA_DeformerList::iterator it2 = deformChildren2.begin(), end2=deformChildren2.end(); it2 != end2; ++it2)
 				{
-					(*it2)->Update();
+					deformer = *it2;
+					child = static_cast<KX_GameObject*>(deformer->GetParent());
+					child->UpdateActionManager(curtime, true);
+					deformer->Update();
 				}
 			}
 		}
@@ -1625,17 +1629,29 @@ static void update_anim_thread_func(TaskPool *pool, void *taskdata, int UNUSED(t
 void KX_Scene::UpdateAnimations(double curtime)
 {
 	TaskPool *pool = BLI_task_pool_create(KX_GetActiveEngine()->GetTaskScheduler(), &curtime);
+	KX_GameObject *gameobj;
+	RAS_Deformer *deformer;
+
+
+	// do the IPO first so that in an Lattice object that deforms a mesh is having animation,
+	// it will have its timestamp updated before calling the deform animation
+	for (CListValue::iterator<KX_GameObject> it = m_animatedlist->GetBegin(), end = m_animatedlist->GetEnd(); it != end; ++it) {
+		(*it)->UpdateActionIPOs();
+	}
 
 	for (CListValue::iterator<KX_GameObject> it = m_animatedlist->GetBegin(), end = m_animatedlist->GetEnd(); it != end; ++it) {
-		BLI_task_pool_push(pool, update_anim_thread_func, *it, false, TASK_PRIORITY_LOW);
+		gameobj = *it;
+		deformer = gameobj->GetDeformer();
+		// only animate the non dependent
+		if (deformer && deformer->IsDependent())
+			// the parent object has been added to the animated list already, skip it in favor of the parent
+			continue;
+		BLI_task_pool_push(pool, update_anim_thread_func, gameobj, false, TASK_PRIORITY_LOW);
 	}
 
 	BLI_task_pool_work_and_wait(pool);
 	BLI_task_pool_free(pool);
 
-	for (CListValue::iterator<KX_GameObject> it = m_animatedlist->GetBegin(), end = m_animatedlist->GetEnd(); it != end; ++it) {
-		(*it)->UpdateActionIPOs();
-	}
 }
 
 void KX_Scene::LogicUpdateFrame(double curtime, bool frame)

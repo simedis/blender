@@ -92,6 +92,11 @@ public:
 	{
 		return false;
 	}
+	// dependent objects have been added to animated list
+	virtual void AddAnimatedParent()
+	{
+	}
+
 	// true when deformer produces varying vertex (shape or armature)
 	bool IsDynamic()
 	{

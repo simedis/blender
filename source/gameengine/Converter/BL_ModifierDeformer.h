@@ -90,7 +90,10 @@ public:
 
 	bool LatticeUpdated()
 	{
-		if (m_latticeObj && m_lastLatticeUpdate != m_latticeObj->GetLastFrame()) {
+		if (m_latticeObj &&
+		    ((m_gameobj->GetParent() != m_latticeObj && m_lastLatticeUpdate < m_latticeObj->GetLastFrameIPO()) ||
+		     (m_lastLatticeUpdate < m_latticeObj->GetLastFrameAction())))
+		{
 			m_bDynamic = true;
 			return true;
 		}
@@ -98,10 +101,18 @@ public:
 	}
 	virtual bool IsDependent()
 	{
-		if (m_latticeObj)
+		if (m_latticeObj) {
 			return true;
+		}
 		return BL_SkinDeformer::IsDependent();
 	}
+	virtual void AddAnimatedParent()
+	{
+		if (m_latticeObj)
+			m_latticeObj->EnsureAnimated();
+		BL_SkinDeformer::AddAnimatedParent();
+	}
+
 	BL_LatticeObject *GetLatticeObject()
 	{
 		return m_latticeObj;

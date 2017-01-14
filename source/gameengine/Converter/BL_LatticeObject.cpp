@@ -123,11 +123,6 @@ CValue*	BL_LatticeObject::GetReplica()
 	return replica;
 }
 
-void BL_LatticeObject::UpdateLastFrame(double curtime)
-{
-	m_lastframe = curtime;
-}
-
 bool BL_LatticeObject::GetShape(std::vector<float> &shape)
 {
 	shape.clear();

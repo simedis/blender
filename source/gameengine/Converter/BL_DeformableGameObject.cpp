@@ -62,15 +62,15 @@ CValue*		BL_DeformableGameObject::GetReplica()
 
 bool BL_DeformableGameObject::SetActiveAction(short priority, double curtime)
 {
-	if (curtime != m_lastframe) {
+	if (curtime != m_lastFrameAction) {
 		m_activePriority = 9999;
-		m_lastframe= curtime;
+		m_lastFrameAction= curtime;
 	}
 
 	if (priority<=m_activePriority)
 	{
 		m_activePriority = priority;
-		m_lastframe = curtime;
+		m_lastFrameAction = curtime;
 	
 		return true;
 	}

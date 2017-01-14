@@ -86,7 +86,9 @@ public:
 	}
 	bool PoseUpdated()
 	{
-		if (m_armobj && m_lastArmaUpdate != m_armobj->GetLastFrame()) {
+		// armature deform mesh are only affected by the actions of the armature,
+		// not the IPO, because the mesh is always child of the armature
+		if (m_armobj && m_lastArmaUpdate != m_armobj->GetLastFrameAction()) {
 			return true;
 		}
 		return false;
@@ -98,6 +100,12 @@ public:
 		return BL_MeshDeformer::IsDependent();
 	}
 
+	virtual void AddAnimatedParent()
+	{
+		if (m_armobj)
+			m_armobj->EnsureAnimated();
+		BL_MeshDeformer::AddAnimatedParent();
+	}
 
 	void ForceUpdate()
 	{

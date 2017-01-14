@@ -59,7 +59,6 @@ protected:
 	bPose *m_armpose;
 	// Need for BKE_pose_where_is.
 	Scene *m_scene;
-	double m_lastframe;
 	/// Delta since last pose evaluation.
 	double m_timestep;
 	int m_vert_deform_type;
@@ -86,8 +85,6 @@ public:
 	virtual void ReParentLogic();
 	virtual void Relink(std::map<void *, void *>& obj_map);
 	virtual bool UnlinkObject(SCA_IObject *clientobj);
-
-	double GetLastFrame();
 
 	void GetPose(bPose **pose);
 	void SetPose(bPose *pose);

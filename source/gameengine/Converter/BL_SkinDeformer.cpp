@@ -406,7 +406,7 @@ bool BL_SkinDeformer::UpdateInternal(bool shape_applied)
 			BlenderDeformVerts();
 
 		/* Update the current frame */
-		m_lastArmaUpdate = m_armobj->GetLastFrame();
+		m_lastArmaUpdate = m_armobj->GetLastFrameAction();
 
 		m_armobj->RestorePose();
 		/* dynamic vertex, cannot use display list */

@@ -93,7 +93,9 @@ protected:
 	RAS_MeshUser						*m_meshUser;
 	struct Object*						m_pBlenderObject;
 	struct Object*						m_pBlenderGroupObject;
-	
+
+	double								m_lastFrameIPO;
+	double								m_lastFrameAction;
 	bool								m_bIsNegativeScaling;
 	MT_Vector4							m_objectColor;
 
@@ -129,6 +131,15 @@ protected:
 	BL_ActionManager* GetActionManager();
 
 public:
+	/**
+	 * Public function to force the object to be on the animated list
+	 * (used by modifiers to automatically animate dependent objects)
+	 */
+	void EnsureAnimated()
+	{
+		GetActionManager();
+	}
+
 	/**
 	 * KX_GameObject custom infos for ray cast, it contains property name,
 	 * collision mask, xray flag and hited object.
@@ -331,6 +342,35 @@ public:
 	 * note: not thread-safe!
 	 */
 	void UpdateActionIPOs();
+
+	/**
+	 * Mark this object updated for the dependency graph
+	 */
+	void UpdateFrameIPO();
+
+	/**
+	 * last frame that the object was updated by an IPO
+	 */
+	double GetLastFrameIPO()
+	{
+		return m_lastFrameIPO;
+	}
+
+	/**
+	 * last frame that the object was updated by an action
+	 */
+	double GetLastFrameAction()
+	{
+		return m_lastFrameAction;
+	}
+
+	/**
+	 * return the last time the object was updated by action or by IPO
+	 */
+	double GetLastFrameUpdate()
+	{
+		return (m_lastFrameIPO > m_lastFrameAction) ? m_lastFrameIPO : m_lastFrameAction;
+	}
 
 	/*********************************
 	 * End Animation API

@@ -271,10 +271,7 @@ bool BL_ModifierDeformer::UpdateInternal(bool shape_applied)
 {
 	bool bShapeUpdate = BL_ShapeDeformer::UpdateInternal(shape_applied);
 
-	if (!bShapeUpdate)
-		bShapeUpdate = LatticeUpdated();
-
-	if (bShapeUpdate || m_lastModifierUpdate != m_gameobj->GetLastFrame()) {
+	if (bShapeUpdate || LatticeUpdated()) {
 		// static derived mesh are not updated
 		if (m_dm == NULL || m_bDynamic) {
 			// Set to true if it's the first time Update() function is called.
@@ -284,15 +281,22 @@ bool BL_ModifierDeformer::UpdateInternal(bool shape_applied)
 			/* hack: the modifiers require that the mesh is attached to the object
 			 * It may not be the case here because of replace mesh actuator */
 			Mesh *oldmesh = (Mesh *)blendobj->data;
+			// if not already done, prepare the vertex storage
+			if (!bShapeUpdate) {
+				// the shape keys if any have not been applied yet, must do it before the modifiers
+				BL_ShapeDeformer::ForceUpdate();
+				// this will at least refer m_transverts before the modifier stack.
+				BL_ShapeDeformer::UpdateInternal(shape_applied);
+			}
+			// FIXME: this is not thread safe if duplicates point to the same blender object
 			blendobj->data = m_bmesh;
 			if (m_latticeObj)
 				m_latticeObj->SwapLatticeCache();
 			/* execute the modifiers */
 			DerivedMesh *dm = mesh_create_derived_no_virtual(m_scene, blendobj, m_transverts, CD_MASK_MESH);
-			if (m_latticeObj)
-			{
+			if (m_latticeObj) {
 				m_latticeObj->RestoreLatticeCache();
-				m_lastLatticeUpdate = m_latticeObj->GetLastFrame();
+				m_lastLatticeUpdate = m_latticeObj->GetLastFrameUpdate();
 			}
 			/* restore object data */
 			blendobj->data = oldmesh;
@@ -322,33 +326,29 @@ bool BL_ModifierDeformer::UpdateInternal(bool shape_applied)
 				m_dm->getMinMax(m_dm, min, max);
 				m_boundingBox->SetAabb(MT_Vector3(min), MT_Vector3(max));
 			}
-			if (m_useVertexArray)
-			{
+			if (m_useVertexArray) {
 				// this means that the modifier stack only deformed the mesh
 				// => the new vertex positions are already in m_transverts
 				// Normal were calculated, retrieve them
 				MVert *mvert = m_dm->getVertArray(m_dm);
 				float (*nor)[3] = m_transnors;
-				for (int i=0; i<m_totvert; ++i, ++mvert, ++nor)
-				{
+				for (int i=0; i<m_totvert; ++i, ++mvert, ++nor)	{
 					memcpy(nor, mvert->no, 3*sizeof(float));
 				}
-				m_dm->needsFree = 1;
-				m_dm->release(m_dm);
-				m_dm = NULL;
 			}
 			bShapeUpdate = true;
 		}
-		m_lastModifierUpdate = m_gameobj->GetLastFrame();
 
-		int nmat = m_mesh->NumMaterials();
-		for (int imat = 0; imat < nmat; imat++) {
-			RAS_MeshMaterial *mmat = m_mesh->GetMeshMaterial(imat);
-			RAS_MeshSlot *slot = mmat->m_slots[(void *)m_gameobj->getClientInfo()];
-			if (!slot) {
-				continue;
+		if (!m_useVertexArray) {
+			int nmat = m_mesh->NumMaterials();
+			for (int imat = 0; imat < nmat; imat++) {
+				RAS_MeshMaterial *mmat = m_mesh->GetMeshMaterial(imat);
+				RAS_MeshSlot *slot = mmat->m_slots[(void *)m_gameobj->getClientInfo()];
+				if (!slot) {
+					continue;
+				}
+				slot->m_pDerivedMesh = m_dm;
 			}
-			slot->m_pDerivedMesh = m_dm;
 		}
 	}
 
