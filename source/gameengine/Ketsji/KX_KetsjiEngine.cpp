@@ -267,7 +267,6 @@ void KX_KetsjiEngine::RunLogicCallbacks()
 {
 	PyObject *list = m_logicCallbacks;
 
-	KX_SetActiveScene(NULL);
 	if (!list || PyList_GET_SIZE(list) == 0) {
 		return;
 	}
