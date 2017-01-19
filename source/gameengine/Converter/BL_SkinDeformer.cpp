@@ -227,8 +227,11 @@ void BL_SkinDeformer::BlenderDeformVerts()
 	copy_m4_m4(m_objMesh->obmat, obmat);
 
 #ifdef __NLA_DEFNORMALS
-	if (m_recalcNormal)
+	if (m_recalcNormal) {
 		RecalcNormals();
+		m_copyNormals = true;
+	}
+
 #endif
 }
 

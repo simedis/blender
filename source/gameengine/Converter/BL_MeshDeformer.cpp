@@ -164,7 +164,6 @@ void BL_MeshDeformer::RecalcNormals()
 		const unsigned short numvert = poly->VertexCount();
 
 		const float *co[4];
-		unsigned int indices[4];
 		unsigned int origindices[4];
 		bool flat = true;
 
@@ -174,7 +173,6 @@ void BL_MeshDeformer::RecalcNormals()
 			const unsigned int origindex = vinfo.getOrigIndex();
 
 			co[j] = m_transverts[origindex];
-			indices[j] = index;
 			origindices[j] = origindex;
 
 			if (!(vinfo.getFlag() & RAS_TexVertInfo::FLAT)) {
@@ -191,36 +189,14 @@ void BL_MeshDeformer::RecalcNormals()
 		}
 
 		if (flat) {
-			MT_Vector3 normal(pnorm);
 			for (unsigned int j = 0; j < numvert; ++j) {
-				RAS_ITexVert *vert = array->GetVertex(indices[j]);
-
-				vert->SetNormal(normal);
+				copy_v3_v3(m_transnors[origindices[j]], pnorm);
 			}
 		}
 		else {
 			for (unsigned int j = 0; j < numvert; ++j) {
 				add_v3_v3(m_transnors[origindices[j]], pnorm);
 			}
-		}
-	}
-
-	/* assign smooth vertex normals */
-	for (mit = m_mesh->GetFirstMaterial(); mit != m_mesh->GetLastMaterial(); ++mit) {
-		RAS_MeshMaterial *meshmat = *mit;
-		RAS_MeshSlot *slot = meshmat->m_slots[(void *)m_gameobj->getClientInfo()];
-		if (!slot) {
-			continue;
-		}
-
-		RAS_IDisplayArray *array = slot->GetDisplayArray();
-
-		for (unsigned int i = 0, size = array->GetVertexCount(); i < size; ++i) {
-			RAS_ITexVert *v = array->GetVertex(i);
-			const RAS_TexVertInfo& vinfo = array->GetVertexInfo(i);
-
-			if (!(vinfo.getFlag() & RAS_TexVertInfo::FLAT))
-				v->SetNormal(MT_Vector3(m_transnors[vinfo.getOrigIndex()])); //.safe_normalized()
 		}
 	}
 }

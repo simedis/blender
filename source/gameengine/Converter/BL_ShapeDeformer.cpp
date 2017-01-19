@@ -223,8 +223,10 @@ bool BL_ShapeDeformer::UpdateInternal(bool shape_applied)
 		// update the normal (was not done after shape key calculation)
 
 #ifdef __NLA_DEFNORMALS
-		if (m_recalcNormal)
+		if (m_recalcNormal) {
 			RecalcNormals();
+			m_copyNormals = true;
+		}
 #endif
 
 		bSkinUpdate = true;

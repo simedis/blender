@@ -333,8 +333,9 @@ bool BL_ModifierDeformer::UpdateInternal(bool shape_applied)
 				MVert *mvert = m_dm->getVertArray(m_dm);
 				float (*nor)[3] = m_transnors;
 				for (int i=0; i<m_totvert; ++i, ++mvert, ++nor)	{
-					memcpy(nor, mvert->no, 3*sizeof(float));
+					normal_short_to_float_v3((float*)nor, mvert->no);
 				}
+				m_copyNormals = true;
 			}
 			bShapeUpdate = true;
 		}
