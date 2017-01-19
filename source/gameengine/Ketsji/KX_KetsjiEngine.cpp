@@ -76,6 +76,10 @@
 
 #include "KX_NavMeshObject.h"
 
+#ifdef WITH_PYTHON
+#  include "EXP_PythonCallBack.h"
+#endif
+
 #define DEFAULT_LOGIC_TIC_RATE 60.0
 
 #ifdef FREE_WINDOWS /* XXX mingw64 (gcc 4.7.0) defines a macro for DrawText that translates to DrawTextA. Not good */
@@ -167,6 +171,7 @@ KX_KetsjiEngine::KX_KetsjiEngine(KX_ISystem *system)
 
 #ifdef WITH_PYTHON
 	m_pyprofiledict = PyDict_New();
+	m_logicCallbacks = PyList_New(0);
 #endif
 
 	m_taskscheduler = BLI_task_scheduler_create(TASK_SCHEDULER_AUTO_THREADS);
@@ -183,6 +188,7 @@ KX_KetsjiEngine::~KX_KetsjiEngine()
 
 #ifdef WITH_PYTHON
 	Py_CLEAR(m_pyprofiledict);
+	Py_CLEAR(m_logicCallbacks);
 #endif
 
 	if (m_taskscheduler)
@@ -230,6 +236,43 @@ PyObject *KX_KetsjiEngine::GetPyProfileDict()
 	Py_INCREF(m_pyprofiledict);
 	return m_pyprofiledict;
 }
+
+PyObject * KX_KetsjiEngine::GetPyLogicCallbackList()
+{
+	Py_INCREF(m_logicCallbacks);
+	return m_logicCallbacks;
+}
+
+bool KX_KetsjiEngine::SetPyLogicCallbackList(PyObject *args)
+{
+	PyObject *list;
+
+	if (!PyArg_ParseTuple(args, "O:setLogicCallback", &list))
+		return NULL;
+
+	if (!PyList_CheckExact(list)) {
+		PyErr_SetString(PyExc_ValueError, "Expected a list");
+		return false;
+	}
+
+	Py_XDECREF(m_logicCallbacks);
+
+	Py_INCREF(list);
+	m_logicCallbacks = list;
+
+	return true;
+}
+
+void KX_KetsjiEngine::RunLogicCallbacks()
+{
+	PyObject *list = m_logicCallbacks;
+
+	if (!list || PyList_GET_SIZE(list) == 0) {
+		return;
+	}
+	RunPythonCallBackList(list, NULL, 0, 0);
+}
+
 #endif
 
 void KX_KetsjiEngine::SetSceneConverter(KX_ISceneConverter *sceneconverter)
@@ -316,7 +359,9 @@ void KX_KetsjiEngine::EndFrame()
 
 bool KX_KetsjiEngine::NextFrame()
 {
-
+#ifdef WITH_PYTHON
+	bool callback_called = false;
+#endif
 	m_logger->StartLog(tc_services, m_kxsystem->GetTimeInSeconds(), true);
 
 	/*
@@ -416,6 +461,16 @@ bool KX_KetsjiEngine::NextFrame()
 			 * update. */
 			m_logger->StartLog(tc_logic, m_kxsystem->GetTimeInSeconds(), true);
 
+			KX_SetActiveScene(scene);
+
+#ifdef WITH_PYTHON
+			if (!callback_called) {
+				// the logic callbacks are per frame, only run them once
+				RunLogicCallbacks();
+				callback_called = true;
+			}
+#endif
+
 			scene->UpdateObjectActivity();
 
 			if (!scene->IsSuspended()) {
@@ -425,7 +480,6 @@ bool KX_KetsjiEngine::NextFrame()
 #ifdef WITH_PYTHON
 				PHY_SetActiveEnvironment(scene->GetPhysicsEnvironment());
 #endif
-				KX_SetActiveScene(scene);
 
 				scene->GetPhysicsEnvironment()->EndFrame();
 

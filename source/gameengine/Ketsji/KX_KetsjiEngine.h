@@ -89,6 +89,7 @@ private:
 	/// \note borrowed from sys.modules["__main__"], don't manage ref's
 	PyObject *m_pythondictionary;
 	PyObject *m_pyprofiledict;
+	PyObject *m_logicCallbacks;
 #endif
 	SCA_IInputDevice *m_inputDevice;
 
@@ -258,6 +259,9 @@ public:
 		return m_pythondictionary;
 	}
 	PyObject *GetPyProfileDict();
+	PyObject *GetPyLogicCallbackList();
+	bool SetPyLogicCallbackList(PyObject *list);
+	void RunLogicCallbacks();
 #endif
 	void SetSceneConverter(KX_ISceneConverter *sceneconverter);
 	KX_ISceneConverter *GetSceneConverter()

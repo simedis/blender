@@ -306,6 +306,28 @@ static PyObject *gPyGetProfileInfo(PyObject *)
 	return KX_GetActiveEngine()->GetPyProfileDict();
 }
 
+PyDoc_STRVAR(gPyGetLogicCallback_doc,
+"getLogicCallback()\n"
+"returns a the current list of callback function that are called once before the logic step"
+);
+static PyObject *gPyGetLogicCallback(PyObject *)
+{
+	return KX_GetActiveEngine()->GetPyLogicCallbackList();
+}
+
+PyDoc_STRVAR(gPySetLogicCallback_doc,
+"setLogicCallback(list)\n"
+"sets the full list of callback functions that are called once before the logic step"
+);
+static PyObject *gPySetLogicCallback(PyObject *, PyObject *args)
+{
+	if (!KX_GetActiveEngine()->SetPyLogicCallbackList(args))
+		return NULL;
+	Py_RETURN_NONE;
+}
+
+
+
 PyDoc_STRVAR(gPySendMessage_doc,
 "sendMessage(subject, [body, to, from])\n"
 "sends a message in same manner as a message actuator"
@@ -830,6 +852,8 @@ static struct PyMethodDef game_methods[] = {
 	{"PrintMemInfo", (PyCFunction)pyPrintStats, METH_NOARGS, (const char *)"Print engine statistics"},
 	{"NextFrame", (PyCFunction)gPyNextFrame, METH_NOARGS, (const char *)"Render next frame (if Python has control)"},
 	{"getProfileInfo", (PyCFunction)gPyGetProfileInfo, METH_NOARGS, gPyGetProfileInfo_doc},
+    {"getLogicCallback", (PyCFunction)gPyGetLogicCallback, METH_NOARGS, gPyGetLogicCallback_doc},
+    {"setLogicCallback", (PyCFunction)gPySetLogicCallback, METH_VARARGS, gPySetLogicCallback_doc},
 	/* library functions */
 	{"LibLoad", (PyCFunction)gLibLoad, METH_VARARGS|METH_KEYWORDS, (const char *)""},
 	{"LibNew", (PyCFunction)gLibNew, METH_VARARGS, (const char *)""},

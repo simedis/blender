@@ -406,6 +406,41 @@ General functions
    :return: The flag value
    :rtype: bool
 
+.. function:: setLogicCallback(list)
+
+   Sets the list of callback functions that are called once per frame just before the
+   logic step. The functions are called without argument. To disable the callback, just
+   call this method with an empty list. All methods that can be used in a python controller
+   can be used in the callbacks.
+
+   .. note::
+
+      Although a scene context is set (the first scene of the stack), it should not be
+      relied upon. Only game level methods should be used in these callback. It is possible
+      to use scene methods but only after retrieving the scene reference via `bge.logic.getSceneList`.
+
+   .. note::
+
+      The callback functions are called only once per frame no matter how many logic substeps
+      there are (see `bge.logic.setMaxLogicFrame`). If the game engine determines that there is no need
+      to run the logic steps (because not enough time has elapsed since last frame), then the
+      callbacks are not called either.
+
+   :arg list: list of logic callback functions
+   :type list: list
+
+.. function:: getLogicCallback()
+
+   Returns a reference to the current list of logic callback function (see `bge.logic.setLogicCallback`).
+   The list of callbacks can be modified by appending, removing or clearing the list.
+
+   :return: The current list of logic callbacks
+   :rtype: list
+
+   .. note::
+
+      The result is unpredictable if the list is modified from within a logic callback. 
+
 **********************
 Time related functions
 **********************
