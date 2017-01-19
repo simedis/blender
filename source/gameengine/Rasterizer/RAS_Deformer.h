@@ -96,6 +96,14 @@ public:
 	virtual void AddAnimatedParent()
 	{
 	}
+	// control the recalculation of normal
+	virtual void SetRecalcNormal(bool v)
+	{
+	}
+	virtual bool GetRecalcNormal()
+	{
+		return false;
+	}
 
 	// true when deformer produces varying vertex (shape or armature)
 	bool IsDynamic()

@@ -119,6 +119,15 @@ public:
 	{
 		return m_useVertexArray;
 	}
+	virtual void SetRecalcNormal(bool v)
+	{
+		m_recalcNormal = v;
+	}
+	virtual bool GetRecalcNormal()
+	{
+		return m_recalcNormal;
+	}
+
 	BL_ArmatureObject* GetArmatureObject()
 	{
 		return m_armobj;

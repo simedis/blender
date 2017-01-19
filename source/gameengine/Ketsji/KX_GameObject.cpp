@@ -938,6 +938,30 @@ KX_GameObject::SetVisible(
 	}
 }
 
+void
+KX_GameObject::SetRecalcNormal(
+	bool v
+	)
+{
+	RAS_Deformer *deformer;
+
+	if ((deformer = GetDeformer()) != NULL) {
+		deformer->SetRecalcNormal(v);
+	}
+}
+
+bool
+KX_GameObject::GetRecalcNormal(
+	)
+{
+	RAS_Deformer *deformer;
+
+	if ((deformer = GetDeformer()) != NULL) {
+		return deformer->GetRecalcNormal();
+	}
+	return false;
+}
+
 static void setOccluder_recursive(SG_Node* node, bool v)
 {
 	NodeList& children = node->GetSGChildren();
@@ -1927,6 +1951,8 @@ PyMethodDef KX_GameObject::Methods[] = {
 	{"setVisible",(PyCFunction) KX_GameObject::sPySetVisible, METH_VARARGS},
 	{"setOcclusion",(PyCFunction) KX_GameObject::sPySetOcclusion, METH_VARARGS},
 	{"removeParent", (PyCFunction)KX_GameObject::sPyRemoveParent,METH_NOARGS},
+    {"setRecalcNormal",(PyCFunction) KX_GameObject::sPySetRecalcNormal, METH_VARARGS},
+    {"getRecalcNormal",(PyCFunction) KX_GameObject::sPyGetRecalcNormal, METH_NOARGS},
 
 
 	{"getPhysicsId", (PyCFunction)KX_GameObject::sPyGetPhysicsId,METH_NOARGS},
@@ -3424,6 +3450,25 @@ PyObject *KX_GameObject::PySetVisible(PyObject *args)
 	SetVisible(visible ? true:false, recursive ? true:false);
 	Py_RETURN_NONE;
 	
+}
+
+PyObject *KX_GameObject::PySetRecalcNormal(PyObject *args)
+{
+	int recalcNormal;
+	if (!PyArg_ParseTuple(args,"i:setRecalcNormal",&recalcNormal))
+		return NULL;
+
+	SetRecalcNormal(recalcNormal ? true:false);
+	Py_RETURN_NONE;
+}
+
+PyObject *KX_GameObject::PyGetRecalcNormal()
+{
+	RAS_Deformer *deformer;
+	bool recalcNormal = false;
+	if ((deformer = GetDeformer()) != NULL)
+		recalcNormal = deformer->GetRecalcNormal();
+	return PyLong_FromUnsignedLong(recalcNormal);
 }
 
 PyObject *KX_GameObject::PySetOcclusion(PyObject *args)

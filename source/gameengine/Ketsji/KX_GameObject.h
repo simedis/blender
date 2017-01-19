@@ -847,6 +847,21 @@ public:
 	);
 
 	/**
+	 * Set recalcNormal flag in case the object has a deformer
+	 */
+		void
+	SetRecalcNormal(
+		bool b
+	);
+
+	/**
+	 * Get recalcNormal flag in case the object has a deformer
+	 */
+		bool
+	GetRecalcNormal(
+	);
+
+	/**
 	 * Was this object culled?
 	 */
 	inline bool
@@ -1018,6 +1033,8 @@ public:
 	KX_PYMETHOD_VARARGS(KX_GameObject, ReinstancePhysicsMesh);
 	KX_PYMETHOD_O(KX_GameObject, ReplacePhysicsShape);
 	KX_PYMETHOD_DOC(KX_GameObject, addDebugProperty);
+	KX_PYMETHOD_VARARGS(KX_GameObject,SetRecalcNormal);
+	KX_PYMETHOD_NOARGS(KX_GameObject,GetRecalcNormal);
 
 	KX_PYMETHOD_DOC(KX_GameObject, playAction);
 	KX_PYMETHOD_DOC(KX_GameObject, stopAction);

@@ -547,6 +547,31 @@ base class --- :class:`SCA_IObject`
       :arg recursive: optional argument to set all childrens visibility flag too.
       :type recursive: boolean
 
+   .. method:: setRecalcNormal(recalc)
+
+      Sets the object recalcNormal flag. If the object is a mesh that can be deformed
+      (ex: shape keys), this flag controls whether the vertex normals will be recomputed on each
+      deformation or not. If the object is a graphic object, than the normals should normally be
+      recomputed to avoid render artifact but if the object is an invisible object (e.g. a physics
+      mesh), then normals are not needed and CPU time can be saved by not recomputing them.
+
+      .. note::
+
+         By default the recalcNormal flag is set appropriately and it should only be necessary
+         to set it to False when you are sure that the vertex normals are not needed.
+
+      :arg recalc: the recalcNormal flag (True to recompute the normals, False to skip).
+      :type recalc: boolean
+
+   .. method:: getRecalcNormal()
+
+      Get the current value of the recalcNormal flag. True if the deformer is set to recompute
+      the vertex normal on each deformation. False if the normal calculation will be skipped or
+      if the object is not a deformable mesh.
+
+      :return: the recalcNormal flag value.
+      :rtype: boolean
+
    .. method:: setOcclusion(occlusion, recursive)
 
       Sets the game object's occlusion capability.
