@@ -60,7 +60,7 @@ extern "C" {
 #define BGE_FONT_RES 100
 
 /* proptotype */
-int GetFontId(VFont *font);
+int GetFontId(VFont *font, Library *lib);
 
 static std::vector<std::string> split_string(std::string str)
 {
@@ -99,7 +99,7 @@ KX_FontObject::KX_FontObject(void *sgReplicationInfo,
 	m_line_spacing = text->linedist;
 	m_offset = MT_Vector3(text->xof, text->yof, 0.0f);
 
-	m_fontid = GetFontId(text->vfont);
+	m_fontid = GetFontId(text->vfont, ob->id.lib);
 }
 
 KX_FontObject::~KX_FontObject()
@@ -227,7 +227,7 @@ const MT_Vector2 KX_FontObject::GetTextDimensions()
 	return dimensions;
 }
 
-int GetFontId(VFont *vfont)
+int GetFontId(VFont *vfont, Library *lib)
 {
 	PackedFile *packedfile = NULL;
 	int fontid = -1;
@@ -261,7 +261,7 @@ int GetFontId(VFont *vfont)
 	// convert from absolute to relative
 	char expanded[256]; // font names can be bigger than FILE_MAX (240)
 	BLI_strncpy(expanded, filepath, 256);
-	BLI_path_abs(expanded, KX_GetMainPath().c_str());
+	BLI_path_abs(expanded, (lib) ? lib->filepath : KX_GetMainPath().c_str());
 
 	fontid = BLF_load(expanded);
 
