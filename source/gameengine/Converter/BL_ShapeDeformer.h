@@ -60,7 +60,7 @@ public:
 					 Object *bmeshobj_new,
 					 RAS_MeshObject *mesh,
 					 bool recalc_normal,
-					 BL_ArmatureObject *arma = NULL);
+					 BL_ArmatureObject *arma = nullptr);
 
 	virtual RAS_Deformer *GetReplica();
 	virtual void ProcessReplica();
@@ -82,11 +82,6 @@ protected:
 	bool m_useShapeDrivers;
 	double m_lastShapeUpdate;
 	Key *m_key;
-
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:BL_ShapeDeformer")
-#endif
 };
 
 #endif

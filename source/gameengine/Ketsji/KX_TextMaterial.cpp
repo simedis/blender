@@ -36,7 +36,7 @@ KX_TextMaterial *GetTextMaterial()
 }
 
 KX_TextMaterial::KX_TextMaterial()
-	:RAS_IPolyMaterial("__TextMaterial__", NULL)
+	:RAS_IPolyMaterial("__TextMaterial__", nullptr)
 {
 	m_rasMode |= (RAS_ALPHA | RAS_TEXT);
 	m_flag |= RAS_BLENDERGLSL;
@@ -47,15 +47,15 @@ KX_TextMaterial::~KX_TextMaterial()
 {
 }
 
-void KX_TextMaterial::Activate(RAS_IRasterizer *rasty)
+void KX_TextMaterial::Activate(RAS_Rasterizer *rasty)
 {
 }
 
-void KX_TextMaterial::Desactivate(RAS_IRasterizer *rasty)
+void KX_TextMaterial::Desactivate(RAS_Rasterizer *rasty)
 {
 }
 
-void KX_TextMaterial::ActivateInstancing(RAS_IRasterizer *rasty, void *matrixoffset, void *positionoffset, void *coloroffset, unsigned int stride)
+void KX_TextMaterial::ActivateInstancing(RAS_Rasterizer *rasty, void *matrixoffset, void *positionoffset, void *coloroffset, unsigned int stride)
 {
 }
 
@@ -63,7 +63,7 @@ void KX_TextMaterial::DesactivateInstancing()
 {
 }
 
-void KX_TextMaterial::ActivateMeshSlot(RAS_MeshSlot *ms, RAS_IRasterizer *rasty)
+void KX_TextMaterial::ActivateMeshSlot(RAS_MeshSlot *ms, RAS_Rasterizer *rasty)
 {
 }
 
@@ -74,27 +74,27 @@ const std::string KX_TextMaterial::GetTextureName() const
 
 Material *KX_TextMaterial::GetBlenderMaterial() const
 {
-	return NULL;
+	return nullptr;
 }
 
 Image *KX_TextMaterial::GetBlenderImage() const
 {
-	return NULL;
+	return nullptr;
 }
 
 MTexPoly *KX_TextMaterial::GetMTexPoly() const
 {
-	return NULL;
+	return nullptr;
 }
 
 Scene *KX_TextMaterial::GetBlenderScene() const
 {
-	return NULL;
+	return nullptr;
 }
 
 SCA_IScene *KX_TextMaterial::GetScene() const
 {
-	return NULL;
+	return nullptr;
 }
 
 bool KX_TextMaterial::UseInstancing() const
@@ -111,9 +111,9 @@ void KX_TextMaterial::UpdateIPO(MT_Vector4 rgba, MT_Vector3 specrgb, MT_Scalar h
 {
 }
 
-const RAS_IRasterizer::AttribLayerList KX_TextMaterial::GetAttribLayers(const RAS_MeshObject::LayersInfo& layersInfo) const
+const RAS_Rasterizer::AttribLayerList KX_TextMaterial::GetAttribLayers(const RAS_MeshObject::LayersInfo& layersInfo) const
 {
-	static const RAS_IRasterizer::AttribLayerList attribLayers;
+	static const RAS_Rasterizer::AttribLayerList attribLayers;
 	return attribLayers;
 }
 

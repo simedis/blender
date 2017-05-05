@@ -116,11 +116,11 @@ public:
 
 	virtual PHY_IPhysicsController *GetReplica()
 	{
-		return NULL;
+		return nullptr;
 	}
 	virtual PHY_IPhysicsController *GetReplicaForSensors()
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	virtual void CalcXform() = 0;
@@ -153,10 +153,6 @@ public:
 
 	/* Method to replicate rigid body joint contraints for group instances. */
 	virtual void ReplicateConstraints(KX_GameObject *gameobj, std::vector<KX_GameObject *> constobj) = 0;
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:PHY_IPhysicsController")
-#endif
 };
 
 #endif  /* __PHY_IPHYSICSCONTROLLER_H__ */

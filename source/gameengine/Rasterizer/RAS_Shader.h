@@ -14,7 +14,7 @@
 
 #define SORT_UNIFORMS 1
 
-class RAS_IRasterizer;
+class RAS_Rasterizer;
 struct GPUShader;
 
 /**
@@ -61,10 +61,6 @@ public:
 		void SetData(int location, int type, unsigned int count, bool transpose = false);
 		int GetLocation();
 		void *GetData();
-
-	#ifdef WITH_CXX_GUARDEDALLOC
-		MEM_CXX_CLASS_ALLOC_FUNCS("GE:RAS_Uniform")
-	#endif
 	};
 
 	/**
@@ -85,10 +81,6 @@ public:
 		int m_type;
 		int m_loc;
 		unsigned int m_flag;
-
-	#ifdef WITH_CXX_GUARDEDALLOC
-		MEM_CXX_CLASS_ALLOC_FUNCS("GE:RAS_DefUniform")
-	#endif
 	};
 
 	enum ProgramType {
@@ -103,7 +95,6 @@ protected:
 	typedef std::vector<RAS_DefUniform *> RAS_UniformVecDef;
 
 	GPUShader *m_shader;
-	bool m_ok; // Valid and ok
 	bool m_use;
 	int m_attr; // Tangent attribute
 	std::string m_progs[MAX_PROGRAM];
@@ -168,7 +159,7 @@ public:
 	void DeleteShader();
 
 	// Update predefined uniforms each render call
-	void Update(RAS_IRasterizer *rasty, MT_Matrix4x4 model);
+	void Update(RAS_Rasterizer *rasty, MT_Matrix4x4 model);
 
 	void SetUniformfv(int location, int type, float *param, int size, unsigned int count, bool transpose = false);
 	void SetUniformiv(int location, int type, int *param, int size, unsigned int count, bool transpose = false);

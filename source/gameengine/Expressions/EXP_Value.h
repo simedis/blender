@@ -23,17 +23,15 @@
 #  pragma warning (disable:4786)
 #endif
 
+#include "CM_RefCount.h"
+
 #include <map> // Array functionality for the property list.
 #include <vector>
 #include <string> // std::string class.
 
-#ifdef WITH_CXX_GUARDEDALLOC
-#include "MEM_guardedalloc.h"
-#endif
-
 #ifndef GEN_NO_TRACE
 #undef  trace
-#define trace(exp) ((void)NULL)
+#define trace(exp) ((void)nullptr)
 #endif
 
 enum VALUE_OPERATOR {
@@ -86,7 +84,6 @@ enum VALUE_DATA_TYPE {
  * calculations and uses reference counting for memory management.
  *
  * Features:
- * - Reference Counting (AddRef() / Release())
  * - Calculations (Calc() / CalcFinal())
  * - Property system (SetProperty() / GetProperty() / FindIdentifier())
  * - Replication (GetReplica())
@@ -96,7 +93,7 @@ enum VALUE_DATA_TYPE {
  * - A helperclass CompressorArchive handles the serialization
  *
  */
-class CValue : public PyObjectPlus
+class CValue : public PyObjectPlus, public CM_RefCount<CValue>
 {
 	Py_Header
 public:
@@ -111,12 +108,12 @@ public:
 
 	virtual PyObject *ConvertValueToPython()
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	virtual CValue *ConvertPythonToValue(PyObject *pyobj, const bool do_type_exception, const char *error_prefix);
 
-	static PyObject *pyattr_get_name(void *self, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject *pyattr_get_name(PyObjectPlus *self, const KX_PYATTRIBUTE_DEF *attrdef);
 
 	virtual PyObject *ConvertKeysToPython(void);
 #endif  // WITH_PYTHON
@@ -124,13 +121,6 @@ public:
 	/// Expression Calculation
 	virtual CValue *Calc(VALUE_OPERATOR op, CValue *val);
 	virtual CValue *CalcFinal(VALUE_DATA_TYPE dtype, VALUE_OPERATOR op, CValue *val);
-
-	/// Reference Counting
-	int GetRefCount();
-	/// Add a reference to this value
-	CValue *AddRef();
-	/// Release a reference to this value (when reference count reaches 0, the value is removed from the heap)
-	int Release();
 
 	/// Property Management
 	/// Set property <ioProperty>, overwrites and releases a previous property with the same name if needed.
@@ -186,8 +176,6 @@ private:
 	/// Properties for user/game etc.
 	std::map<std::string, CValue *> *m_pNamedPropertyArray;
 	bool m_error;
-	/// Reference Counter.
-	int m_refcount;
 };
 
 /** CPropValue is a CValue derived class, that implements the identification (String name)
@@ -217,10 +205,6 @@ public:
 
 protected:
 	std::string m_strNewName;
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:CPropValue")
-#endif
 };
 
 #endif  // __EXP_VALUE_H__

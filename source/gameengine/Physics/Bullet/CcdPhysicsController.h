@@ -21,6 +21,8 @@
 #ifndef __CCDPHYSICSCONTROLLER_H__
 #define __CCDPHYSICSCONTROLLER_H__
 
+#include "CM_RefCount.h"
+
 #include <vector>
 #include <map>
 
@@ -58,7 +60,7 @@ class btCollisionShape;
 
 // Shape contructor
 // It contains all the information needed to create a simple bullet shape at runtime
-class CcdShapeConstructionInfo
+class CcdShapeConstructionInfo : public CM_RefCount<CcdShapeConstructionInfo>
 {
 public:
 	struct UVco
@@ -74,41 +76,21 @@ public:
 		m_height(1.0f),
 		m_halfExtend(0.0f, 0.0f, 0.0f),
 		m_childScale(1.0f, 1.0f, 1.0f),
-		m_userData(NULL),
-		m_refCount(1),
-		m_meshObject(NULL),
-		m_triangleIndexVertexArray(NULL),
+		m_userData(nullptr),
+		m_meshObject(nullptr),
+		m_triangleIndexVertexArray(nullptr),
 		m_forceReInstance(false),
 		m_weldingThreshold1(0.0f),
-		m_shapeProxy(NULL)
+		m_shapeProxy(nullptr)
 	{
 		m_childTrans.setIdentity();
 	}
 
 	~CcdShapeConstructionInfo();
 
-	CcdShapeConstructionInfo *AddRef()
-	{
-		m_refCount++;
-		return this;
-	}
-
-	int Release()
-	{
-		if (--m_refCount > 0)
-			return m_refCount;
-		delete this;
-		return 0;
-	}
-
-	int GetRefCount() const
-	{
-		return m_refCount;
-	}
-
 	bool IsUnused(void)
 	{
-		return (m_meshObject == NULL && m_shapeArray.size() == 0 && m_shapeProxy == NULL);
+		return (m_meshObject == nullptr && m_shapeArray.size() == 0 && m_shapeProxy == nullptr);
 	}
 
 	void AddShape(CcdShapeConstructionInfo *shapeInfo);
@@ -121,17 +103,17 @@ public:
 	CcdShapeConstructionInfo *GetChildShape(int i)
 	{
 		if (i < 0 || i >= (int)m_shapeArray.size())
-			return NULL;
+			return nullptr;
 
 		return m_shapeArray.at(i);
 	}
 	int FindChildShape(CcdShapeConstructionInfo *shapeInfo, void *userData)
 	{
-		if (shapeInfo == NULL)
+		if (shapeInfo == nullptr)
 			return -1;
 		for (int i = 0; i < (int)m_shapeArray.size(); i++) {
 			CcdShapeConstructionInfo *childInfo = m_shapeArray.at(i);
-			if ((userData == NULL || userData == childInfo->m_userData) &&
+			if ((userData == nullptr || userData == childInfo->m_userData) &&
 			    (childInfo == shapeInfo ||
 			    (childInfo->m_shapeType == PHY_SHAPE_PROXY &&
 			    childInfo->m_shapeProxy == shapeInfo)))
@@ -202,8 +184,6 @@ public:
 	}
 protected:
 	static std::map<RAS_MeshObject *, CcdShapeConstructionInfo *> m_meshShapeMap;
-	/// this class is shared between replicas keep track of users so that we can release it
-	int m_refCount;
 	/// Keep a pointer to the original mesh
 	RAS_MeshObject *m_meshObject;
 	/// The list of vertexes and indexes for the triangle mesh, shared between Bullet shape.
@@ -216,10 +196,6 @@ protected:
 	float m_weldingThreshold1;
 	/// only used for PHY_SHAPE_PROXY, pointer to actual shape info
 	CcdShapeConstructionInfo *m_shapeProxy;
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:CcdShapeConstructionInfo")
-#endif
 };
 
 struct CcdConstructionInfo {
@@ -291,10 +267,10 @@ struct CcdConstructionInfo {
 		m_bGimpact(false),
 		m_collisionFilterGroup(DefaultFilter),
 		m_collisionFilterMask(AllFilter),
-		m_collisionShape(NULL),
-		m_MotionState(NULL),
-		m_shapeInfo(NULL),
-		m_physicsEnv(NULL),
+		m_collisionShape(nullptr),
+		m_MotionState(nullptr),
+		m_shapeInfo(nullptr),
+		m_physicsEnv(nullptr),
 		m_inertiaFactor(1.0f),
 		m_do_anisotropic(false),
 		m_anisotropicFriction(1.0f, 1.0f, 1.0f),
@@ -517,11 +493,6 @@ public:
 		btVector3 vec = getWalkDirection();
 		return MT_Vector3(vec[0], vec[1], vec[2]);
 	}
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	using PHY_ICharacter::operator new;
-	using PHY_ICharacter::operator delete;
-#endif
 };
 
 class CleanPairCallback : public btOverlapCallback
@@ -618,7 +589,7 @@ public:
 
 	/**
 	 * Delete the old Bullet shape and set the new Bullet shape : newShape
-	 * \param newShape The new Bullet shape to set, if is NULL we create a new Bullet shape
+	 * \param newShape The new Bullet shape to set, if is nullptr we create a new Bullet shape
 	 */
 	bool ReplaceControllerShape(btCollisionShape *newShape);
 
@@ -865,10 +836,6 @@ public:
 
 	/* Method to replicate rigid body joint contraints for group instances. */
 	virtual void ReplicateConstraints(KX_GameObject *gameobj, std::vector<KX_GameObject *> constobj);
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:CcdPhysicsController")
-#endif
 };
 
 /// DefaultMotionState implements standard motionstate, using btTransform
@@ -892,10 +859,6 @@ public:
 
 	btTransform m_worldTransform;
 	btVector3 m_localScaling;
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:DefaultMotionState")
-#endif
 };
 
 #endif  /* __CCDPHYSICSCONTROLLER_H__ */

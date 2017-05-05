@@ -73,23 +73,27 @@ set(SRC
 	BL_Texture.cpp
 	KX_2DFilter.cpp
 	KX_2DFilterManager.cpp
+	KX_2DFilterOffScreen.cpp
 	KX_ArmatureSensor.cpp
+	KX_BatchGroup.cpp
 	KX_BlenderMaterial.cpp
 	KX_BoundingBox.cpp
 	KX_Camera.cpp
 	KX_CameraActuator.cpp
 	KX_CameraIpoSGController.cpp
 	KX_CharacterWrapper.cpp
+	KX_CollisionEventManager.cpp
+	KX_CollisionSensor.cpp
 	KX_ConstraintActuator.cpp
 	KX_ConstraintWrapper.cpp
 	KX_CubeMap.cpp
-	KX_CubeMapManager.cpp
+	KX_CullingHandler.cpp
+	KX_CullingNode.cpp
 	KX_EmptyObject.cpp
 	KX_FontObject.cpp
 	KX_GameActuator.cpp
 	KX_GameObject.cpp
 	KX_Globals.cpp
-	KX_IpoConvert.cpp
 	KX_IPO_SGController.cpp
 	KX_KetsjiEngine.cpp
 	KX_Light.cpp
@@ -109,6 +113,7 @@ set(SRC
 	KX_ObstacleSimulation.cpp
 	KX_OrientationInterpolator.cpp
 	KX_ParentActuator.cpp
+	KX_PlanarMap.cpp
 	KX_PolyProxy.cpp
 	KX_PositionInterpolator.cpp
 	KX_PyConstraintBinding.cpp
@@ -134,10 +139,10 @@ set(SRC
 	KX_StateActuator.cpp
 	KX_SteeringActuator.cpp
 	KX_TextMaterial.cpp
+	KX_TextureRenderer.cpp
+	KX_TextureRendererManager.cpp
 	KX_TimeCategoryLogger.cpp
 	KX_TimeLogger.cpp
-	KX_CollisionEventManager.cpp
-	KX_CollisionSensor.cpp
 	KX_TrackToActuator.cpp
 	KX_VehicleWrapper.cpp
 	KX_VertexProxy.cpp
@@ -153,7 +158,9 @@ set(SRC
 	BL_Texture.h
 	KX_2DFilter.h
 	KX_2DFilterManager.h
+	KX_2DFilterOffScreen.h
 	KX_ArmatureSensor.h
+	KX_BatchGroup.h
 	KX_BlenderMaterial.h
 	KX_BoundingBox.h
 	KX_Camera.h
@@ -164,18 +171,17 @@ set(SRC
 	KX_ConstraintActuator.h
 	KX_ConstraintWrapper.h
 	KX_CubeMap.h
-	KX_CubeMapManager.h
+	KX_CullingHandler.h
+	KX_CullingNode.h
 	KX_EmptyObject.h
 	KX_FontObject.h
 	KX_GameActuator.h
 	KX_GameObject.h
 	KX_Globals.h
 	KX_IInterpolator.h
-	KX_IpoConvert.h
 	KX_IPOTransform.h
 	KX_IPO_SGController.h
 	KX_IScalarInterpolator.h
-	KX_ISceneConverter.h
 	KX_ISystem.h
 	KX_KetsjiEngine.h
 	KX_Light.h
@@ -196,6 +202,7 @@ set(SRC
 	KX_OrientationInterpolator.h
 	KX_ParentActuator.h
 	KX_PhysicsEngineEnums.h
+	KX_PlanarMap.h
 	KX_PolyProxy.h
 	KX_PositionInterpolator.h
 	KX_PyConstraintBinding.h
@@ -221,6 +228,8 @@ set(SRC
 	KX_StateActuator.h
 	KX_SteeringActuator.h
 	KX_TextMaterial.h
+	KX_TextureRenderer.h
+	KX_TextureRendererManager.h
 	KX_TimeCategoryLogger.h
 	KX_TimeLogger.h
 	KX_CollisionEventManager.h

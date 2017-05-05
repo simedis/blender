@@ -22,6 +22,7 @@
 
 #include "KX_MouseActuator.h"
 #include "KX_KetsjiEngine.h"
+#include "KX_PyMath.h"
 #include "SCA_MouseManager.h"
 #include "SCA_IInputDevice.h"
 #include "RAS_ICanvas.h"
@@ -295,12 +296,6 @@ bool KX_MouseActuator::Update()
 	return result;
 }
 
-bool KX_MouseActuator::isValid(KX_MouseActuator::KX_ACT_MOUSE_MODE mode)
-{
-	return ((mode > KX_ACT_MOUSE_NODEF) && (mode < KX_ACT_MOUSE_MAX));
-}
-
-
 CValue* KX_MouseActuator::GetReplica()
 {
 	KX_MouseActuator* replica = new KX_MouseActuator(*this);
@@ -352,7 +347,7 @@ void KX_MouseActuator::setMousePosition(float fx, float fy)
 
 /* Integration hooks ------------------------------------------------------- */
 PyTypeObject KX_MouseActuator::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"KX_MouseActuator",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -375,7 +370,7 @@ PyTypeObject KX_MouseActuator::Type = {
 
 PyMethodDef KX_MouseActuator::Methods[] = {
 	{"reset", (PyCFunction) KX_MouseActuator::sPyReset, METH_NOARGS,"reset() : undo rotation caused by actuator\n"},
-	{NULL,NULL} //Sentinel
+	{nullptr,nullptr} //Sentinel
 };
 
 
@@ -397,13 +392,13 @@ PyAttributeDef KX_MouseActuator::Attributes[] = {
 	KX_PYATTRIBUTE_NULL	//Sentinel
 };
 
-PyObject* KX_MouseActuator::pyattr_get_limit_x(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject* KX_MouseActuator::pyattr_get_limit_x(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_MouseActuator* self= static_cast<KX_MouseActuator*>(self_v);
-	return Py_BuildValue("[f,f]", (self->m_limit_x[0] / (float)M_PI * 180.0f), (self->m_limit_x[1] / (float)M_PI * 180.0f));
+	return PyObjectFrom(MT_Vector2(self->m_limit_x[0] / (float)M_PI * 180.0f, self->m_limit_x[1] / (float)M_PI * 180.0f));
 }
 
-int KX_MouseActuator::pyattr_set_limit_x(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int KX_MouseActuator::pyattr_set_limit_x(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	PyObject *item1, *item2;
 	KX_MouseActuator* self= static_cast<KX_MouseActuator*>(self_v);
@@ -428,13 +423,13 @@ int KX_MouseActuator::pyattr_set_limit_x(void *self_v, const KX_PYATTRIBUTE_DEF 
 	return PY_SET_ATTR_SUCCESS;
 }
 
-PyObject* KX_MouseActuator::pyattr_get_limit_y(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject* KX_MouseActuator::pyattr_get_limit_y(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_MouseActuator* self= static_cast<KX_MouseActuator*>(self_v);
-	return Py_BuildValue("[f,f]", (self->m_limit_y[0] / (float)M_PI * 180.0f), (self->m_limit_y[1] / (float)M_PI * 180.0f));
+	return PyObjectFrom(MT_Vector2(self->m_limit_y[0] / (float)M_PI * 180.0f, self->m_limit_y[1] / (float)M_PI * 180.0f));
 }
 
-int KX_MouseActuator::pyattr_set_limit_y(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int KX_MouseActuator::pyattr_set_limit_y(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	PyObject *item1, *item2;
 	KX_MouseActuator* self= static_cast<KX_MouseActuator*>(self_v);
@@ -459,13 +454,13 @@ int KX_MouseActuator::pyattr_set_limit_y(void *self_v, const KX_PYATTRIBUTE_DEF 
 	return PY_SET_ATTR_SUCCESS;
 }
 
-PyObject* KX_MouseActuator::pyattr_get_angle(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject* KX_MouseActuator::pyattr_get_angle(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_MouseActuator* self= static_cast<KX_MouseActuator*>(self_v);
-	return Py_BuildValue("[f,f]", (self->m_angle[0] / (float)M_PI * 180.0f), (self->m_angle[1] / (float)M_PI * 180.0f));
+	return PyObjectFrom(MT_Vector2(self->m_angle[0] / (float)M_PI * 180.0f, self->m_angle[1] / (float)M_PI * 180.0f));
 }
 
-int KX_MouseActuator::pyattr_set_angle(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int KX_MouseActuator::pyattr_set_angle(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	PyObject *item1, *item2;
 	KX_MouseActuator* self= static_cast<KX_MouseActuator*>(self_v);

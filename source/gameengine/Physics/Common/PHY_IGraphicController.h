@@ -52,12 +52,8 @@ public:
 
 	virtual PHY_IGraphicController *GetReplica(class PHY_IMotionState *motionstate)
 	{
-		return NULL;
+		return nullptr;
 	}
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:PHY_IController")
-#endif
 };
 
 #endif  /* __PHY_IGRAPHICCONTROLLER_H__ */

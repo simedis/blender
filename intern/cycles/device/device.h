@@ -19,15 +19,15 @@
 
 #include <stdlib.h>
 
-#include "device_memory.h"
-#include "device_task.h"
+#include "device/device_memory.h"
+#include "device/device_task.h"
 
-#include "util_list.h"
-#include "util_stats.h"
-#include "util_string.h"
-#include "util_thread.h"
-#include "util_types.h"
-#include "util_vector.h"
+#include "util/util_list.h"
+#include "util/util_stats.h"
+#include "util/util_string.h"
+#include "util/util_thread.h"
+#include "util/util_types.h"
+#include "util/util_vector.h"
 
 CCL_NAMESPACE_BEGIN
 
@@ -121,6 +121,12 @@ public:
 	/* Use Transparent shadows */
 	bool use_transparent;
 
+	/* Use various shadow tricks, such as shadow catcher. */
+	bool use_shadow_tricks;
+
+	/* Per-uber shader usage flags. */
+	bool use_principled;
+
 	DeviceRequestedFeatures()
 	{
 		/* TODO(sergey): Find more meaningful defaults. */
@@ -137,6 +143,8 @@ public:
 		use_integrator_branched = false;
 		use_patch_evaluation = false;
 		use_transparent = false;
+		use_shadow_tricks = false;
+		use_principled = false;
 	}
 
 	bool modified(const DeviceRequestedFeatures& requested_features)
@@ -153,7 +161,9 @@ public:
 		         use_volume == requested_features.use_volume &&
 		         use_integrator_branched == requested_features.use_integrator_branched &&
 		         use_patch_evaluation == requested_features.use_patch_evaluation &&
-		         use_transparent == requested_features.use_transparent);
+		         use_transparent == requested_features.use_transparent &&
+		         use_shadow_tricks == requested_features.use_shadow_tricks &&
+		         use_principled == requested_features.use_principled);
 	}
 
 	/* Convert the requested features structure to a build options,
@@ -194,8 +204,14 @@ public:
 		if(!use_patch_evaluation) {
 			build_options += " -D__NO_PATCH_EVAL__";
 		}
-		if(!use_transparent) {
+		if(!use_transparent && !use_volume) {
 			build_options += " -D__NO_TRANSPARENT__";
+		}
+		if(!use_shadow_tricks) {
+			build_options += " -D__NO_SHADOW_TRICKS__";
+		}
+		if(!use_principled) {
+			build_options += " -D__NO_PRINCIPLED__";
 		}
 		return build_options;
 	}
@@ -228,13 +244,21 @@ public:
 	DeviceInfo info;
 	virtual const string& error_message() { return error_msg; }
 	bool have_error() { return !error_message().empty(); }
+	virtual void set_error(const string& error)
+	{
+		if(!have_error()) {
+			error_msg = error;
+		}
+		fprintf(stderr, "%s\n", error.c_str());
+		fflush(stderr);
+	}
 	virtual bool show_samples() const { return false; }
 
 	/* statistics */
 	Stats &stats;
 
 	/* regular memory */
-	virtual void mem_alloc(device_memory& mem, MemoryType type) = 0;
+	virtual void mem_alloc(const char *name, device_memory& mem, MemoryType type) = 0;
 	virtual void mem_copy_to(device_memory& mem) = 0;
 	virtual void mem_copy_from(device_memory& mem,
 		int y, int w, int h, int elem) = 0;

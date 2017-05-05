@@ -41,7 +41,8 @@ SCA_2DFilterActuator::SCA_2DFilterActuator(
         short flag,
         float float_arg,
         int int_arg,
-        RAS_IRasterizer* rasterizer,
+        bool mipmap,
+        RAS_Rasterizer* rasterizer,
 		RAS_2DFilterManager *filterManager,
         SCA_IScene* scene)
     : SCA_IActuator(gameobj, KX_ACT_2DFILTER),
@@ -49,6 +50,7 @@ SCA_2DFilterActuator::SCA_2DFilterActuator(
       m_disableMotionBlur(flag),
       m_float_arg(float_arg),
       m_int_arg(int_arg),
+      m_mipmap(mipmap),
       m_rasterizer(rasterizer),
       m_filterManager(filterManager),
       m_scene(scene)
@@ -117,6 +119,7 @@ bool SCA_2DFilterActuator::Update()
 				info.filterMode = m_type;
 				info.propertyNames = m_propNames;
 				info.shaderText = m_shaderText;
+				info.mipmap = m_mipmap;
 
 				m_filterManager->AddFilter(info);
 			}
@@ -151,7 +154,7 @@ void SCA_2DFilterActuator::SetShaderText(const std::string& text)
 
 /* Integration hooks ------------------------------------------------------- */
 PyTypeObject SCA_2DFilterActuator::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"SCA_2DFilterActuator",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -174,7 +177,7 @@ PyTypeObject SCA_2DFilterActuator::Type = {
 
 PyMethodDef SCA_2DFilterActuator::Methods[] = {
 	/* add python functions to deal with m_msg... */
-	{NULL,NULL}
+	{nullptr,nullptr}
 };
 
 PyAttributeDef SCA_2DFilterActuator::Attributes[] = {

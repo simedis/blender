@@ -32,6 +32,7 @@
 
 
 #include <math.h>
+#include <fstream>
 
 #ifdef __linux__
 #  ifdef __alpha__
@@ -116,6 +117,10 @@ extern "C"
 #  include "sdlew.h"
 #endif
 
+#ifdef WITH_GAMEENGINE_BPPLAYER
+#  include "SpindleEncryption.h"
+#endif  // WITH_GAMEENGINE_BPPLAYER
+
 #include <boost/algorithm/string.hpp>
 
 #include "CM_Message.h"
@@ -147,12 +152,12 @@ typedef enum {
 } ScreenSaverMode;
 
 static ScreenSaverMode scr_saver_mode = SCREEN_SAVER_MODE_NONE;
-static HWND scr_saver_hwnd = NULL;
+static HWND scr_saver_hwnd = nullptr;
 
 static BOOL scr_saver_init(int argc, char **argv) 
 {
 	scr_saver_mode = SCREEN_SAVER_MODE_NONE;
-	scr_saver_hwnd = NULL;
+	scr_saver_hwnd = nullptr;
 	BOOL ret = false;
 
 	int len = ::strlen(argv[0]);
@@ -169,7 +174,7 @@ static BOOL scr_saver_init(int argc, char **argv)
 			if (!::stricmp("/c", argv[1]))
 			{
 				scr_saver_mode = SCREEN_SAVER_MODE_CONFIGURATION;
-				if (scr_saver_hwnd == NULL)
+				if (scr_saver_hwnd == nullptr)
 					scr_saver_hwnd = ::GetForegroundWindow();
 			}
 			else if (!::stricmp("/s", argv[1]))
@@ -241,7 +246,7 @@ BOOL CALLBACK findGhostWindowHWNDProc(HWND hwnd, LPARAM lParam)
 
 static HWND findGhostWindowHWND(GHOST_IWindow* window)
 {
-	found_ghost_window_hwnd = NULL;
+	found_ghost_window_hwnd = nullptr;
 	ghost_window_to_find = window;
 	EnumWindows(findGhostWindowHWNDProc, NULL);
 	return found_ghost_window_hwnd;
@@ -286,7 +291,7 @@ static GHOST_IWindow *startScreenSaverPreview(
 
 		style = (style & (~(WS_POPUP|WS_OVERLAPPEDWINDOW|WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX|WS_TILEDWINDOW ))) | WS_CHILD;
 		SetWindowLongPtr(ghost_hwnd, GWL_STYLE, style);
-		SetWindowPos(ghost_hwnd, NULL, adjrc.left, adjrc.top, 0, 0, SWP_NOZORDER|SWP_NOSIZE|SWP_NOACTIVATE);
+		SetWindowPos(ghost_hwnd, nullptr, adjrc.left, adjrc.top, 0, 0, SWP_NOZORDER|SWP_NOSIZE|SWP_NOACTIVATE);
 
 		/* Check the size of the client rectangle of the window and resize the window
 		 * so that the client rectangle has the size requested.
@@ -296,7 +301,7 @@ static GHOST_IWindow *startScreenSaverPreview(
 		return window;
 	}
 
-	return NULL;
+	return nullptr;
 }
 
 #endif  // WIN32
@@ -319,7 +324,7 @@ static GHOST_IWindow *startFullScreen(
 	setting.bpp = bpp;
 	setting.frequency = frequency;
 
-	GHOST_IWindow *window = NULL;
+	GHOST_IWindow *window = nullptr;
 	system->beginFullScreen(setting, &window, stereoVisual, alphaBackground);
 	window->setCursorVisibility(false);
 	/* note that X11 ignores this (it uses a window internally for fullscreen) */
@@ -340,7 +345,7 @@ static GHOST_IWindow *startScreenSaverFullScreen(
 {
 	GHOST_IWindow *window = startFullScreen(system, width, height, bpp, frequency, stereoVisual, alphaBackground, 0);
 	HWND ghost_hwnd = findGhostWindowHWND(window);
-	if (ghost_hwnd != NULL)
+	if (ghost_hwnd != nullptr)
 	{
 		GetCursorPos(&scr_save_mouse_pos);
 		ghost_wnd_proc = (WNDPROC) GetWindowLongPtr(ghost_hwnd, GWLP_WNDPROC);
@@ -404,7 +409,7 @@ static GHOST_IWindow *startEmbeddedWindow(
 	if (parentWindow != 0)
 		state = GHOST_kWindowStateEmbedded;
 	GHOST_IWindow *window = system->createWindow(title, 0, 0, 0, 0, state,
-	                                     GHOST_kDrawingContextTypeOpenGL, glSettings, parentWindow);
+	                                     GHOST_kDrawingContextTypeOpenGL, glSettings, false, parentWindow);
 
 	if (!window) {
 		CM_Error("could not create main window");
@@ -484,6 +489,10 @@ static void usage(const std::string& program, bool isBlenderPlayer)
 	CM_Message("       show_framerate                 0         Show the frame rate");
 	CM_Message("       show_properties                0         Show debug properties");
 	CM_Message("       show_profile                   0         Show profiling information");
+	CM_Message("       show_bounding_box              0         Show debug bounding box volume");
+	CM_Message("       show_armatures                 0         Show debug armatures");
+	CM_Message("       show_camera_frustum            0         Show debug camera frustum volume");
+	CM_Message("       show_shadow_frustum            0         Show debug light shadow frustum volume");
 	CM_Message("       ignore_deprecation_warnings    1         Ignore deprecation warnings" << std::endl);
 	CM_Message("  -p: override python main loop script");
 	CM_Message(std::endl);
@@ -503,7 +512,7 @@ static void get_filename(int argc, char **argv, char *filename)
 	 */
 	int srclen = ::strlen(argv[0]);
 	int len = 0;
-	char *gamefile = NULL;
+	char *gamefile = nullptr;
 	
 	filename[0] = '\0';
 
@@ -540,10 +549,10 @@ static void get_filename(int argc, char **argv, char *filename)
 #endif // !_APPLE
 }
 
-static BlendFileData *load_game_data(const char *progname, char *filename = NULL, char *relativename = NULL)
+static BlendFileData *load_game_data(const char *progname, char *filename = nullptr, char *relativename = nullptr)
 {
 	ReportList reports;
-	BlendFileData *bfd = NULL;
+	BlendFileData *bfd = nullptr;
 
 	BKE_reports_init(&reports, RPT_STORE);
 	
@@ -555,7 +564,7 @@ static BlendFileData *load_game_data(const char *progname, char *filename = NULL
 			BLI_strncpy(bfd->main->name, progname, sizeof(bfd->main->name));
 		}
 	} else {
-		bfd= BLO_read_from_file(progname, &reports);
+		bfd= BLO_read_from_file(progname, &reports, BLO_READ_SKIP_NONE);
 	}
 	
 	if (!bfd && filename) {
@@ -572,11 +581,46 @@ static BlendFileData *load_game_data(const char *progname, char *filename = NULL
 }
 
 /// Return true when the exit code ask to quit the engine.
-static bool quitGame(int exitcode)
+static bool quitGame(KX_ExitRequest exitcode)
 {
 	// Exit the game engine if we are not restarting the game or loading an other file.
-	return (exitcode != KX_EXIT_REQUEST_RESTART_GAME && exitcode != KX_EXIT_REQUEST_START_OTHER_GAME);
+	return (exitcode != KX_ExitRequest::RESTART_GAME && exitcode != KX_ExitRequest::START_OTHER_GAME);
 }
+
+#ifdef WITH_GAMEENGINE_BPPLAYER
+
+static BlendFileData *load_encrypted_game_data(const char *filename, std::string encryptKey)
+{
+	ReportList reports;
+	BlendFileData *bfd = NULL;
+	char *fileData = NULL;
+	int fileSize;
+	std::string localPath(SPINDLE_GetFilePath());
+	BKE_reports_init(&reports, RPT_STORE);
+
+	if (filename == NULL) {
+		return NULL;
+	}
+
+	if (!localPath.empty() && !encryptKey.empty()) {
+		// Load file and decrypt.
+		fileData = SPINDLE_DecryptFromFile(filename, &fileSize, encryptKey.c_str(), 0);
+	}
+
+	if (fileData) {
+		bfd = BLO_read_from_memory(fileData, fileSize, &reports, BLO_READ_SKIP_USERDEF);
+		delete[] fileData;
+	}
+
+	if (!bfd) {
+		BKE_reports_print(&reports, RPT_ERROR);
+	}
+
+	BKE_reports_clear(&reports);
+	return bfd;
+}
+
+#endif  // WITH_GAMEENGINE_BPPLAYER
 
 int main(
 	int argc,
@@ -597,7 +641,12 @@ int main(
 #ifdef WIN32
 	bool closeConsole = true;
 #endif
-	RAS_IRasterizer::StereoMode stereomode = RAS_IRasterizer::RAS_STEREO_NOSTEREO;
+
+#ifdef WITH_GAMEENGINE_BPPLAYER
+	bool useLocalPath = false;
+	std::string hexKey;
+#endif  // WITH_GAMEENGINE_BPPLAYER
+	RAS_Rasterizer::StereoMode stereomode = RAS_Rasterizer::RAS_STEREO_NOSTEREO;
 	bool stereoWindow = false;
 	bool stereoParFound = false;
 	int windowLeft = 100;
@@ -606,14 +655,14 @@ int main(
 	int windowHeight = 480;
 	GHOST_TUns32 fullScreenWidth = 0;
 	GHOST_TUns32 fullScreenHeight= 0;
-	GHOST_IWindow *window = NULL;
+	GHOST_IWindow *window = nullptr;
 	int fullScreenBpp = 32;
 	int fullScreenFrequency = 60;
 	GHOST_TEmbedderWindowID parentWindow = 0;
 	bool isBlenderPlayer = false; //true when lauching from blender or command line. false for bundled player
 	int validArguments=0;
 	bool samplesParFound = false;
-	char *pythonControllerFile = NULL;
+	std::string pythonControllerFile;
 	GHOST_TUns16 aasamples = 0;
 	int alphaBackground = 0;
 	
@@ -656,7 +705,7 @@ int main(
 #endif
 
 	BKE_appdir_program_path_init(argv[0]);
-	BKE_tempdir_init(NULL);
+	BKE_tempdir_init(nullptr);
 	
 	// We don't use threads directly in the BGE, but we need to call this so things like
 	// freeing up GPU_Textures works correctly.
@@ -672,7 +721,7 @@ int main(
 
 	// We load our own G.main, so free the one that BKE_blender_globals_init() gives us
 	BKE_main_free(G.main);
-	G.main = NULL;
+	G.main = nullptr;
 
 	MEM_CacheLimiter_set_disabled(true);
 	IMB_init();
@@ -836,6 +885,25 @@ int main(
 
 				break;
 			}
+#ifdef WITH_GAMEENGINE_BPPLAYER
+			case 'L':
+			{
+				// Find the requested base file directory.
+				if (!useLocalPath) {
+					SPINDLE_SetFilePath(&argv[i][2]);
+					useLocalPath = true;
+				}
+				i++;
+				break;
+			}
+			case 'K':
+			{
+				//Find and set keys
+				hexKey = SPINDLE_FindAndSetEncryptionKeys(argv, i);
+				i++;
+				break;
+			}
+#endif  // WITH_GAMEENGINE_BPPLAYER
 			case 'f': //fullscreen mode
 			{
 				i++;
@@ -939,31 +1007,31 @@ int main(
 
 					if (!strcmp(argv[i], "nostereo"))  // may not be redundant if the file has different setting
 					{
-						stereomode = RAS_IRasterizer::RAS_STEREO_NOSTEREO;
+						stereomode = RAS_Rasterizer::RAS_STEREO_NOSTEREO;
 					}
 
 					// only the hardware pageflip method needs a stereo window
 					else if (!strcmp(argv[i], "hwpageflip")) {
-						stereomode = RAS_IRasterizer::RAS_STEREO_QUADBUFFERED;
+						stereomode = RAS_Rasterizer::RAS_STEREO_QUADBUFFERED;
 						stereoWindow = true;
 					}
 					else if (!strcmp(argv[i], "syncdoubling"))
-						stereomode = RAS_IRasterizer::RAS_STEREO_ABOVEBELOW;
+						stereomode = RAS_Rasterizer::RAS_STEREO_ABOVEBELOW;
 
 					else if (!strcmp(argv[i], "3dtvtopbottom"))
-						stereomode = RAS_IRasterizer::RAS_STEREO_3DTVTOPBOTTOM;
+						stereomode = RAS_Rasterizer::RAS_STEREO_3DTVTOPBOTTOM;
 
 					else if (!strcmp(argv[i], "anaglyph"))
-						stereomode = RAS_IRasterizer::RAS_STEREO_ANAGLYPH;
+						stereomode = RAS_Rasterizer::RAS_STEREO_ANAGLYPH;
 
 					else if (!strcmp(argv[i], "sidebyside"))
-						stereomode = RAS_IRasterizer::RAS_STEREO_SIDEBYSIDE;
+						stereomode = RAS_Rasterizer::RAS_STEREO_SIDEBYSIDE;
 
 					else if (!strcmp(argv[i], "interlace"))
-						stereomode = RAS_IRasterizer::RAS_STEREO_INTERLACED;
+						stereomode = RAS_Rasterizer::RAS_STEREO_INTERLACED;
 
 					else if (!strcmp(argv[i], "vinterlace"))
-						stereomode = RAS_IRasterizer::RAS_STEREO_VINTERLACE;
+						stereomode = RAS_Rasterizer::RAS_STEREO_VINTERLACE;
 
 #if 0
 //					// future stuff
@@ -989,6 +1057,7 @@ int main(
 			{
 				i++;
 				alphaBackground = 1;
+				break;
 			}
 			case 'p':
 			{
@@ -1041,7 +1110,7 @@ int main(
 			// this bracket is needed for app (see below) to get out
 			// of scope before GHOST_ISystem::disposeSystem() is called.
 			{
-				int exitcode = KX_EXIT_REQUEST_NO_REQUEST;
+				KX_ExitRequest exitcode = KX_ExitRequest::NO_REQUEST;
 				std::string exitstring = "";
 				bool firstTimeRunning = true;
 				char filename[FILE_MAX];
@@ -1058,22 +1127,21 @@ int main(
 				GlobalSettings gs;
 
 #ifdef WITH_PYTHON
-				PyObject *globalDict = NULL;
+				PyObject *globalDict = nullptr;
 #endif  // WITH_PYTHON
 
 				do {
 					// Read the Blender file
 					BlendFileData *bfd;
 					
-					// if we got an exitcode 3 (KX_EXIT_REQUEST_START_OTHER_GAME) load a different file
-					if (exitcode == KX_EXIT_REQUEST_START_OTHER_GAME)
+					// if we got an exitcode 3 (KX_ExitRequest::START_OTHER_GAME) load a different file
+					if (exitcode == KX_ExitRequest::START_OTHER_GAME)
 					{
 						char basedpath[FILE_MAX];
-						
+
 						// base the actuator filename relative to the last file
 						BLI_strncpy(basedpath, exitstring.c_str(), sizeof(basedpath));
 						BLI_path_abs(basedpath, pathname);
-						
 						bfd = load_game_data(basedpath);
 
 						if (!bfd) {
@@ -1085,11 +1153,25 @@ int main(
 							bfd = load_game_data(temppath);
 						}
 					}
-					else {
-						bfd = load_game_data(BKE_appdir_program_path(), filename[0]? filename: NULL);
-						// The file is valid and it's the original file name.
-						if (bfd) {
-							KX_SetOrigPath(bfd->main->name);
+					else
+					{
+#ifdef WITH_GAMEENGINE_BPPLAYER
+						if (useLocalPath) {
+							bfd = load_encrypted_game_data(filename[0] ? filename : NULL, hexKey);
+
+							// The file is valid and it's the original file name.
+							if (bfd) {
+								remove(filename);
+								KX_SetOrigPath(bfd->main->name);
+							}
+						}
+						else
+#endif  // WITH_GAMEENGINE_BPPLAYER
+						{
+							bfd = load_game_data(BKE_appdir_program_path(), filename[0] ? filename : NULL);
+							// The file is valid and it's the original file name.
+							if (bfd)
+								KX_SetOrigPath(bfd->main->name);
 						}
 					}
 
@@ -1100,7 +1182,7 @@ int main(
 					if (!bfd) {
 						usage(argv[0], isBlenderPlayer);
 						error = true;
-						exitcode = KX_EXIT_REQUEST_QUIT_GAME;
+						exitcode = KX_ExitRequest::QUIT_GAME;
 					}
 					else {
 						/* Setting options according to the blend file if not overriden in the command line */
@@ -1152,41 +1234,41 @@ int main(
 								switch (scene->gm.stereomode) {
 									case STEREO_QUADBUFFERED:
 									{
-										stereomode = RAS_IRasterizer::RAS_STEREO_QUADBUFFERED;
+										stereomode = RAS_Rasterizer::RAS_STEREO_QUADBUFFERED;
 										break;
 									}
 									case STEREO_ABOVEBELOW:
 									{
-										stereomode = RAS_IRasterizer::RAS_STEREO_ABOVEBELOW;
+										stereomode = RAS_Rasterizer::RAS_STEREO_ABOVEBELOW;
 										break;
 									}
 									case STEREO_INTERLACED:
 									{
-										stereomode = RAS_IRasterizer::RAS_STEREO_INTERLACED;
+										stereomode = RAS_Rasterizer::RAS_STEREO_INTERLACED;
 										break;
 									}
 									case STEREO_ANAGLYPH:
 									{
-										stereomode = RAS_IRasterizer::RAS_STEREO_ANAGLYPH;
+										stereomode = RAS_Rasterizer::RAS_STEREO_ANAGLYPH;
 										break;
 									}
 									case STEREO_SIDEBYSIDE:
 									{
-										stereomode = RAS_IRasterizer::RAS_STEREO_SIDEBYSIDE;
+										stereomode = RAS_Rasterizer::RAS_STEREO_SIDEBYSIDE;
 										break;
 									}
 									case STEREO_VINTERLACE:
 									{
-										stereomode = RAS_IRasterizer::RAS_STEREO_VINTERLACE;
+										stereomode = RAS_Rasterizer::RAS_STEREO_VINTERLACE;
 										break;
 									}
 									case STEREO_3DTVTOPBOTTOM:
 									{
-										stereomode = RAS_IRasterizer::RAS_STEREO_3DTVTOPBOTTOM;
+										stereomode = RAS_Rasterizer::RAS_STEREO_3DTVTOPBOTTOM;
 										break;
 									}
 								}
-								if (stereomode == RAS_IRasterizer::RAS_STEREO_QUADBUFFERED)
+								if (stereomode == RAS_Rasterizer::RAS_STEREO_QUADBUFFERED)
 									stereoWindow = true;
 							}
 						}
@@ -1264,15 +1346,16 @@ int main(
 									else
 										window = startWindow(system, title, windowLeft, windowTop, windowWidth,
 															 windowHeight, stereoWindow, alphaBackground);
-
-									if (SYS_GetCommandLineInt(syshandle, "nomipmap", 0)) {
-										GPU_set_mipmap(0);
-									}
-
-									GPU_set_anisotropic(U.anisotropic_filter);
-									GPU_set_gpu_mipmapping(U.use_gpu_mipmap);
 								}
 							}
+
+							if (SYS_GetCommandLineInt(syshandle, "nomipmap", 0)) {
+								GPU_set_mipmap(0);
+							}
+
+							GPU_set_anisotropic(U.anisotropic_filter);
+							GPU_set_gpu_mipmapping(U.use_gpu_mipmap);
+							GPU_set_linear_mipmap(true);
 						}
 
 						// This argc cant be argc_py_clamped, since python uses it.
@@ -1299,7 +1382,7 @@ int main(
 						 */
 						if (quitGame(exitcode)) {
 #ifdef WITH_PYTHON
-							// If the globalDict is to NULL then python is certainly not initialized.
+							// If the globalDict is to nullptr then python is certainly not initialized.
 							if (globalDict) {
 								PyDict_Clear(globalDict);
 								Py_DECREF(globalDict);
@@ -1310,7 +1393,7 @@ int main(
 
 						BLO_blendfiledata_free(bfd);
 						/* G.main == bfd->main, it gets referenced in free_nodesystem so we can't have a dangling pointer */
-						G.main = NULL;
+						G.main = nullptr;
 					}
 				} while (!quitGame(exitcode));
 			}
@@ -1372,7 +1455,7 @@ int main(
 		free(argv[--argv_num]);
 	}
 	free(argv);
-	argv = NULL;
+	argv = nullptr;
 #endif
 
 	return error ? -1 : 0;

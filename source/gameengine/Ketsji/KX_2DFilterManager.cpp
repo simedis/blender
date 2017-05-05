@@ -26,6 +26,7 @@
 
 #include "KX_2DFilterManager.h"
 #include "KX_2DFilter.h"
+#include "KX_2DFilterOffScreen.h"
 
 #include "CM_Message.h"
 
@@ -48,7 +49,7 @@ PyMethodDef KX_2DFilterManager::Methods[] = {
 	KX_PYMETHODTABLE(KX_2DFilterManager, getFilter),
 	KX_PYMETHODTABLE(KX_2DFilterManager, addFilter),
 	KX_PYMETHODTABLE(KX_2DFilterManager, removeFilter),
-	{NULL, NULL} //Sentinel
+	{nullptr, nullptr} //Sentinel
 };
 
 PyAttributeDef KX_2DFilterManager::Attributes[] = {
@@ -56,7 +57,7 @@ PyAttributeDef KX_2DFilterManager::Attributes[] = {
 };
 
 PyTypeObject KX_2DFilterManager::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"KX_2DFilterManager",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -83,7 +84,7 @@ KX_PYMETHODDEF_DOC(KX_2DFilterManager, getFilter, " getFilter(index)")
 	int index = 0;
 
 	if (!PyArg_ParseTuple(args, "i:getFilter", &index)) {
-		return NULL;
+		return nullptr;
 	}
 
 	KX_2DFilter *filter = (KX_2DFilter*)GetFilterPass(index);
@@ -91,6 +92,7 @@ KX_PYMETHODDEF_DOC(KX_2DFilterManager, getFilter, " getFilter(index)")
 	if (filter) {
 		return filter->GetProxy();
 	}
+
 	Py_RETURN_NONE;
 }
 
@@ -101,17 +103,17 @@ KX_PYMETHODDEF_DOC(KX_2DFilterManager, addFilter, " addFilter(index, type, fragm
 	const char *frag = "";
 
 	if (!PyArg_ParseTuple(args, "ii|s:addFilter", &index, &type, &frag)) {
-		return NULL;
+		return nullptr;
 	}
 
 	if (GetFilterPass(index)) {
 		PyErr_Format(PyExc_ValueError, "filterManager.addFilter(index, type, fragmentProgram): KX_2DFilterManager, found existing filter in index (%i)", index);
-		return NULL;
+		return nullptr;
 	}
 
 	if (type < FILTER_BLUR || type > FILTER_CUSTOMFILTER) {
 		PyErr_SetString(PyExc_ValueError, "filterManager.addFilter(index, type, fragmentProgram): KX_2DFilterManager, type invalid");
-		return NULL;
+		return nullptr;
 	}
 
 	if (strlen(frag) > 0 && type != FILTER_CUSTOMFILTER) {
@@ -123,9 +125,9 @@ KX_PYMETHODDEF_DOC(KX_2DFilterManager, addFilter, " addFilter(index, type, fragm
 	data.filterMode = type;
 	data.shaderText = std::string(frag);
 
-	AddFilter(data);
+	KX_2DFilter *filter = static_cast<KX_2DFilter *>(AddFilter(data));
 
-	Py_RETURN_NONE;
+	return filter->GetProxy();
 }
 
 KX_PYMETHODDEF_DOC(KX_2DFilterManager, removeFilter, " removeFilter(index)")
@@ -133,7 +135,7 @@ KX_PYMETHODDEF_DOC(KX_2DFilterManager, removeFilter, " removeFilter(index)")
 	int index = 0;
 
 	if (!PyArg_ParseTuple(args, "i:removeFilter", &index)) {
-		return NULL;
+		return nullptr;
 	}
 
 	RemoveFilterPass(index);

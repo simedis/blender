@@ -39,7 +39,7 @@ SCA_ILogicBrick::SCA_ILogicBrick(SCA_IObject* gameobj)
 	:
 	CValue(),
 	m_gameobj(gameobj),
-	m_logicManager(NULL),
+	m_logicManager(nullptr),
 	m_Execute_Priority(0),
 	m_Execute_Ueber_Priority(0),
 	m_bActive(false),
@@ -76,7 +76,7 @@ void SCA_ILogicBrick::ReParent(SCA_IObject* parent)
 	m_gameobj = parent;
 }
 
-void SCA_ILogicBrick::Relink(std::map<void *, void *>& obj_map)
+void SCA_ILogicBrick::Relink(std::map<SCA_IObject *, SCA_IObject *>& obj_map)
 {
 	// nothing to do
 }
@@ -137,44 +137,21 @@ SCA_LogicManager *SCA_ILogicBrick::GetLogicManager()
 	return m_logicManager;
 }
 
-void SCA_ILogicBrick::RegisterEvent(CValue* eventval)
-{
-	if (m_eventval)
-		m_eventval->Release();
-
-	m_eventval = eventval->AddRef();
-}
-
-
 void SCA_ILogicBrick::RemoveEvent()
 {
 	if (m_eventval)
 	{
 		m_eventval->Release();
-		m_eventval = NULL;
+		m_eventval = nullptr;
 	}
 }
-
-
-
-CValue* SCA_ILogicBrick::GetEvent()
-{
-	if (m_eventval)
-	{
-		return m_eventval->AddRef();
-	}
-	
-	return NULL;
-}
-
-
 
 #ifdef WITH_PYTHON
 
 /* python stuff */
 
 PyTypeObject SCA_ILogicBrick::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"SCA_ILogicBrick",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -196,7 +173,7 @@ PyTypeObject SCA_ILogicBrick::Type = {
 };
 
 PyMethodDef SCA_ILogicBrick::Methods[] = {
-	{NULL,NULL} //Sentinel
+	{nullptr,nullptr} //Sentinel
 };
 
 PyAttributeDef SCA_ILogicBrick::Attributes[] = {
@@ -206,7 +183,7 @@ PyAttributeDef SCA_ILogicBrick::Attributes[] = {
 	KX_PYATTRIBUTE_NULL //Sentinel
 };
 
-int SCA_ILogicBrick::CheckProperty(void *self, const PyAttributeDef *attrdef)
+int SCA_ILogicBrick::CheckProperty(PyObjectPlus *self, const PyAttributeDef *attrdef)
 {
 	if (attrdef->m_type != KX_PYATTRIBUTE_TYPE_STRING || attrdef->m_length != 1) {
 		PyErr_SetString(PyExc_AttributeError, "inconsistent check function for attribute type, report to blender.org");
@@ -225,7 +202,7 @@ int SCA_ILogicBrick::CheckProperty(void *self, const PyAttributeDef *attrdef)
 }
 
 /*Attribute functions */
-PyObject *SCA_ILogicBrick::pyattr_get_owner(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_ILogicBrick::pyattr_get_owner(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	SCA_ILogicBrick* self = static_cast<SCA_ILogicBrick*>(self_v);
 	CValue* parent = self->GetParent();

@@ -41,7 +41,7 @@
 
 /* This little block needed for linking to Blender... */
 #ifdef _MSC_VER
-#  include "BLI_winstuff.h"
+//#  include "BLI_winstuff.h"
 #endif
 
 #include "DNA_object_types.h"
@@ -82,6 +82,7 @@
 #include "PHY_IPhysicsEnvironment.h"
 
 #include "KX_KetsjiEngine.h"
+#include "KX_Globals.h"
 #include "BL_BlenderDataConversion.h"
 
 #include "CM_Message.h"
@@ -94,7 +95,7 @@ void BL_ConvertSensors(struct Object* blenderobject,
 					   int activeLayerBitInfo,
 					   bool isInActiveLayer,
 					   RAS_ICanvas* canvas,
-					   KX_BlenderSceneConverter* converter
+					   KX_BlenderSceneConverter& converter
 					   )
 {
 
@@ -119,7 +120,7 @@ void BL_ConvertSensors(struct Object* blenderobject,
 
 	while (sens) {
 		if (!(sens->flag & SENS_DEACTIVATE)) {
-			SCA_ISensor* gamesensor=NULL;
+			SCA_ISensor* gamesensor=nullptr;
 			/* All sensors have a pulse toggle, skipped ticks parameter, and invert field.     */
 			/* These are extracted here, and set when the sensor is added to the */
 			/* list.                                                             */
@@ -262,7 +263,7 @@ void BL_ConvertSensors(struct Object* blenderobject,
 							blenderkeybdsensor->targetName,
 							blenderkeybdsensor->toggleName,
 							gameobj,
-							KX_KetsjiEngine::GetExitKey()); //			blenderkeybdsensor->pad);
+							KX_GetActiveEngine()->GetExitKey()); //			blenderkeybdsensor->pad);
 
 					}
 
@@ -328,6 +329,7 @@ void BL_ConvertSensors(struct Object* blenderobject,
 							/* give us a focus-aware sensor */
 							bool bFindMaterial = (bmouse->mode & SENS_COLLISION_MATERIAL);
 							bool bXRay = (bmouse->flag & SENS_RAY_XRAY);
+							int mask = bmouse->mask;
 							std::string checkname = (bFindMaterial? bmouse->matname : bmouse->propname);
 
 							gamesensor = new KX_MouseFocusSensor(eventmgr,
@@ -339,6 +341,7 @@ void BL_ConvertSensors(struct Object* blenderobject,
 								checkname,
 								bFindMaterial,
 								bXRay,
+								mask,
 								kxscene,
 								kxengine,
 								gameobj);
@@ -503,7 +506,7 @@ void BL_ConvertSensors(struct Object* blenderobject,
 			case SENS_RANDOM:
 				{
 					bRandomSensor* blenderrndsensor = (bRandomSensor*) sens->data;
-					// some files didn't write randomsensor, avoid crash now for NULL ptr's
+					// some files didn't write randomsensor, avoid crash now for nullptr ptr's
 					if (blenderrndsensor)
 					{
 						SCA_EventManager* eventmgr = logicmgr->FindEventManager(SCA_EventManager::BASIC_EVENTMGR);
@@ -523,7 +526,7 @@ void BL_ConvertSensors(struct Object* blenderobject,
 			case SENS_MOVEMENT:
 			{
 				bMovementSensor *blendermovsensor = (bMovementSensor *)sens->data;
-				// some files didn't write movementsensor, avoid crash now for NULL ptr's
+				// some files didn't write movementsensor, avoid crash now for nullptr ptr's
 				if (blendermovsensor)
 				{
 					SCA_EventManager *eventmgr = logicmgr->FindEventManager(SCA_EventManager::BASIC_EVENTMGR);
@@ -633,13 +636,13 @@ void BL_ConvertSensors(struct Object* blenderobject,
 					if (linkedcont) {
 						// If the controller is deactived doesn't register it
 						if (!(linkedcont->flag & CONT_DEACTIVATE)) {
-							SCA_IController* gamecont = converter->FindGameController(linkedcont);
+							SCA_IController* gamecont = converter.FindGameController(linkedcont);
 
 							if (gamecont) {
 								logicmgr->RegisterToSensor(gamecont,gamesensor);
 							}
 							else {
-								CM_Warning("Warning, sensor \"" << sens->name << "\" could not find its controller (link "
+								CM_Warning("sensor \"" << sens->name << "\" could not find its controller (link "
 									<< (i + 1) << " of " << sens->totlinks << ") from object \"" << blenderobject->id.name+2
 									<< "\". There has been an error converting the blender controller for the game engine, "
 									<< "logic may be incorrect");
@@ -647,7 +650,7 @@ void BL_ConvertSensors(struct Object* blenderobject,
 						}
 					}
 					else {
-						CM_Warning("Warning, sensor \"" << sens->name << "\" has lost a link to a controller (link "
+						CM_Warning("sensor \"" << sens->name << "\" has lost a link to a controller (link "
 							<< (i + 1) << " of " << sens->totlinks << ") from object \"" << blenderobject->id.name+2
 							<< "\". Possible causes are partially appended objects or an error reading the file, "
 							<< "logic may be incorrect");

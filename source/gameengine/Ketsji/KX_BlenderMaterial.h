@@ -14,10 +14,6 @@
 #include "MT_Vector3.h"
 #include "MT_Vector4.h"
 
-#ifdef WITH_CXX_GUARDEDALLOC
-#include "MEM_guardedalloc.h"
-#endif
-
 class SCA_IScene;
 class KX_Scene;
 class BL_BlenderShader;
@@ -37,28 +33,29 @@ public:
 	KX_BlenderMaterial(
 			KX_Scene *scene,
 			Material *mat,
+			const std::string& name,
 			GameSettings *game,
 			MTFace *mtface,
 			int lightlayer);
 
 	virtual ~KX_BlenderMaterial();
 
-	virtual void Activate(RAS_IRasterizer *rasty);
-	virtual void Desactivate(RAS_IRasterizer *rasty);
-	virtual void ActivateInstancing(RAS_IRasterizer *rasty, void *matrixoffset, void *positionoffset, void *coloroffset, unsigned int stride);
+	virtual void Activate(RAS_Rasterizer *rasty);
+	virtual void Desactivate(RAS_Rasterizer *rasty);
+	virtual void ActivateInstancing(RAS_Rasterizer *rasty, void *matrixoffset, void *positionoffset, void *coloroffset, unsigned int stride);
 	virtual void DesactivateInstancing();
-	virtual void ActivateMeshSlot(RAS_MeshSlot *ms, RAS_IRasterizer *rasty);
+	virtual void ActivateMeshSlot(RAS_MeshSlot *ms, RAS_Rasterizer *rasty);
 
-	void ActivateShaders(RAS_IRasterizer *rasty);
+	void ActivateShaders(RAS_Rasterizer *rasty);
 
-	void ActivateBlenderShaders(RAS_IRasterizer *rasty);
+	void ActivateBlenderShaders(RAS_Rasterizer *rasty);
 
 	virtual bool UseInstancing() const;
 	virtual const std::string GetTextureName() const;
 	virtual Material *GetBlenderMaterial() const;
 	virtual Image *GetBlenderImage() const;
 	virtual MTexPoly *GetMTexPoly() const;
-	virtual bool UsesLighting(RAS_IRasterizer *rasty) const;
+	virtual bool UsesLighting(RAS_Rasterizer *rasty) const;
 	virtual void GetRGBAColor(unsigned char *rgba) const;
 	virtual Scene *GetBlenderScene() const;
 	virtual SCA_IScene *GetScene() const;
@@ -72,7 +69,7 @@ public:
 	virtual void UpdateIPO(MT_Vector4 rgba, MT_Vector3 specrgb, MT_Scalar hard, MT_Scalar spec, MT_Scalar ref,
 						   MT_Scalar emit, MT_Scalar ambient, MT_Scalar alpha, MT_Scalar specalpha);
 
-	virtual const RAS_IRasterizer::AttribLayerList GetAttribLayers(const RAS_MeshObject::LayersInfo& layersInfo) const;
+	virtual const RAS_Rasterizer::AttribLayerList GetAttribLayers(const RAS_MeshObject::LayersInfo& layersInfo) const;
 
 	virtual void Replace_IScene(SCA_IScene *val);
 
@@ -81,29 +78,29 @@ public:
 
 #ifdef WITH_PYTHON
 
-	static PyObject *pyattr_get_shader(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static PyObject *pyattr_get_materialIndex(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static PyObject *pyattr_get_blending(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static PyObject *pyattr_get_textures(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int pyattr_set_blending(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
-	static PyObject *pyattr_get_alpha(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int pyattr_set_alpha(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
-	static PyObject *pyattr_get_hardness(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int pyattr_set_hardness(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
-	static PyObject *pyattr_get_specular_intensity(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int pyattr_set_specular_intensity(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
-	static PyObject *pyattr_get_specular_color(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int pyattr_set_specular_color(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
-	static PyObject *pyattr_get_diffuse_intensity(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int pyattr_set_diffuse_intensity(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
-	static PyObject *pyattr_get_diffuse_color(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int pyattr_set_diffuse_color(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
-	static PyObject *pyattr_get_emit(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int pyattr_set_emit(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
-	static PyObject *pyattr_get_ambient(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int pyattr_set_ambient(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
-	static PyObject *pyattr_get_specular_alpha(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int pyattr_set_specular_alpha(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject *pyattr_get_shader(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject *pyattr_get_materialIndex(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject *pyattr_get_blending(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject *pyattr_get_textures(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_set_blending(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject *pyattr_get_alpha(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_set_alpha(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject *pyattr_get_hardness(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_set_hardness(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject *pyattr_get_specular_intensity(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_set_specular_intensity(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject *pyattr_get_specular_color(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_set_specular_color(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject *pyattr_get_diffuse_intensity(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_set_diffuse_intensity(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject *pyattr_get_diffuse_color(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_set_diffuse_color(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject *pyattr_get_emit(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_set_emit(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject *pyattr_get_ambient(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_set_ambient(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject *pyattr_get_specular_alpha(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_set_specular_alpha(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
 
 	KX_PYMETHOD_DOC(KX_BlenderMaterial, getShader);
 	KX_PYMETHOD_DOC(KX_BlenderMaterial, getTextureBindcode);
@@ -115,7 +112,7 @@ public:
 	// pre calculate to avoid pops/lag at startup
 	virtual void OnConstruction();
 
-	static void EndFrame(RAS_IRasterizer *rasty);
+	static void EndFrame(RAS_Rasterizer *rasty);
 
 private:
 	Material *m_material;
@@ -143,11 +140,11 @@ private:
 
 	void SetBlenderGLSLShader();
 
-	void ActivateGLMaterials(RAS_IRasterizer *rasty) const;
-	void ActivateTexGen(RAS_IRasterizer *ras) const;
+	void ActivateGLMaterials(RAS_Rasterizer *rasty) const;
+	void ActivateTexGen(RAS_Rasterizer *ras) const;
 
-	void SetBlenderShaderData(RAS_IRasterizer *ras);
-	void SetShaderData(RAS_IRasterizer *ras);
+	void SetBlenderShaderData(RAS_Rasterizer *ras);
+	void SetShaderData(RAS_Rasterizer *ras);
 
 	// cleanup stuff
 	void OnExit();

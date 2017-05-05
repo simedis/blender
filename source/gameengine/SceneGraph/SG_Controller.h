@@ -46,7 +46,7 @@ class SG_Controller
 {
 public:
 	SG_Controller()
-		:m_node(NULL)
+		:m_node(nullptr)
 	{
 	}
 
@@ -94,10 +94,6 @@ public:
 
 protected:
 	SG_Node *m_node;
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:SG_Controller")
-#endif
 };
 
 #endif  /* __SG_CONTROLLER_H__ */

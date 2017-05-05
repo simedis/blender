@@ -38,14 +38,11 @@
 
 #include <deque>
 
-#ifdef WITH_CXX_GUARDEDALLOC
-#  include "MEM_guardedalloc.h"
-#endif
-
 /**
  * Stores and manages time measurements.
  */
-class KX_TimeLogger {
+class KX_TimeLogger
+{
 public:
 	/**
 	 * Constructor.
@@ -56,59 +53,54 @@ public:
 	/**
 	 * Destructor.
 	 */
-	virtual ~KX_TimeLogger(void);
+	~KX_TimeLogger();
 
 	/**
 	 * Changes the maximum number of measurements that can be stored.
 	 */
-	virtual void SetMaxNumMeasurements(unsigned int maxNumMeasurements);
+	void SetMaxNumMeasurements(unsigned int maxNumMeasurements);
 
 	/**
 	 * Changes the maximum number of measurements that can be stored.
 	 */
-	virtual unsigned int GetMaxNumMeasurements(void) const;
+	unsigned int GetMaxNumMeasurements() const;
 
 	/**
 	 * Starts logging in current measurement.
 	 * \param now	The current time.
 	 */
-	virtual void StartLog(double now);
+	void StartLog(double now);
 
 	/**
 	 * End logging in current measurement.
 	 * \param now	The current time.
 	 */
-	virtual void EndLog(double now);
+	void EndLog(double now);
 
 	/**
 	 * Logs time in next measurement.
 	 * \param now	The current time.
 	 */
-	virtual void NextMeasurement(double now);
+	void NextMeasurement(double now);
 
 	/**
 	 * Returns average of all but the current measurement.
 	 * \return The average of all but the current measurement.
 	 */
-	virtual double GetAverage(void) const;
+	double GetAverage() const;
 
 protected:
-	/** Storage for the measurements. */
+	/// Storage for the measurements.
 	std::deque<double> m_measurements;
 
-	/** Maximum number of measurements. */
+	/// Maximum number of measurements.
 	unsigned int m_maxNumMeasurements;
 
-	/** Time at start of logging. */
+	/// Time at start of logging.
 	double m_logStart;
 
-	/** State of logging. */
+	/// State of logging.
 	bool m_logging;
-
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:KX_TimeLogger")
-#endif
 };
 
-#endif  /* __KX_TIMELOGGER_H__ */
+#endif  // __KX_TIMELOGGER_H__

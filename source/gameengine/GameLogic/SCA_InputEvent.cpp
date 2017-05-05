@@ -85,7 +85,7 @@ bool SCA_InputEvent::End(SCA_EnumInputs inputenum) const
 #ifdef WITH_PYTHON
 
 PyTypeObject SCA_InputEvent::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"SCA_InputEvent",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -109,7 +109,7 @@ PyTypeObject SCA_InputEvent::Type = {
 };
 
 PyMethodDef SCA_InputEvent::Methods[] = {
-	{NULL, NULL} //Sentinel
+	{nullptr, nullptr} //Sentinel
 };
 
 PyAttributeDef SCA_InputEvent::Attributes[] = {
@@ -130,15 +130,15 @@ PyObject *SCA_InputEvent::get_status_item_cb(void *self_v, int index)
 	return PyLong_FromLong(((SCA_InputEvent *)self_v)->m_status[index]);
 }
 
-PyObject *SCA_InputEvent::pyattr_get_status(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_InputEvent::pyattr_get_status(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	return (new CListWrapper(self_v,
 							 ((SCA_InputEvent *)self_v)->GetProxy(),
-							 NULL,
+							 nullptr,
 							 SCA_InputEvent::get_status_size_cb,
 							 SCA_InputEvent::get_status_item_cb,
-							 NULL,
-							 NULL,
+							 nullptr,
+							 nullptr,
 							 CListWrapper::FLAG_FIND_VALUE))->NewProxy(true);
 }
 
@@ -152,15 +152,15 @@ PyObject *SCA_InputEvent::get_queue_item_cb(void *self_v, int index)
 	return PyLong_FromLong(((SCA_InputEvent *)self_v)->m_queue[index]);
 }
 
-PyObject *SCA_InputEvent::pyattr_get_queue(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_InputEvent::pyattr_get_queue(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	return (new CListWrapper(self_v,
 							 ((SCA_InputEvent *)self_v)->GetProxy(),
-							 NULL,
+							 nullptr,
 							 SCA_InputEvent::get_queue_size_cb,
 							 SCA_InputEvent::get_queue_item_cb,
-							 NULL,
-							 NULL,
+							 nullptr,
+							 nullptr,
 							 CListWrapper::FLAG_FIND_VALUE))->NewProxy(true);
 }
 
@@ -174,15 +174,15 @@ PyObject *SCA_InputEvent::get_values_item_cb(void *self_v, int index)
 	return PyLong_FromLong(((SCA_InputEvent *)self_v)->m_values[index]);
 }
 
-PyObject *SCA_InputEvent::pyattr_get_values(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_InputEvent::pyattr_get_values(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	return (new CListWrapper(self_v,
 							 ((SCA_InputEvent *)self_v)->GetProxy(),
-							 NULL,
+							 nullptr,
 							 SCA_InputEvent::get_values_size_cb,
 							 SCA_InputEvent::get_values_item_cb,
-							 NULL,
-							 NULL,
+							 nullptr,
+							 nullptr,
 							 CListWrapper::FLAG_FIND_VALUE))->NewProxy(true);
 }
 

@@ -354,7 +354,7 @@ static void create_properties(PythonComponent *pycomp, PyObject *cls)
 }
 #endif /* WITH_PYTHON */
 
-static bool load_component(PythonComponent *pc, ReportList *reports, char *filename)
+static bool load_component(PythonComponent *pc, ReportList *reports, Main *maggie)
 {
 #ifdef WITH_PYTHON
 
@@ -362,6 +362,7 @@ static bool load_component(PythonComponent *pc, ReportList *reports, char *filen
 	 * The "value" argument is false on failure and true on succes.
 	 */
 	#define FINISH(value) \
+		PyErr_Print(); \
 		if (mod) { \
 			/* Take the module out of the module list so it's not cached \
 			   by Python (this allows for simpler reloading of components)*/ \
@@ -371,21 +372,49 @@ static bool load_component(PythonComponent *pc, ReportList *reports, char *filen
 		Py_XDECREF(item); \
 		PyDict_DelItemString(sys_modules, "bge"); \
 		PyDict_DelItemString(sys_modules, "bge.types"); \
-		PySequence_DelItem(sys_path, 0); \
+		BLI_split_dir_part(maggie->name, path, sizeof(path)); \
+		pypath = PyC_UnicodeFromByte(path); \
+		index = PySequence_Index(sys_path, pypath); \
+		/* Safely remove the value by finding their index. */ \
+		if (index != -1) { \
+			PySequence_DelItem(sys_path, index); \
+		} \
+		Py_DECREF(pypath); \
+		for (Library *lib = (Library *)maggie->library.first; lib; lib = (Library *)lib->id.next) { \
+			BLI_split_dir_part(lib->filepath, path, sizeof(path)); \
+			pypath = PyC_UnicodeFromByte(path); \
+			index = PySequence_Index(sys_path, pypath); \
+			/* Safely remove the value by finding their index. */ \
+			if (index != -1) { \
+				PySequence_DelItem(sys_path, index); \
+			} \
+			Py_DECREF(pypath); \
+		} \
 		PyGILState_Release(state); \
 		return value;
 
 	PyObject *mod, *item = NULL, *sys_path, *pypath, *sys_modules, *bgemod, *bgesubmod;
 	PyGILState_STATE state;
 	char path[FILE_MAX];
+	int index;
 
 	state = PyGILState_Ensure();
 
 	// Set the current file directory do import path to allow extern modules.
 	sys_path = PySys_GetObject("path");
-	BLI_split_dir_part(filename, path, sizeof(path));
+	/* Add to sys.path the path to all the used library to follow game engine sys.path management.
+	 * These path are remove later in FINISH. */
+	for (Library *lib = (Library *)maggie->library.first; lib; lib = (Library *)lib->id.next) {
+		BLI_split_dir_part(lib->filepath, path, sizeof(path));
+		pypath = PyC_UnicodeFromByte(path);
+		PyList_Insert(sys_path, 0, pypath);
+		Py_DECREF(pypath);
+	}
+	/* Add default path */
+	BLI_split_dir_part(maggie->name, path, sizeof(path));
 	pypath = PyC_UnicodeFromByte(path);
 	PyList_Insert(sys_path, 0, pypath);
+	Py_DECREF(pypath);
 
 	// Setup BGE fake module and submodule.
 	sys_modules = PyThreadState_GET()->interp->modules;
@@ -399,7 +428,6 @@ static bool load_component(PythonComponent *pc, ReportList *reports, char *filen
 	PyDict_SetItemString(sys_modules, "bge", bgemod);
 	PyDict_SetItemString(sys_modules, "bge.types", bgesubmod);
 	PyDict_SetItemString(PyModule_GetDict(bgemod), "__component__", Py_True);
-	Py_INCREF(Py_True);
 
 	// Try to load up the module
 	mod = PyImport_ImportModule(pc->module);
@@ -437,7 +465,7 @@ static bool load_component(PythonComponent *pc, ReportList *reports, char *filen
 
 	(void)pc;
 	(void)reports;
-	(void)filename;
+	(void)maggie;
 
 	return true;
 
@@ -469,7 +497,7 @@ PythonComponent *BKE_python_component_new(char *import, ReportList *reports, bCo
 	}
 
 	// Try load the component.
-	if (!load_component(pc, reports, CTX_data_main(context)->name)) {
+	if (!load_component(pc, reports, CTX_data_main(context))) {
 		BKE_python_component_free(pc);
 		return NULL;
 	}
@@ -479,7 +507,7 @@ PythonComponent *BKE_python_component_new(char *import, ReportList *reports, bCo
 
 void BKE_python_component_reload(PythonComponent *pc, ReportList *reports, bContext *context)
 {
-	load_component(pc, reports, CTX_data_main(context)->name);
+	load_component(pc, reports, CTX_data_main(context));
 }
 
 static PythonComponent *copy_component(PythonComponent *comp)

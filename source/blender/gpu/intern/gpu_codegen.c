@@ -360,7 +360,7 @@ static void codegen_print_datatype(DynStr *ds, const GPUType type, float *data)
 	BLI_dynstr_appendf(ds, "%s(", GPU_DATATYPE_STR[type]);
 
 	for (i = 0; i < type; i++) {
-		BLI_dynstr_appendf(ds, "%f", data[i]);
+		BLI_dynstr_appendf(ds, "%.12f", data[i]);
 		if (i == type - 1)
 			BLI_dynstr_append(ds, ")");
 		else
@@ -426,6 +426,10 @@ const char *GPU_builtin_name(GPUBuiltin builtin)
 		return "ininstmatrix";
 	else if (builtin == GPU_INSTANCING_POSITION_ATTRIB)
 		return "ininstposition";
+	else if (builtin == GPU_TIME)
+		return "unftime";
+	else if (builtin == GPU_OBJECT_INFO)
+		return "unfobjectinfo";
 	else
 		return "";
 }

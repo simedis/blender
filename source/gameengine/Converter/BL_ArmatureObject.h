@@ -43,6 +43,7 @@ struct bConstraint;
 struct Object;
 class MT_Matrix4x4;
 class KX_BlenderSceneConverter;
+class RAS_DebugDraw;
 
 class BL_ArmatureObject : public KX_GameObject
 {
@@ -81,9 +82,9 @@ public:
 
 	virtual CValue *GetReplica();
 	virtual void ProcessReplica();
-	virtual int GetGameObjectType();
+	virtual int GetGameObjectType() const;
 	virtual void ReParentLogic();
-	virtual void Relink(std::map<void *, void *>& obj_map);
+	virtual void Relink(std::map<SCA_IObject *, SCA_IObject *>& obj_map);
 	virtual bool UnlinkObject(SCA_IObject *clientobj);
 
 	void GetPose(bPose **pose);
@@ -104,10 +105,10 @@ public:
 	Object *GetOrigArmatureObject();
 	int GetVertDeformType();
 	bool GetDrawDebug() const;
-	void DrawDebugArmature();
+	void DrawDebug(RAS_DebugDraw& debugDraw);
 
 	// for constraint python API
-	void LoadConstraints(KX_BlenderSceneConverter *converter);
+	void LoadConstraints(KX_BlenderSceneConverter& converter);
 	size_t GetConstraintNumber() const;
 	BL_ArmatureConstraint *GetConstraint(const std::string& posechannel, const std::string& constraint);
 	BL_ArmatureConstraint *GetConstraint(const std::string& posechannelconstraint);
@@ -130,8 +131,8 @@ public:
 #ifdef WITH_PYTHON
 
 	// PYTHON
-	static PyObject *pyattr_get_constraints(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static PyObject *pyattr_get_channels(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject *pyattr_get_constraints(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject *pyattr_get_channels(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
 	KX_PYMETHOD_DOC_NOARGS(BL_ArmatureObject, update);
 	KX_PYMETHOD_DOC_NOARGS(BL_ArmatureObject, draw);
 

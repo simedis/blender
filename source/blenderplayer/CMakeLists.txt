@@ -121,14 +121,15 @@ endif()
 		bf_editor_datafiles
 		ge_launcher
 		ge_player
+		ge_logic_ketsji 
 		ge_converter 
 		ge_logic_ketsji 
 		ge_phys_bullet 
 		ge_phys_dummy
 		ge_logic
 		ge_device
-		ge_oglrasterizer
 		ge_rasterizer
+		ge_oglrasterizer
 		ge_logic_expressions
 		ge_common
 		ge_scenegraph
@@ -176,10 +177,16 @@ endif()
 		extern_rangetree
 		extern_wcwidth
 		bf_intern_libmv
-		extern_glog
-		extern_gflags
 		extern_sdlew
 	)
+
+	if(NOT WITH_SYSTEM_GLOG)
+		list(APPEND BLENDER_SORTED_LIBS extern_glog)
+	endif()
+
+	if(NOT WITH_SYSTEM_GFLAGS)
+		list(APPEND BLENDER_SORTED_LIBS extern_gflags)
+	endif()
 
 	if(WITH_MOD_CLOTH_ELTOPO)
 		list(APPEND BLENDER_SORTED_LIBS extern_eltopo)
@@ -219,6 +226,10 @@ endif()
 
 	if(WITH_GAMEENGINE_DECKLINK)
 		list(APPEND BLENDER_SORTED_LIBS bf_intern_decklink)
+	endif()
+
+	if(WITH_GAMEENGINE_BPPLAYER)
+		list(APPEND BLENDER_SORTED_LIBS bf_intern_spindle)
 	endif()
 
 	if(WIN32)

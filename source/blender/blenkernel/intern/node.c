@@ -46,10 +46,11 @@
 #include "DNA_world_types.h"
 #include "DNA_linestyle_types.h"
 
-#include "BLI_string.h"
-#include "BLI_math.h"
 #include "BLI_listbase.h"
+#include "BLI_math.h"
 #include "BLI_path_util.h"
+#include "BLI_string.h"
+#include "BLI_string_utils.h"
 #include "BLI_utildefines.h"
 
 #include "BLT_translation.h"
@@ -1827,7 +1828,7 @@ void ntreeFreeTree(bNodeTree *ntree)
 		if (tntree == ntree)
 			break;
 	if (tntree == NULL) {
-		BKE_libblock_free_data(G.main, &ntree->id);
+		BKE_libblock_free_data(G.main, &ntree->id, true);
 	}
 }
 
@@ -3522,6 +3523,8 @@ static void registerShaderNodes(void)
 	register_node_type_sh_output();
 	register_node_type_sh_material();
 	register_node_type_sh_camera();
+	register_node_type_sh_object();
+	register_node_type_sh_time();
 	register_node_type_sh_lamp();
 	register_node_type_sh_gamma();
 	register_node_type_sh_brightcontrast();
@@ -3567,6 +3570,7 @@ static void registerShaderNodes(void)
 	register_node_type_sh_background();
 	register_node_type_sh_bsdf_anisotropic();
 	register_node_type_sh_bsdf_diffuse();
+	register_node_type_sh_bsdf_principled();
 	register_node_type_sh_bsdf_glossy();
 	register_node_type_sh_bsdf_glass();
 	register_node_type_sh_bsdf_translucent();

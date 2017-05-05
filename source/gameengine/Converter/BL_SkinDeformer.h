@@ -54,7 +54,7 @@ class RAS_IPolyMaterial;
 class BL_SkinDeformer : public BL_MeshDeformer
 {
 public:
-	virtual void Relink(std::map<void *, void *>& map);
+	virtual void Relink(std::map<SCA_IObject *, SCA_IObject *>& map);
 	void SetArmature(BL_ArmatureObject *armobj);
 
 	BL_SkinDeformer(BL_DeformableGameObject *gameobj,
@@ -69,7 +69,7 @@ public:
 					Object *bmeshobj_new,
 					RAS_MeshObject *mesh,
 					bool recalc_normal,
-					BL_ArmatureObject *arma = NULL);
+					BL_ArmatureObject *arma = nullptr);
 
 	virtual RAS_Deformer *GetReplica();
 	virtual void ProcessReplica();
@@ -82,7 +82,7 @@ public:
 	bool UpdateBuckets()
 	{
 		// update the deformer and all the mesh slots; Apply() does it well, so just call it.
-		return Apply(NULL, NULL);
+		return Apply(nullptr, nullptr);
 	}
 	bool PoseUpdated()
 	{
@@ -149,10 +149,6 @@ protected:
 	void BGEDeformVerts();
 
 	void UpdateTransverts();
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:BL_SkinDeformer")
-#endif
 };
 
 #endif  /* __BL_SKINDEFORMER_H__ */

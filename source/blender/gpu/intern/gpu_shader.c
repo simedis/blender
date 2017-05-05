@@ -39,6 +39,7 @@
 #include "GPU_glew.h"
 #include "GPU_shader.h"
 #include "GPU_texture.h"
+#include "GPU_material.h"
 #include "gpu_codegen.h"
 
 /* TODO(sergey): Find better default values for this constants. */
@@ -46,8 +47,8 @@
 #define MAX_EXT_DEFINE_LENGTH 1024
 
 /* Non-generated shaders */
-extern char datatoc_gpu_shader_basic_instancing_frag_glsl[];
-extern char datatoc_gpu_shader_basic_instancing_vert_glsl[];
+extern char datatoc_gpu_shader_black_frag_glsl[];
+extern char datatoc_gpu_shader_black_vert_glsl[];
 extern char datatoc_gpu_shader_frame_buffer_frag_glsl[];
 extern char datatoc_gpu_shader_frame_buffer_vert_glsl[];
 extern char datatoc_gpu_shader_fire_frag_glsl[];
@@ -76,7 +77,8 @@ static struct GPUShadersGlobal {
 		GPUShader *smoke;
 		GPUShader *smoke_fire;
 		GPUShader *smoke_coba;
-		GPUShader *instancing;
+		GPUShader *black;
+		GPUShader *black_instancing;
 		GPUShader *draw_frame_buffer;
 		GPUShader *stereo_stipple;
 		GPUShader *stereo_anaglyph;
@@ -759,12 +761,19 @@ GPUShader *GPU_shader_get_builtin_shader(GPUBuiltinShader shader)
 				        NULL, NULL, "#define USE_COBA;\n", 0, 0, 0);
 			retval = GG.shaders.smoke_coba;
 			break;
-		case GPU_SHADER_INSTANCING:
-			if (!GG.shaders.instancing)
-				GG.shaders.instancing = GPU_shader_create(
-					datatoc_gpu_shader_basic_instancing_vert_glsl, datatoc_gpu_shader_basic_instancing_frag_glsl,
+		case GPU_SHADER_BLACK:
+			if (!GG.shaders.black)
+				GG.shaders.black = GPU_shader_create(
+					datatoc_gpu_shader_black_vert_glsl, datatoc_gpu_shader_black_frag_glsl,
 					NULL, NULL, NULL, 0, 0, 0);
-			retval = GG.shaders.instancing;
+			retval = GG.shaders.black;
+			break;
+		case GPU_SHADER_BLACK_INSTANCING:
+			if (!GG.shaders.black_instancing)
+				GG.shaders.black_instancing = GPU_shader_create(
+					datatoc_gpu_shader_black_vert_glsl, datatoc_gpu_shader_black_frag_glsl,
+					NULL, NULL, "#define USE_INSTANCING;\n", 0, 0, 0);
+			retval = GG.shaders.black_instancing;
 			break;
 		case GPU_SHADER_DRAW_FRAME_BUFFER:
 			if (!GG.shaders.draw_frame_buffer)
@@ -903,9 +912,14 @@ void GPU_shader_free_builtin_shaders(void)
 		GG.shaders.smoke_coba = NULL;
 	}
 
-	if (GG.shaders.instancing) {
-		GPU_shader_free(GG.shaders.instancing);
-		GG.shaders.instancing = NULL;
+	if (GG.shaders.black) {
+		GPU_shader_free(GG.shaders.black);
+		GG.shaders.black = NULL;
+	}
+
+	if (GG.shaders.black_instancing) {
+		GPU_shader_free(GG.shaders.black_instancing);
+		GG.shaders.black_instancing = NULL;
 	}
 
 	if (GG.shaders.draw_frame_buffer) {

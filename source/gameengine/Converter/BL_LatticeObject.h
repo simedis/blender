@@ -43,7 +43,7 @@ class BL_LatticeObject : public BL_DeformableGameObject
 public:
 	BL_LatticeObject(Object* blendobj, void* sgReplicationInfo, SG_Callbacks callbacks);
 	virtual ~BL_LatticeObject();
-	virtual int GetGameObjectType();
+	virtual int GetGameObjectType() const;
 	virtual CValue*	GetReplica();
 	virtual void ProcessReplica();
 	virtual bool GetShape(std::vector<float> &shape);

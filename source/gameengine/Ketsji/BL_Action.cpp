@@ -34,11 +34,13 @@
 #include "KX_GameObject.h"
 #include "KX_Globals.h"
 
+#include "RAS_MeshObject.h"
+
 #include "SG_Controller.h"
 
 // These three are for getting the action from the logic manager
 #include "KX_Scene.h"
-#include "KX_BlenderSceneConverter.h"
+#include "KX_BlenderConverter.h"
 #include "SCA_LogicManager.h"
 
 extern "C" {
@@ -59,10 +61,10 @@ extern "C" {
 
 BL_Action::BL_Action(class KX_GameObject* gameobj)
 :
-	m_action(NULL),
-	m_tmpaction(NULL),
-	m_blendpose(NULL),
-	m_blendinpose(NULL),
+	m_action(nullptr),
+	m_tmpaction(nullptr),
+	m_blendpose(nullptr),
+	m_blendinpose(nullptr),
 	m_obj(gameobj),
 	m_startframe(0.f),
 	m_endframe(0.f),
@@ -77,6 +79,7 @@ BL_Action::BL_Action(class KX_GameObject* gameobj)
 	m_ipo_flags(0),
 	m_done(true),
 	m_appliedToObject(true),
+	m_requestIpo(false),
 	m_calc_localtime(true),
 	m_prevUpdate(-1.0f)
 {
@@ -92,7 +95,7 @@ BL_Action::~BL_Action()
 
 	if (m_tmpaction) {
 		BKE_libblock_free(G.main, m_tmpaction);
-		m_tmpaction = NULL;
+		m_tmpaction = nullptr;
 	}
 }
 
@@ -152,7 +155,7 @@ bool BL_Action::Play(const std::string& name,
 	// Keep a copy of the action for threading purposes
 	if (m_tmpaction) {
 		BKE_libblock_free(G.main, m_tmpaction);
-		m_tmpaction = NULL;
+		m_tmpaction = nullptr;
 	}
 	m_tmpaction = BKE_action_copy(G.main, m_action);
 
@@ -160,13 +163,13 @@ bool BL_Action::Play(const std::string& name,
 	ClearControllerList();
 
 	// Create an SG_Controller
-	SG_Controller *sg_contr = BL_CreateIPO(m_action, m_obj, kxscene->GetSceneConverter());
+	SG_Controller *sg_contr = BL_CreateIPO(m_action, m_obj, kxscene);
 	m_sg_contr_list.push_back(sg_contr);
 	m_obj->GetSGNode()->AddSGController(sg_contr);
 	sg_contr->SetNode(m_obj->GetSGNode());
 
 	// World
-	sg_contr = BL_CreateWorldIPO(m_action, kxscene->GetBlenderScene()->world, kxscene->GetSceneConverter());
+	sg_contr = BL_CreateWorldIPO(m_action, kxscene->GetBlenderScene()->world, kxscene);
 	if (sg_contr) {
 		m_sg_contr_list.push_back(sg_contr);
 		m_obj->GetSGNode()->AddSGController(sg_contr);
@@ -174,7 +177,7 @@ bool BL_Action::Play(const std::string& name,
 	}
 
 	// Try obcolor
-	sg_contr = BL_CreateObColorIPO(m_action, m_obj, kxscene->GetSceneConverter());
+	sg_contr = BL_CreateObColorIPO(m_action, m_obj, kxscene);
 	if (sg_contr) {
 		m_sg_contr_list.push_back(sg_contr);
 		m_obj->GetSGNode()->AddSGController(sg_contr);
@@ -182,37 +185,32 @@ bool BL_Action::Play(const std::string& name,
 	}
 
 	// Now try materials
-	for (int matidx = 1; matidx <= m_obj->GetBlenderObject()->totcol; ++matidx) {
-		Material *mat = give_current_material(m_obj->GetBlenderObject(), matidx);
-		if (!mat) {
-			continue;
-		}
+	for (unsigned short i = 0, meshcount = m_obj->GetMeshCount(); i < meshcount; ++i) {
+		RAS_MeshObject *mesh = m_obj->GetMesh(i);
+		for (unsigned short j = 0, matcount = mesh->NumMaterials(); j < matcount; ++j) {
+			RAS_MeshMaterial *meshmat = mesh->GetMeshMaterial(j);
+			RAS_IPolyMaterial *polymat = meshmat->m_bucket->GetPolyMaterial();
 
-		KX_BlenderSceneConverter *converter = kxscene->GetSceneConverter();
-		RAS_IPolyMaterial *polymat = converter->FindCachedPolyMaterial(kxscene, mat);
-		if (!polymat) {
-			continue;
-		}
-
-		sg_contr = BL_CreateMaterialIpo(m_action, mat, polymat, m_obj, converter);
-		if (sg_contr) {
-			m_sg_contr_list.push_back(sg_contr);
-			m_obj->GetSGNode()->AddSGController(sg_contr);
-			sg_contr->SetNode(m_obj->GetSGNode());
+			sg_contr = BL_CreateMaterialIpo(m_action, polymat, m_obj, kxscene);
+			if (sg_contr) {
+				m_sg_contr_list.push_back(sg_contr);
+				m_obj->GetSGNode()->AddSGController(sg_contr);
+				sg_contr->SetNode(m_obj->GetSGNode());
+			}
 		}
 	}
 
 	// Extra controllers
 	if (m_obj->GetGameObjectType() == SCA_IObject::OBJ_LIGHT)
 	{
-		sg_contr = BL_CreateLampIPO(m_action, m_obj, kxscene->GetSceneConverter());
+		sg_contr = BL_CreateLampIPO(m_action, m_obj, kxscene);
 		m_sg_contr_list.push_back(sg_contr);
 		m_obj->GetSGNode()->AddSGController(sg_contr);
 		sg_contr->SetNode(m_obj->GetSGNode());
 	}
 	else if (m_obj->GetGameObjectType() == SCA_IObject::OBJ_CAMERA)
 	{
-		sg_contr = BL_CreateCameraIPO(m_action, m_obj, kxscene->GetSceneConverter());
+		sg_contr = BL_CreateCameraIPO(m_action, m_obj, kxscene);
 		m_sg_contr_list.push_back(sg_contr);
 		m_obj->GetSGNode()->AddSGController(sg_contr);
 		sg_contr->SetNode(m_obj->GetSGNode());
@@ -245,7 +243,7 @@ bool BL_Action::Play(const std::string& name,
 	}
 
 	// Now that we have an action, we have something we can play
-	m_starttime = KX_GetActiveEngine()->GetFrameTime() - kxscene->getSuspendedDelta();
+	m_starttime = KX_GetActiveEngine()->GetFrameTime() - kxscene->GetSuspendedDelta();
 	m_startframe = m_localframe = start;
 	m_endframe = end;
 	m_blendin = blendin;
@@ -258,6 +256,7 @@ bool BL_Action::Play(const std::string& name,
 	
 	m_done = false;
 	m_appliedToObject = false;
+	m_requestIpo = false;
 
 	m_prevUpdate = -1.0f;
 
@@ -284,7 +283,7 @@ void BL_Action::InitIPO()
 
 bAction *BL_Action::GetAction()
 {
-	return (IsDone()) ? NULL : m_action;
+	return (IsDone()) ? nullptr : m_action;
 }
 
 float BL_Action::GetFrame()
@@ -294,7 +293,7 @@ float BL_Action::GetFrame()
 
 const std::string BL_Action::GetName()
 {
-	if (m_action != NULL) {
+	if (m_action != nullptr) {
 		return m_action->id.name + 2;
 	}
 	else {
@@ -319,15 +318,9 @@ void BL_Action::SetPlayMode(short play_mode)
 	m_playmode = play_mode;
 }
 
-void BL_Action::SetTimes(float start, float end)
-{
-	m_startframe = start;
-	m_endframe = end;
-}
-
 void BL_Action::SetLocalTime(float curtime)
 {
-	float dt = (curtime-m_starttime)*(float)KX_KetsjiEngine::GetAnimFrameRate()*m_speed;
+	float dt = (curtime-m_starttime)*(float)KX_GetActiveEngine()->GetAnimFrameRate()*m_speed;
 
 	if (m_endframe < m_startframe)
 		dt = -dt;
@@ -339,7 +332,7 @@ void BL_Action::ResetStartTime(float curtime)
 {
 	float dt = (m_localframe > m_startframe) ? m_localframe - m_startframe : m_startframe - m_localframe;
 
-	m_starttime = curtime - dt / ((float)KX_KetsjiEngine::GetAnimFrameRate()*m_speed);
+	m_starttime = curtime - dt / ((float)KX_GetActiveEngine()->GetAnimFrameRate()*m_speed);
 	SetLocalTime(curtime);
 }
 
@@ -350,7 +343,7 @@ void BL_Action::IncrementBlending(float curtime)
 		m_blendstart = curtime;
 	
 	// Bump the blend frame
-	m_blendframe = (curtime - m_blendstart)*(float)KX_KetsjiEngine::GetAnimFrameRate();
+	m_blendframe = (curtime - m_blendstart)*(float)KX_GetActiveEngine()->GetAnimFrameRate();
 
 	// Clamp
 	if (m_blendframe>m_blendin)
@@ -378,12 +371,13 @@ void BL_Action::Update(float curtime, bool applyToObject)
 	/* Don't bother if we're done with the animation and if the animation was already applied to the object.
 	 * of if the animation made a double update for the same time and that it was applied to the object.
 	 */
-	if ((m_done && m_appliedToObject) || (m_prevUpdate == curtime && m_appliedToObject)) {
+	if ((m_done || m_prevUpdate == curtime) && m_appliedToObject) {
 		return;
 	}
 	m_prevUpdate = curtime;
 
-	curtime -= (float)KX_KetsjiEngine::GetSuspendedDelta();
+	KX_Scene *scene = m_obj->GetScene();
+	curtime -= (float)scene->GetSuspendedDelta();
 
 	if (m_calc_localtime)
 		SetLocalTime(curtime);
@@ -423,6 +417,8 @@ void BL_Action::Update(float curtime, bool applyToObject)
 	if (!applyToObject) {
 		return;
 	}
+
+	m_requestIpo = true;
 
 	if (m_obj->GetGameObjectType() == SCA_IObject::OBJ_ARMATURE)
 	{
@@ -466,7 +462,7 @@ void BL_Action::Update(float curtime, bool applyToObject)
 			PointerRNA ptrrna;
 			RNA_id_pointer_create(&key->id, &ptrrna);
 
-			animsys_evaluate_action(&ptrrna, m_tmpaction, NULL, m_localframe);
+			animsys_evaluate_action(&ptrrna, m_tmpaction, nullptr, m_localframe);
 
 			// Handle blending between shape actions
 			if (m_blendin && m_blendframe < m_blendin)
@@ -499,9 +495,15 @@ void BL_Action::Update(float curtime, bool applyToObject)
 
 void BL_Action::UpdateIPOs()
 {
-	/* This function does nothing if the scene graph controllers are already removed
-	 * by ClearControllerList. */
-	m_obj->UpdateIPO(m_localframe, m_ipo_flags & ACT_IPOFLAG_CHILD);
+	if (m_sg_contr_list.size() == 0) {
+		// Nothing to update or remove.
+		return;
+	}
+
+	if (m_requestIpo) {
+		m_obj->UpdateIPO(m_localframe, m_ipo_flags & ACT_IPOFLAG_CHILD);
+		m_requestIpo = false;
+	}
 
 	// If the action is done we can remove its scene graph IPO controller.
 	if (m_done) {

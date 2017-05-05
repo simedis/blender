@@ -27,19 +27,19 @@
 
 #include "RAS_ILightObject.h"
 
-class RAS_OpenGLRasterizer;
+class RAS_Rasterizer;
 struct GPULamp;
 struct Image;
 
 class RAS_OpenGLLight : public RAS_ILightObject
 {
 
-	RAS_OpenGLRasterizer *m_rasterizer;
+	RAS_Rasterizer *m_rasterizer;
 
 	GPULamp *GetGPULamp();
 
 public:
-	RAS_OpenGLLight(RAS_OpenGLRasterizer *ras);
+	RAS_OpenGLLight(RAS_Rasterizer *ras);
 	~RAS_OpenGLLight();
 
 	bool ApplyFixedFunctionLighting(KX_Scene *kxscene, int oblayer, int slot);
@@ -52,6 +52,8 @@ public:
 	bool HasShadowBuffer();
 	bool NeedShadowUpdate();
 	int GetShadowBindCode();
+	MT_Matrix4x4 GetViewMat();
+	MT_Matrix4x4 GetWinMat();
 	MT_Matrix4x4 GetShadowMatrix();
 	int GetShadowLayer();
 	void BindShadowBuffer(RAS_ICanvas *canvas, KX_Camera *cam, MT_Transform& camtrans);

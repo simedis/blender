@@ -22,8 +22,10 @@
 
 #include "RAS_2DFilter.h"
 #include "RAS_2DFilterManager.h"
-#include "RAS_IRasterizer.h"
+#include "RAS_2DFilterOffScreen.h"
+#include "RAS_Rasterizer.h"
 #include "RAS_ICanvas.h"
+#include "RAS_OffScreen.h"
 #include "RAS_Rect.h"
 
 #include "BLI_utildefines.h" // for STRINGIFY
@@ -36,7 +38,7 @@ extern "C" {
 	extern char datatoc_RAS_VertexShader2DFilter_glsl[];
 }
 
-static char predefinedUniformsName[RAS_2DFilter::MAX_PREDEFINED_UNIFORM_TYPE][40] = {
+static std::string predefinedUniformsName[RAS_2DFilter::MAX_PREDEFINED_UNIFORM_TYPE] = {
 	"bgl_RenderedTexture", // RENDERED_TEXTURE_UNIFORM
 	"bgl_DepthTexture", // DEPTH_TEXTURE_UNIFORM
 	"bgl_RenderedTextureWidth", // RENDERED_TEXTURE_WIDTH_UNIFORM
@@ -47,7 +49,8 @@ static char predefinedUniformsName[RAS_2DFilter::MAX_PREDEFINED_UNIFORM_TYPE][40
 RAS_2DFilter::RAS_2DFilter(RAS_2DFilterData& data)
 	:m_properties(data.propertyNames),
 	m_gameObject(data.gameObject),
-	m_uniformInitialized(false)
+	m_uniformInitialized(false),
+	m_mipmap(data.mipmap)
 {
 	for(unsigned int i = 0; i < TEXTURE_OFFSETS_SIZE; i++) {
 		m_textureOffsets[i] = 0;
@@ -71,6 +74,26 @@ RAS_2DFilter::~RAS_2DFilter()
 {
 }
 
+bool RAS_2DFilter::GetMipmap() const
+{
+	return m_mipmap;
+}
+
+void RAS_2DFilter::SetMipmap(bool mipmap)
+{
+	m_mipmap = mipmap;
+}
+
+RAS_2DFilterOffScreen *RAS_2DFilter::GetOffScreen() const
+{
+	return m_offScreen.get();
+}
+
+void RAS_2DFilter::SetOffScreen(RAS_2DFilterOffScreen *offScreen)
+{
+	m_offScreen.reset(offScreen);
+}
+
 void RAS_2DFilter::Initialize(RAS_ICanvas *canvas)
 {
 	/* The shader must be initialized at the first frame when the canvas is accesible.
@@ -82,35 +105,52 @@ void RAS_2DFilter::Initialize(RAS_ICanvas *canvas)
 	}
 }
 
-void RAS_2DFilter::Start(RAS_IRasterizer *rasty, RAS_ICanvas *canvas, unsigned short depthfbo,
-						 unsigned short colorfbo, unsigned short outputfbo)
+RAS_OffScreen *RAS_2DFilter::Start(RAS_Rasterizer *rasty, RAS_ICanvas *canvas, RAS_OffScreen *depthofs,
+						 RAS_OffScreen *colorofs, RAS_OffScreen *targetofs)
 {
-	// The output fbo must be not the color input fbo, it can be the same as depth input fbo because depth is unchanged.
-	BLI_assert(outputfbo != colorfbo);
+	/* The off screen the filter rendered to. If the filter is invalid or uses a custom
+	 * off screen the output off screen is the same as the input off screen. */
+	RAS_OffScreen *outputofs = colorofs;
+	if (!Ok()) {
+		return outputofs;
+	}
 
-	rasty->BindOffScreen(outputfbo);
+	/* The target off screen must be not the color input off screen, it can be the same as depth input
+	 * screen because depth is unchanged. */
+	BLI_assert(targetofs != colorofs);
 
-	if (Ok()) {
-		Initialize(canvas);
+	if (m_offScreen) {
+		if (!m_offScreen->Update(canvas)) {
+			return outputofs;
+		}
 
-		SetProg(true);
-
-		BindTextures(rasty, depthfbo, colorfbo);
-		BindUniforms(canvas);
-
-		Update(rasty, MT_Matrix4x4::Identity());
-
-		ApplyShader();
-
-		rasty->DrawOverlayPlane();
-
-		UnbindTextures(rasty, depthfbo, colorfbo);
+		m_offScreen->Bind(rasty);
 	}
 	else {
-		/* If the filter shader is invalid we simply draw the color off screen to
-		 * the output off screen. */
-		rasty->DrawOffScreen(colorfbo, outputfbo);
+		targetofs->Bind();
+		outputofs = targetofs;
 	}
+
+	Initialize(canvas);
+
+	SetProg(true);
+
+	BindTextures(depthofs, colorofs);
+	BindUniforms(canvas);
+
+	Update(rasty, MT_Matrix4x4::Identity());
+
+	ApplyShader();
+
+	rasty->DrawOverlayPlane();
+
+	UnbindTextures(depthofs, colorofs);
+
+	if (m_offScreen) {
+		m_offScreen->Unbind(rasty, canvas);
+	}
+
+	return outputofs;
 }
 
 void RAS_2DFilter::End()
@@ -169,13 +209,16 @@ void RAS_2DFilter::ComputeTextureOffsets(RAS_ICanvas *canvas)
 	}
 }
 
-void RAS_2DFilter::BindTextures(RAS_IRasterizer *rasty, unsigned short depthfbo, unsigned short colorfbo)
+void RAS_2DFilter::BindTextures(RAS_OffScreen *depthofs, RAS_OffScreen *colorofs)
 {
 	if (m_predefinedUniforms[RENDERED_TEXTURE_UNIFORM] != -1) {
-		rasty->BindOffScreenTexture(colorfbo, 8, RAS_IRasterizer::RAS_OFFSCREEN_COLOR);
+		colorofs->BindColorTexture(8);
+		if (m_mipmap) {
+			colorofs->MipmapTexture();
+		}
 	}
 	if (m_predefinedUniforms[DEPTH_TEXTURE_UNIFORM] != -1) {
-		rasty->BindOffScreenTexture(depthfbo, 9, RAS_IRasterizer::RAS_OFFSCREEN_DEPTH);
+		depthofs->BindDepthTexture(9);
 	}
 
 	// Bind custom textures.
@@ -187,13 +230,16 @@ void RAS_2DFilter::BindTextures(RAS_IRasterizer *rasty, unsigned short depthfbo,
 	}
 }
 
-void RAS_2DFilter::UnbindTextures(RAS_IRasterizer *rasty, unsigned short depthfbo, unsigned short colorfbo)
+void RAS_2DFilter::UnbindTextures(RAS_OffScreen *depthofs, RAS_OffScreen *colorofs)
 {
 	if (m_predefinedUniforms[RENDERED_TEXTURE_UNIFORM] != -1) {
-		rasty->UnbindOffScreenTexture(colorfbo, RAS_IRasterizer::RAS_OFFSCREEN_COLOR);
+		colorofs->UnbindColorTexture();
+		if (m_mipmap) {
+			colorofs->UnmipmapTexture();
+		}
 	}
 	if (m_predefinedUniforms[DEPTH_TEXTURE_UNIFORM] != -1) {
-		rasty->UnbindOffScreenTexture(depthfbo, RAS_IRasterizer::RAS_OFFSCREEN_DEPTH);
+		depthofs->UnbindDepthTexture();
 	}
 
 	// Bind custom textures.

@@ -71,7 +71,7 @@ public:
 	
 	virtual CValue* GetReplica();
 	virtual void ProcessReplica();
-	virtual void Relink(std::map<void *, void *>& obj_map);
+	virtual void Relink(std::map<SCA_IObject *, SCA_IObject *>& obj_map);
 	virtual bool UnlinkObject(SCA_IObject* clientobj);
 	
 #ifdef WITH_PYTHON
@@ -81,8 +81,8 @@ public:
 	/* --------------------------------------------------------------------- */
 
 	/* These are used to get and set m_ob */
-	static PyObject *pyattr_get_object(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef);
-	static int pyattr_set_object(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject *pyattr_get_object(PyObjectPlus *self, const struct KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_set_object(PyObjectPlus *self, const struct KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
 	
 #endif  /* WITH_PYTHON */
 

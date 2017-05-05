@@ -31,7 +31,7 @@
 
 
 #include "RAS_OpenGLLight.h"
-#include "RAS_OpenGLRasterizer.h"
+#include "RAS_Rasterizer.h"
 #include "RAS_ICanvas.h"
 
 #include "MT_CmMatrix4x4.h"
@@ -45,7 +45,7 @@
 
 #include "GPU_material.h"
 
-RAS_OpenGLLight::RAS_OpenGLLight(RAS_OpenGLRasterizer *ras)
+RAS_OpenGLLight::RAS_OpenGLLight(RAS_Rasterizer *ras)
 	:m_rasterizer(ras)
 {
 }
@@ -189,6 +189,24 @@ int RAS_OpenGLLight::GetShadowBindCode()
 	return -1;
 }
 
+MT_Matrix4x4 RAS_OpenGLLight::GetViewMat()
+{
+	GPULamp *lamp = GetGPULamp();
+	if (lamp) {
+		return MT_Matrix4x4(GPU_lamp_get_viewmat(lamp));
+	}
+	return MT_Matrix4x4::Identity();
+}
+
+MT_Matrix4x4 RAS_OpenGLLight::GetWinMat()
+{
+	GPULamp *lamp = GetGPULamp();
+	if (lamp) {
+		return MT_Matrix4x4(GPU_lamp_get_winmat(lamp));
+	}
+	return MT_Matrix4x4::Identity();
+}
+
 MT_Matrix4x4 RAS_OpenGLLight::GetShadowMatrix()
 {
 	GPULamp *lamp;
@@ -221,10 +239,10 @@ void RAS_OpenGLLight::BindShadowBuffer(RAS_ICanvas *canvas, KX_Camera *cam, MT_T
 	GPU_lamp_shadow_buffer_bind(lamp, viewmat, &winsize, winmat);
 
 	if (GPU_lamp_shadow_buffer_type(lamp) == LA_SHADMAP_VARIANCE) {
-		m_rasterizer->SetShadowMode(RAS_IRasterizer::RAS_SHADOW_VARIANCE);
+		m_rasterizer->SetShadowMode(RAS_Rasterizer::RAS_SHADOW_VARIANCE);
 	}
 	else {
-		m_rasterizer->SetShadowMode(RAS_IRasterizer::RAS_SHADOW_SIMPLE);
+		m_rasterizer->SetShadowMode(RAS_Rasterizer::RAS_SHADOW_SIMPLE);
 	}
 
 	/* GPU_lamp_shadow_buffer_bind() changes the viewport, so update the canvas */
@@ -246,10 +264,10 @@ void RAS_OpenGLLight::BindShadowBuffer(RAS_ICanvas *canvas, KX_Camera *cam, MT_T
 
 	/* setup rasterizer transformations */
 	/* SetViewMatrix may use stereomode which we temporarily disable here */
-	RAS_IRasterizer::StereoMode stereomode = m_rasterizer->GetStereoMode();
-	m_rasterizer->SetStereoMode(RAS_IRasterizer::RAS_STEREO_NOSTEREO);
+	RAS_Rasterizer::StereoMode stereomode = m_rasterizer->GetStereoMode();
+	m_rasterizer->SetStereoMode(RAS_Rasterizer::RAS_STEREO_NOSTEREO);
 	m_rasterizer->SetProjectionMatrix(projectionmat);
-	m_rasterizer->SetViewMatrix(modelviewmat, cam->NodeGetWorldOrientation(), cam->NodeGetWorldPosition(), cam->NodeGetLocalScaling(), cam->GetCameraData()->m_perspective);
+	m_rasterizer->SetViewMatrix(modelviewmat, cam->NodeGetWorldPosition(), cam->NodeGetLocalScaling());
 	m_rasterizer->SetStereoMode(stereomode);
 }
 
@@ -258,7 +276,7 @@ void RAS_OpenGLLight::UnbindShadowBuffer()
 	GPULamp *lamp = GetGPULamp();
 	GPU_lamp_shadow_buffer_unbind(lamp);
 
-	m_rasterizer->SetShadowMode(RAS_IRasterizer::RAS_SHADOW_NONE);
+	m_rasterizer->SetShadowMode(RAS_Rasterizer::RAS_SHADOW_NONE);
 
 	m_requestShadowUpdate = false;
 }
@@ -270,13 +288,13 @@ Image *RAS_OpenGLLight::GetTextureImage(short texslot)
 
 	if (texslot >= MAX_MTEX || texslot < 0) {
 		printf("KX_LightObject::GetTextureImage(): texslot exceeds slot bounds (0-%d)\n", MAX_MTEX - 1);
-		return NULL;
+		return nullptr;
 	}
 
 	if (la->mtex[texslot])
 		return la->mtex[texslot]->tex->ima;
 
-	return NULL;
+	return nullptr;
 }
 
 void RAS_OpenGLLight::Update()
@@ -284,7 +302,7 @@ void RAS_OpenGLLight::Update()
 	GPULamp *lamp;
 	KX_LightObject *kxlight = (KX_LightObject *)m_light;
 
-	if ((lamp = GetGPULamp()) != NULL && kxlight->GetSGNode()) {
+	if ((lamp = GetGPULamp()) != nullptr && kxlight->GetSGNode()) {
 		float obmat[4][4];
 		// lights don't get their openGL matrix updated, do it now
 		if (kxlight->GetSGNode()->IsDirty())

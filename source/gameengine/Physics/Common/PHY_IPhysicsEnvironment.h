@@ -37,10 +37,6 @@
 #include "MT_Vector3.h"
 #include "MT_Vector4.h"
 
-#ifdef WITH_CXX_GUARDEDALLOC
-#include "MEM_guardedalloc.h"
-#endif
-
 class PHY_IVehicle;
 class PHY_ICharacter;
 class RAS_MeshObject;
@@ -50,6 +46,7 @@ class RAS_MeshObject;
 struct DerivedMesh;
 class KX_GameObject;
 class KX_Scene;
+class KX_BlenderSceneConverter;
 
 struct PHY_ShapeProps;
 struct PHY_MaterialProps;
@@ -63,8 +60,8 @@ struct PHY_RayCastResult {
 	PHY_IPhysicsController *m_controller;
 	MT_Vector3 m_hitPoint;
 	MT_Vector3 m_hitNormal;
-	RAS_MeshObject *m_meshObject; // !=NULL for mesh object (only for Bullet controllers)
-	int m_polygon; // index of the polygon hit by the ray, only if m_meshObject != NULL
+	RAS_MeshObject *m_meshObject; // !=nullptr for mesh object (only for Bullet controllers)
+	int m_polygon; // index of the polygon hit by the ray, only if m_meshObject != nullptr
 	int m_hitUVOK; // !=0 if UV coordinate in m_hitUV is valid
 	MT_Vector2 m_hitUV; // UV coordinates of hit point
 };
@@ -98,11 +95,6 @@ public:
 		m_faceUV(faceUV)
 	{
 	}
-
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:PHY_IRayCastFilterCallback")
-#endif
 };
 
 /**
@@ -237,7 +229,8 @@ public:
 
 	virtual void MergeEnvironment(PHY_IPhysicsEnvironment *other_env) = 0;
 
-	virtual void ConvertObject(KX_GameObject *gameobj,
+	virtual void ConvertObject(KX_BlenderSceneConverter& converter,
+							   KX_GameObject *gameobj,
 	                           RAS_MeshObject *meshobj,
 	                           DerivedMesh *dm,
 	                           KX_Scene *kxscene,
@@ -252,10 +245,6 @@ public:
 	                                    bRigidBodyJointConstraint *dat)
 	{
 	}
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:PHY_IPhysicsEnvironment")
-#endif
 };
 
 #endif  /* __PHY_IPHYSICSENVIRONMENT_H__ */

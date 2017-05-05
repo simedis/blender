@@ -33,8 +33,14 @@ endmacro()
 macro(windows_find_package package_name
 	)
 	if(WITH_WINDOWS_FIND_MODULES)
-		find_package( ${package_name})
+		find_package(${package_name})
 	endif(WITH_WINDOWS_FIND_MODULES)
+endmacro()
+
+macro(find_package_wrapper)
+	if(WITH_WINDOWS_FIND_MODULES)
+		find_package(${ARGV})
+	endif()
 endmacro()
 
 add_definitions(-DWIN32)
@@ -432,6 +438,7 @@ if(WITH_ALEMBIC)
 	set(ALEMBIC_INCLUDE_DIRS ${ALEMBIC_INCLUDE_DIR})
 	set(ALEMBIC_LIBPATH ${ALEMBIC}/lib)
 	set(ALEMBIC_LIBRARIES optimized alembic debug alembic_d)
+	set(ALEMBIC_FOUND 1)
 endif()
 
 if(WITH_MOD_CLOTH_ELTOPO)
@@ -446,10 +453,20 @@ if(WITH_MOD_CLOTH_ELTOPO)
 endif()
 
 if(WITH_OPENSUBDIV OR WITH_CYCLES_OPENSUBDIV)
-	set(OPENSUBDIV_INCLUDE_DIR ${LIBDIR}/opensubdiv/include)
-	set(OPENSUBDIV_LIBPATH ${LIBDIR}/opensubdiv/lib)
-	set(OPENSUBDIV_LIBRARIES ${OPENSUBDIV_LIBPATH}/osdCPU.lib ${OPENSUBDIV_LIBPATH}/osdGPU.lib)
-	find_package(OpenSubdiv)
+    set(OPENSUBDIV_INCLUDE_DIR ${LIBDIR}/opensubdiv/include)
+    set(OPENSUBDIV_LIBPATH ${LIBDIR}/opensubdiv/lib)
+    set(OPENSUBDIV_LIBRARIES    optimized ${OPENSUBDIV_LIBPATH}/osdCPU.lib 
+                                optimized ${OPENSUBDIV_LIBPATH}/osdGPU.lib
+                                debug ${OPENSUBDIV_LIBPATH}/osdCPU_d.lib 
+                                debug ${OPENSUBDIV_LIBPATH}/osdGPU_d.lib
+                                )
+    set(OPENSUBDIV_HAS_OPENMP TRUE)
+	set(OPENSUBDIV_HAS_TBB FALSE)
+	set(OPENSUBDIV_HAS_OPENCL TRUE)
+	set(OPENSUBDIV_HAS_CUDA FALSE)
+	set(OPENSUBDIV_HAS_GLSL_TRANSFORM_FEEDBACK TRUE)
+	set(OPENSUBDIV_HAS_GLSL_COMPUTE TRUE)
+    windows_find_package(OpenSubdiv)
 endif()
 
 if(WITH_SDL)

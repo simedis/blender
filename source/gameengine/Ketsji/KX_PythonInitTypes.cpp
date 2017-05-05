@@ -44,8 +44,10 @@
 #include "BL_Texture.h"
 #include "KX_2DFilter.h"
 #include "KX_2DFilterManager.h"
+#include "KX_2DFilterOffScreen.h"
 #include "KX_WorldInfo.h"
 #include "KX_ArmatureSensor.h"
+#include "KX_BatchGroup.h"
 #include "KX_BlenderMaterial.h"
 #include "KX_BoundingBox.h"
 #include "KX_Camera.h"
@@ -66,6 +68,7 @@
 #include "KX_NetworkMessageSensor.h"
 #include "KX_ObjectActuator.h"
 #include "KX_ParentActuator.h"
+#include "KX_PlanarMap.h"
 #include "KX_PolyProxy.h"
 #include "KX_PythonComponent.h"
 #include "KX_SCA_AddObjectActuator.h"
@@ -117,12 +120,12 @@
 static void PyType_Attr_Set(PyGetSetDef *attr_getset, PyAttributeDef *attr)
 {
 	attr_getset->name = (char *)attr->m_name.c_str();
-	attr_getset->doc= NULL;
+	attr_getset->doc= nullptr;
 
 	attr_getset->get= reinterpret_cast<getter>(PyObjectPlus::py_get_attrdef);
 
 	if (attr->m_access==KX_PYATTRIBUTE_RO)
-		attr_getset->set= NULL;
+		attr_getset->set= nullptr;
 	else
 		attr_getset->set= reinterpret_cast<setter>(PyObjectPlus::py_set_attrdef);
 
@@ -137,7 +140,7 @@ static void PyType_Ready_ADD(PyObject *dict, PyTypeObject *tp, PyAttributeDef *a
 		/* we need to do this for all types before calling PyType_Ready
 		 * since they will call the parents PyType_Ready and those might not have initialized vars yet */
 
-		if (tp->tp_getset==NULL && ((attributes && !attributes->m_name.empty()) || (attributesPtr && !attributesPtr->m_name.empty()))) {
+		if (tp->tp_getset==nullptr && ((attributes && !attributes->m_name.empty()) || (attributesPtr && !attributesPtr->m_name.empty()))) {
 			PyGetSetDef *attr_getset;
 			int attr_tot= 0;
 
@@ -172,7 +175,7 @@ static void PyType_Ready_ADD(PyObject *dict, PyTypeObject *tp, PyAttributeDef *a
 }
 
 
-#define PyType_Ready_Attr(d, n, i)   PyType_Ready_ADD(d, &n::Type, n::Attributes, NULL, i)
+#define PyType_Ready_Attr(d, n, i)   PyType_Ready_ADD(d, &n::Type, n::Attributes, nullptr, i)
 #define PyType_Ready_AttrPtr(d, n, i)   PyType_Ready_ADD(d, &n::Type, n::Attributes, n::AttributesPtr, i)
 
 
@@ -185,11 +188,11 @@ static struct PyModuleDef GameTypes_module_def = {
 	"GameTypes",  /* m_name */
 	GameTypes_module_documentation,  /* m_doc */
 	0,  /* m_size */
-	NULL,  /* m_methods */
-	NULL,  /* m_reload */
-	NULL,  /* m_traverse */
-	NULL,  /* m_clear */
-	NULL,  /* m_free */
+	nullptr,  /* m_methods */
+	nullptr,  /* m_reload */
+	nullptr,  /* m_traverse */
+	nullptr,  /* m_clear */
+	nullptr,  /* m_free */
 };
 
 
@@ -218,7 +221,9 @@ PyMODINIT_FUNC initGameTypesPythonBinding(void)
 		PyType_Ready_Attr(dict, CValue, init_getset);
 		PyType_Ready_Attr(dict, KX_2DFilter, init_getset);
 		PyType_Ready_Attr(dict, KX_2DFilterManager, init_getset);
+		PyType_Ready_Attr(dict, KX_2DFilterOffScreen, init_getset);
 		PyType_Ready_Attr(dict, KX_ArmatureSensor, init_getset);
+		PyType_Ready_Attr(dict, KX_BatchGroup, init_getset);
 		PyType_Ready_Attr(dict, KX_BlenderMaterial, init_getset);
 		PyType_Ready_Attr(dict, KX_BoundingBox, init_getset);
 		PyType_Ready_Attr(dict, KX_Camera, init_getset);
@@ -242,6 +247,7 @@ PyMODINIT_FUNC initGameTypesPythonBinding(void)
 		PyType_Ready_Attr(dict, KX_NetworkMessageSensor, init_getset);
 		PyType_Ready_Attr(dict, KX_ObjectActuator, init_getset);
 		PyType_Ready_Attr(dict, KX_ParentActuator, init_getset);
+		PyType_Ready_Attr(dict, KX_PlanarMap, init_getset);
 		PyType_Ready_Attr(dict, KX_PolyProxy, init_getset);
 		PyType_Ready_Attr(dict, KX_PythonComponent, init_getset);
 		PyType_Ready_Attr(dict, KX_RadarSensor, init_getset);
@@ -258,6 +264,7 @@ PyMODINIT_FUNC initGameTypesPythonBinding(void)
 		PyType_Ready_Attr(dict, KX_StateActuator, init_getset);
 		PyType_Ready_Attr(dict, KX_SteeringActuator, init_getset);
 		PyType_Ready_Attr(dict, KX_CollisionSensor, init_getset);
+		PyType_Ready_Attr(dict, KX_TextureRenderer, init_getset);
 		PyType_Ready_Attr(dict, KX_TrackToActuator, init_getset);
 		PyType_Ready_Attr(dict, KX_VehicleWrapper, init_getset);
 		PyType_Ready_Attr(dict, KX_VertexProxy, init_getset);

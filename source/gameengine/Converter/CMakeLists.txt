@@ -76,12 +76,14 @@ set(SRC
 	BL_ModifierDeformer.cpp
 	BL_ShapeDeformer.cpp
 	BL_SkinDeformer.cpp
+	KX_BlenderConverter.cpp
 	KX_BlenderScalarInterpolator.cpp
 	KX_BlenderSceneConverter.cpp
 	KX_ConvertActuators.cpp
 	KX_ConvertControllers.cpp
 	KX_ConvertProperties.cpp
 	KX_ConvertSensors.cpp
+	KX_IpoConvert.cpp
 	KX_LibLoadStatus.cpp
 	KX_SoftBodyDeformer.cpp
 
@@ -97,12 +99,14 @@ set(SRC
 	BL_ModifierDeformer.h
 	BL_ShapeDeformer.h
 	BL_SkinDeformer.h
+	KX_BlenderConverter.h
 	KX_BlenderScalarInterpolator.h
 	KX_BlenderSceneConverter.h
 	KX_ConvertActuators.h
 	KX_ConvertControllers.h
 	KX_ConvertProperties.h
 	KX_ConvertSensors.h
+	KX_IpoConvert.h
 	KX_LibLoadStatus.h
 	KX_SoftBodyDeformer.h
 )

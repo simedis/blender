@@ -135,6 +135,39 @@ class DATA_PT_lens(CameraButtonsPanel, Panel):
         col.prop(cam, "clip_end", text="End")
 
 
+class DATA_PT_levels_of_detail(CameraButtonsPanel, Panel):
+    bl_label = "Levels of Detail"
+    COMPAT_ENGINES = {'BLENDER_GAME'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.camera and context.scene.render.engine in cls.COMPAT_ENGINES
+
+    def draw(self, context):
+        layout = self.layout
+        cam = context.camera
+
+        col = layout.column()
+        col.prop(cam, "lod_factor", text="Distance Factor")
+
+
+class DATA_PT_frustum_culling(CameraButtonsPanel, Panel):
+    bl_label = "Frustum Culling"
+    COMPAT_ENGINES = {'BLENDER_GAME'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.camera and context.scene.render.engine in cls.COMPAT_ENGINES
+
+    def draw(self, context):
+        layout = self.layout
+        cam = context.camera
+
+        row = layout.row()
+        row.prop(cam, "show_frustum")
+        row.prop(cam, "override_culling")
+
+
 class DATA_PT_camera_stereoscopy(CameraButtonsPanel, Panel):
     bl_label = "Stereoscopy"
     COMPAT_ENGINES = {'BLENDER_RENDER'}
@@ -325,5 +358,22 @@ def draw_display_safe_settings(layout, safe_data, settings):
     col.prop(safe_data, "action_center", slider=True)
 
 
+classes = (
+    CAMERA_MT_presets,
+    SAFE_AREAS_MT_presets,
+    DATA_PT_context_camera,
+    DATA_PT_lens,
+    DATA_PT_camera,
+    DATA_PT_levels_of_detail,
+    DATA_PT_frustum_culling,
+    DATA_PT_camera_stereoscopy,
+    DATA_PT_camera_dof,
+    DATA_PT_camera_display,
+    DATA_PT_camera_safe_areas,
+    DATA_PT_custom_props_camera,
+)
+
 if __name__ == "__main__":  # only for live edit.
-    bpy.utils.register_module(__name__)
+    from bpy.utils import register_class
+    for cls in classes:
+        register_class(cls)

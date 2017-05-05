@@ -71,6 +71,12 @@ if(WITH_BUILDINFO)
 	add_definitions(-DWITH_BUILDINFO)
 endif()
 
+if(WITH_PYTHON)
+	if(WITH_PYTHON_SECURITY)
+		add_definitions(-DWITH_PYTHON_SECURITY)
+	endif()
+endif()
+
 if(WITH_INTERNATIONAL)
 	add_definitions(-DWITH_INTERNATIONAL)
 endif()
@@ -84,6 +90,13 @@ if(WITH_ALEMBIC)
 		../alembic
 	)
 	add_definitions(-DWITH_ALEMBIC)
+endif()
+
+if(WITH_GAMEENGINE_BPPLAYER)
+	list(APPEND INC
+		../../../intern/spindle
+	)
+	add_definitions(-DWITH_GAMEENGINE_BPPLAYER)
 endif()
 
 blender_add_lib(bf_blenloader "${SRC}" "${INC}" "${INC_SYS}")

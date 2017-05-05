@@ -47,7 +47,7 @@ RAS_IPolyMaterial::RAS_IPolyMaterial(
 	}
 
 	for (unsigned short i = 0; i < RAS_Texture::MaxUnits; ++i) {
-		m_textures[i] = NULL;
+		m_textures[i] = nullptr;
 	}
 }
 
@@ -90,7 +90,7 @@ bool RAS_IPolyMaterial::IsText() const
 
 bool RAS_IPolyMaterial::IsCullFace() const
 {
-	return !(m_rasMode & RAS_TWOSIDED);
+	return !(m_rasMode & (RAS_TWOSIDED | RAS_WIRE));
 }
 
 void RAS_IPolyMaterial::GetRGBAColor(unsigned char *rgba) const
@@ -121,6 +121,11 @@ int RAS_IPolyMaterial::GetDrawingMode() const
 	return m_drawingmode;
 }
 
+int RAS_IPolyMaterial::GetAlphaBlend() const
+{
+	return m_alphablend;
+}
+
 std::string RAS_IPolyMaterial::GetName()
 {
 	return m_name;
@@ -131,7 +136,7 @@ unsigned int RAS_IPolyMaterial::GetFlag() const
 	return m_flag;
 }
 
-bool RAS_IPolyMaterial::UsesLighting(RAS_IRasterizer *rasty) const
+bool RAS_IPolyMaterial::UsesLighting(RAS_Rasterizer *rasty) const
 {
 	// Return false only if material is shadeless.
 	return (m_flag & RAS_MULTILIGHT);
@@ -155,9 +160,4 @@ bool RAS_IPolyMaterial::UsesObjectColor() const
 RAS_Texture *RAS_IPolyMaterial::GetTexture(unsigned int index)
 {
 	return m_textures[index];
-}
-
-bool RAS_IPolyMaterial::UseDisplayLists() const
-{
-	return (m_flag & RAS_DISPLAYLISTS);
 }

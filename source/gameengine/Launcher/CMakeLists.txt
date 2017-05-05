@@ -36,7 +36,6 @@ set(INC
 	../Ketsji/KXNetwork
 	../Rasterizer
 	../Rasterizer/Node
-	../Rasterizer/RAS_OpenGLRasterizer
 	../SceneGraph
 	../VideoTexture
 	../../blender/blenkernel
@@ -53,6 +52,7 @@ set(INC
 
 set(INC_SYS
 	../../../intern/moto/include
+	${BOOST_INCLUDE_DIR}
 )
 
 set(SRC

@@ -26,12 +26,15 @@
 set(INC
 	.
 	Node
+	RAS_OpenGLRasterizer
 	../Common
 	../Expressions
 	../Ketsji
+	../Physics/Common
 	../SceneGraph
 	../GameLogic
 	../../blender/makesdna
+	../../blender/blenfont
 	../../blender/blenlib
 	../../blender/blenkernel
 	../../blender/gpu
@@ -49,59 +52,73 @@ set(INC_SYS
 )
 
 set(SRC
+	RAS_2DFilter.cpp
+	RAS_2DFilterData.cpp
 	RAS_2DFilterManager.cpp
-	RAS_BucketManager.cpp
-	RAS_CubeMap.cpp
-	RAS_DisplayArrayBucket.cpp
-	RAS_FramingManager.cpp
-	RAS_IPolygonMaterial.cpp
-	RAS_InstancingBuffer.cpp
-	RAS_MaterialBucket.cpp
+	RAS_2DFilterOffScreen.cpp
+	RAS_BatchGroup.cpp
 	RAS_BoundingBox.cpp
 	RAS_BoundingBoxManager.cpp
+	RAS_BucketManager.cpp
+	RAS_DebugDraw.cpp
+	RAS_DisplayArrayBucket.cpp
+	RAS_FramingManager.cpp
+	RAS_ICanvas.cpp
+	RAS_IDisplayArray.cpp
+	RAS_IBatchDisplayArray.cpp
+	RAS_InstancingBuffer.cpp
+	RAS_IPolygonMaterial.cpp
+	RAS_Rasterizer.cpp
+	RAS_ITexVert.cpp
+	RAS_MaterialBucket.cpp
 	RAS_MeshObject.cpp
 	RAS_MeshSlot.cpp
 	RAS_MeshUser.cpp
+	RAS_OffScreen.cpp
 	RAS_Polygon.cpp
+	RAS_Query.cpp
 	RAS_Shader.cpp
 	RAS_Texture.cpp
+	RAS_TextureRenderer.cpp
 	RAS_TextUser.cpp
-	RAS_ICanvas.cpp
-	RAS_IDisplayArray.cpp
-	RAS_ITexVert.cpp
-	RAS_2DFilterData.cpp
-	RAS_2DFilter.cpp
  
 	RAS_2DFilterData.h
 	RAS_2DFilter.h
 	RAS_2DFilterManager.h
+	RAS_2DFilterOffScreen.h
+	RAS_BatchDisplayArray.h
+	RAS_BatchGroup.h
+	RAS_BoundingBox.h
+	RAS_BoundingBoxManager.h
 	RAS_BucketManager.h
 	RAS_CameraData.h
-	RAS_CubeMap.h
+	RAS_DebugDraw.h
 	RAS_Deformer.h
 	RAS_DisplayArray.h
 	RAS_DisplayArrayBucket.h
 	RAS_FramingManager.h
 	RAS_ICanvas.h
 	RAS_IDisplayArray.h
+	RAS_IBatchDisplayArray.h
 	RAS_IPolygonMaterial.h
-	RAS_IRasterizer.h
+	RAS_Rasterizer.h
 	RAS_IStorageInfo.h
 	RAS_ILightObject.h
 	RAS_InstancingBuffer.h
 	RAS_ISync.h
 	RAS_ITexVert.h
 	RAS_MaterialBucket.h
-	RAS_BoundingBox.h
-	RAS_BoundingBoxManager.h
 	RAS_MeshMaterial.h
 	RAS_MeshObject.h
 	RAS_MeshSlot.h
 	RAS_MeshUser.h
+	RAS_OffScreen.h
 	RAS_Polygon.h
+	RAS_Query.h
 	RAS_Rect.h
 	RAS_Shader.h
 	RAS_Texture.h
+	RAS_TextureRenderer.h
 	RAS_TextUser.h
 	RAS_TexVert.h
 )
@@ -119,5 +136,11 @@ data_to_c_simple(RAS_OpenGLFilters/RAS_Sobel2DFilter.glsl SRC)
 data_to_c_simple(RAS_OpenGLFilters/RAS_VertexShader2DFilter.glsl SRC)
 
 add_definitions(${GL_DEFINITIONS})
+
+# ----------------------------------------------------------------------------------------------------------------
+# workaround to increase the number of sections for object file format in MSVC 2015 compiler when we DEBUG
+if(MSVC14)
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /bigobj /Zi /Od /Ob0")
+endif()
 
 blender_add_lib(ge_rasterizer "${SRC}" "${INC}" "${INC_SYS}")

@@ -38,12 +38,12 @@
 #include "KX_Camera.h"
 #include "DNA_screen_types.h"
 #include "RAS_ICanvas.h"
-#include "RAS_IRasterizer.h"
+#include "RAS_Rasterizer.h"
 #include "RAS_ISync.h"
 
 #include "ImageViewport.h"
 
-struct GPUOffScreen;
+class RAS_OffScreen;
 
 /// class for render 3d scene
 class ImageRender : public ImageViewport
@@ -105,13 +105,13 @@ protected:
 	int m_samples;
 
 	/// The rendered off screen, can be multisampled.
-	GPUOffScreen *m_offScreen;
-	/// The non multisampled off screen used when bliting, can be NULL.
-	GPUOffScreen *m_blitOffScreen;
+	std::unique_ptr<RAS_OffScreen> m_offScreen;
+	/// The non multisampled off screen used when bliting, can be nullptr.
+	std::unique_ptr<RAS_OffScreen> m_blitOffScreen;
 	/** The pointer to the final off screen without multisamples, can
 	 * be m_offScreen or m_blitOffScreen in case of mutlisamples.
 	 */
-	GPUOffScreen *m_finalOffScreen;
+	RAS_OffScreen *m_finalOffScreen;
 
 	/// object to synchronize render even if no buffer transfer
 	RAS_ISync *m_sync;
@@ -128,7 +128,7 @@ protected:
 	/// canvas
 	RAS_ICanvas* m_canvas;
 	/// rasterizer
-	RAS_IRasterizer* m_rasterizer;
+	RAS_Rasterizer* m_rasterizer;
 	/// engine
 	KX_KetsjiEngine* m_engine;
 

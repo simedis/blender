@@ -58,13 +58,12 @@
 #include "RAS_MeshObject.h"
 #include "SCA_IScene.h"
 #include "KX_LodManager.h"
+#include "KX_CullingHandler.h"
 
-#include "RAS_IRasterizer.h"
+#include "RAS_Rasterizer.h"
 #include "RAS_ICanvas.h"
 #include "RAS_2DFilterData.h"
-#include "RAS_CubeMap.h"
 #include "KX_2DFilterManager.h"
-#include "KX_CubeMapManager.h"
 #include "RAS_BoundingBoxManager.h"
 #include "RAS_BucketManager.h"
 
@@ -84,7 +83,7 @@
 #include "PHY_IPhysicsEnvironment.h"
 #include "PHY_IGraphicController.h"
 #include "PHY_IPhysicsController.h"
-#include "KX_BlenderSceneConverter.h"
+#include "KX_BlenderConverter.h"
 #include "KX_MotionState.h"
 
 #include "BL_ModifierDeformer.h"
@@ -122,7 +121,7 @@ static void *KX_SceneDestructionFunc(SG_Node* node,void* gameobj,void* scene)
 {
 	((KX_Scene*)scene)->RemoveNodeDestructObject(node,(KX_GameObject*)gameobj);
 
-	return NULL;
+	return nullptr;
 };
 
 bool KX_Scene::KX_ScenegraphUpdateFunc(SG_Node* node,void* gameobj,void* scene)
@@ -148,25 +147,23 @@ KX_Scene::KX_Scene(SCA_IInputDevice *inputDevice,
 				   class RAS_ICanvas* canvas,
 				   KX_NetworkMessageManager *messageManager): 
 	CValue(),
-	m_keyboardmgr(NULL),
-	m_mousemgr(NULL),
-	m_sceneConverter(NULL),
+	m_keyboardmgr(nullptr),
+	m_mousemgr(nullptr),
 	m_physicsEnvironment(0),
 	m_sceneName(sceneName),
-	m_active_camera(NULL),
+	m_active_camera(nullptr),
+	m_overrideCullingCamera(nullptr),
 	m_ueberExecutionPriority(0),
+	m_suspendeddelta(0.0),
 	m_blenderScene(scene),
 	m_isActivedHysteresis(false),
 	m_lodHysteresisValue(0)
 {
-	m_suspendedtime = 0.0;
-	m_suspendeddelta = 0.0;
 
 	m_dbvt_culling = false;
 	m_dbvt_occlusion_res = 0;
 	m_activity_culling = false;
 	m_suspend = false;
-	m_isclearingZbuffer = true;
 	m_tempObjectList = new CListValue();
 	m_objectlist = new CListValue();
 	m_parentlist = new CListValue();
@@ -198,9 +195,9 @@ KX_Scene::KX_Scene(SCA_IInputDevice *inputDevice,
 
 	m_networkScene = new KX_NetworkMessageScene(messageManager);
 	
-	m_rootnode = NULL;
+	m_rootnode = nullptr;
 
-	m_cubeMapManager = new KX_CubeMapManager(this);
+	m_rendererManager = new KX_TextureRendererManager(this);
 	m_bucketmanager=new RAS_BucketManager();
 	m_boundingBoxManager = new RAS_BoundingBoxManager();
 	
@@ -214,14 +211,16 @@ KX_Scene::KX_Scene(SCA_IInputDevice *inputDevice,
 		m_obstacleSimulation = new KX_ObstacleSimulationTOI_cells((MT_Scalar)scene->gm.levelHeight, showObstacleSimulation);
 		break;
 	default:
-		m_obstacleSimulation = NULL;
+		m_obstacleSimulation = nullptr;
 	}
-	
+
+	m_animationPool = BLI_task_pool_create(KX_GetActiveEngine()->GetTaskScheduler(), &m_animationPoolData);
+
 #ifdef WITH_PYTHON
-	m_attr_dict = NULL;
+	m_attr_dict = nullptr;
 
 	for (unsigned short i = 0; i < MAX_DRAW_CALLBACK; ++i) {
-		m_drawCallbacks[i] = NULL;
+		m_drawCallbacks[i] = nullptr;
 	}
 #endif
 }
@@ -243,6 +242,10 @@ KX_Scene::~KX_Scene()
 
 	if (m_obstacleSimulation)
 		delete m_obstacleSimulation;
+
+	if (m_animationPool) {
+		BLI_task_pool_free(m_animationPool);
+	}
 
 	if (m_objectlist)
 		m_objectlist->Release();
@@ -285,9 +288,9 @@ KX_Scene::~KX_Scene()
 
 	if (m_networkScene)
 		delete m_networkScene;
-	
-	if (m_cubeMapManager) {
-		delete m_cubeMapManager;
+
+	if (m_rendererManager) {
+		delete m_rendererManager;
 	}
 
 	if (m_bucketmanager)
@@ -302,11 +305,11 @@ KX_Scene::~KX_Scene()
 #ifdef WITH_PYTHON
 	if (m_attr_dict) {
 		PyDict_Clear(m_attr_dict);
-		/* Py_CLEAR: Py_DECREF's and NULL's */
+		/* Py_CLEAR: Py_DECREF's and nullptr's */
 		Py_CLEAR(m_attr_dict);
 	}
 
-	/* these may be NULL but the macro checks */
+	/* these may be nullptr but the macro checks */
 	for (unsigned short i = 0; i < MAX_DRAW_CALLBACK; ++i) {
 		Py_CLEAR(m_drawCallbacks[i]);
 	}
@@ -329,9 +332,9 @@ RAS_BucketManager* KX_Scene::GetBucketManager()
 	return m_bucketmanager;
 }
 
-KX_CubeMapManager *KX_Scene::GetCubeMapManager()
+KX_TextureRendererManager *KX_Scene::GetTextureRendererManager() const
 {
-	return m_cubeMapManager;
+	return m_rendererManager;
 }
 
 RAS_BoundingBoxManager *KX_Scene::GetBoundingBoxManager()
@@ -435,19 +438,13 @@ bool KX_Scene::IsSuspended()
 	return m_suspend;
 }
 
-bool KX_Scene::IsClearingZBuffer()
-{
-	return m_isclearingZbuffer;
-}
-
-void KX_Scene::EnableZBufferClearing(bool isclearingZbuffer)
-{
-	m_isclearingZbuffer = isclearingZbuffer;
-}
-
 void KX_Scene::AddObjectDebugProperties(class KX_GameObject* gameobj)
 {
 	Object* blenderobject = gameobj->GetBlenderObject();
+	if (!blenderobject) {
+		return;
+	}
+
 	bProperty* prop = (bProperty*)blenderobject->prop.first;
 
 	while (prop) {
@@ -463,20 +460,19 @@ void KX_Scene::AddObjectDebugProperties(class KX_GameObject* gameobj)
 void KX_Scene::RemoveNodeDestructObject(class SG_Node* node,class CValue* gameobj)
 {
 	KX_GameObject* orgobj = (KX_GameObject*)gameobj;
-	if (NewRemoveObject(orgobj) != 0)
-	{
+	if (NewRemoveObject(orgobj)) {
 		// object is not yet deleted because a reference is hanging somewhere.
 		// This should not happen anymore since we use proxy object for Python
 		// confident enough to put an assert?
 		//assert(false);
 		CM_Warning("zombie object! name=" << orgobj->GetName());
-		orgobj->SetSGNode(NULL);
+		orgobj->SetSGNode(nullptr);
 		PHY_IGraphicController* ctrl = orgobj->GetGraphicController();
 		if (ctrl)
 		{
 			// a graphic controller is set, we must delete it as the node will be deleted
 			delete ctrl;
-			orgobj->SetGraphicController(NULL);
+			orgobj->SetGraphicController(nullptr);
 		}
 	}
 	if (node)
@@ -488,7 +484,7 @@ KX_GameObject* KX_Scene::AddNodeReplicaObject(class SG_Node* node, class CValue*
 	// for group duplication, limit the duplication of the hierarchy to the
 	// objects that are part of the group. 
 	if (!IsObjectInGroup(gameobj))
-		return NULL;
+		return nullptr;
 	
 	KX_GameObject* orgobj = (KX_GameObject*)gameobj;
 	KX_GameObject* newobj = (KX_GameObject*)orgobj->GetReplica();
@@ -528,7 +524,7 @@ KX_GameObject* KX_Scene::AddNodeReplicaObject(class SG_Node* node, class CValue*
 	}
 	
 	SG_Node* replicanode = newobj->GetSGNode();
-//	SG_Node* rootnode = (replicanode == m_rootnode ? NULL : m_rootnode);
+//	SG_Node* rootnode = (replicanode == m_rootnode ? nullptr : m_rootnode);
 
 	// Add the object in the obstacle simulation if needed.
 	if (m_obstacleSimulation && orgobj->GetBlenderObject()->gameflag & OB_HASOBSTACLE) {
@@ -539,10 +535,23 @@ KX_GameObject* KX_Scene::AddNodeReplicaObject(class SG_Node* node, class CValue*
 
 	// this is the list of object that are send to the graphics pipeline
 	m_objectlist->Add(newobj->AddRef());
-	if (newobj->GetGameObjectType()==SCA_IObject::OBJ_LIGHT)
-		m_lightlist->Add(newobj->AddRef());
-	else if (newobj->GetGameObjectType()==SCA_IObject::OBJ_TEXT)
-		m_fontlist->Add(newobj->AddRef());
+	switch (newobj->GetGameObjectType()) {
+		case SCA_IObject::OBJ_LIGHT:
+		{
+			m_lightlist->Add(newobj->AddRef());
+			break;
+		}
+		case SCA_IObject::OBJ_TEXT:
+		{
+			m_fontlist->Add(newobj->AddRef());
+			break;
+		}
+		case SCA_IObject::OBJ_CAMERA:
+		{
+			m_cameralist->Add(newobj->AddRef());
+			break;
+		}
+	}
 	newobj->AddMeshUser();
 
 	// logic cannot be replicated, until the whole hierarchy is replicated.
@@ -581,7 +590,7 @@ KX_GameObject* KX_Scene::AddNodeReplicaObject(class SG_Node* node, class CValue*
 		PHY_IPhysicsController* newctrl = orgobj->GetPhysicsController()->GetReplica();
 
 		KX_GameObject *parent = newobj->GetParent();
-		PHY_IPhysicsController* parentctrl = (parent) ? parent->GetPhysicsController() : NULL;
+		PHY_IPhysicsController* parentctrl = (parent) ? parent->GetPhysicsController() : nullptr;
 
 		newctrl->SetNewClientInfo(newobj->getClientInfo());
 		newobj->SetPhysicsController(newctrl);
@@ -591,6 +600,9 @@ KX_GameObject* KX_Scene::AddNodeReplicaObject(class SG_Node* node, class CValue*
 		if (parent)
 			newctrl->SuspendDynamics();
 	}
+
+	// Always make sure that the bounding box is valid.
+	newobj->UpdateBounds(true);
 
 	return newobj;
 }
@@ -610,7 +622,7 @@ KX_GameObject* KX_Scene::AddNodeReplicaObject(class SG_Node* node, class CValue*
 void KX_Scene::ReplicateLogic(KX_GameObject* newobj)
 {
 	/* add properties to debug list, for added objects and DupliGroups */
-	if (KX_GetActiveEngine()->GetAutoAddDebugProperties()) {
+	if (KX_GetActiveEngine()->GetFlag(KX_KetsjiEngine::AUTO_ADD_DEBUG_PROPERTIES)) {
 		AddObjectDebugProperties(newobj);
 	}
 	// also relink the controller to sensors/actuators
@@ -650,7 +662,7 @@ void KX_Scene::ReplicateLogic(KX_GameObject* newobj)
 				// yes, then the new sensor has the same position
 				SCA_SensorList& sensorlist = oldsensorobj->GetSensors();
 				SCA_SensorList::iterator sit;
-				SCA_ISensor* newsensor = NULL;
+				SCA_ISensor* newsensor = nullptr;
 				int sensorpos;
 
 				for (sensorpos=0, sit=sensorlist.begin(); sit!=sensorlist.end(); sit++, sensorpos++)
@@ -661,7 +673,7 @@ void KX_Scene::ReplicateLogic(KX_GameObject* newobj)
 						break;
 					}
 				}
-				assert(newsensor != NULL);
+				BLI_assert(newsensor != nullptr);
 				m_logicmgr->RegisterToSensor(cont,newsensor);
 			}
 		}
@@ -685,7 +697,7 @@ void KX_Scene::ReplicateLogic(KX_GameObject* newobj)
 				// yes, then the new sensor has the same position
 				SCA_ActuatorList& actuatorlist = oldactuatorobj->GetActuators();
 				SCA_ActuatorList::iterator ait;
-				SCA_IActuator* newactuator = NULL;
+				SCA_IActuator* newactuator = nullptr;
 				int actuatorpos;
 
 				for (actuatorpos=0, ait=actuatorlist.begin(); ait!=actuatorlist.end(); ait++, actuatorpos++)
@@ -696,7 +708,7 @@ void KX_Scene::ReplicateLogic(KX_GameObject* newobj)
 						break;
 					}
 				}
-				assert(newactuator != NULL);
+				BLI_assert(newactuator != nullptr);
 				m_logicmgr->RegisterToActuator(cont,newactuator);
 				newactuator->SetUeberExecutePriority(m_ueberExecutionPriority);
 			}
@@ -739,7 +751,7 @@ void KX_Scene::DupliGroupRecurse(CValue* obj, int level)
 			continue;
 
 		gameobj = (KX_GameObject*)m_logicmgr->FindGameObjByBlendObj(blenderobj);
-		if (gameobj == NULL) 
+		if (gameobj == nullptr) 
 		{
 			// this object has not been converted!!!
 			// Should not happen as dupli group are created automatically 
@@ -762,7 +774,7 @@ void KX_Scene::DupliGroupRecurse(CValue* obj, int level)
 		gameobj = (KX_GameObject*)(*oit);
 
 		KX_GameObject *parent = gameobj->GetParent();
-		if (parent != NULL)
+		if (parent != nullptr)
 		{
 			// this object is not a top parent. Either it is the child of another
 			// object in the group and it will be added automatically when the parent
@@ -770,7 +782,7 @@ void KX_Scene::DupliGroupRecurse(CValue* obj, int level)
 			// is inconsistent, skip it anyway
 			continue;
 		}
-		replica = (KX_GameObject*) AddNodeReplicaObject(NULL,gameobj);
+		replica = (KX_GameObject*) AddNodeReplicaObject(nullptr,gameobj);
 		// add to 'rootparent' list (this is the list of top hierarchy objects, updated each frame)
 		m_parentlist->Add(replica->AddRef());
 
@@ -805,7 +817,6 @@ void KX_Scene::DupliGroupRecurse(CValue* obj, int level)
 		replica->NodeSetLocalOrientation(newori);
 		// update scenegraph for entire tree of children
 		replica->GetSGNode()->UpdateWorldData(0);
-		replica->GetSGNode()->SetBBox(gameobj->GetSGNode()->BBox());
 		// we can now add the graphic controller to the physic engine
 		replica->ActivateGraphicController(true);
 
@@ -881,7 +892,7 @@ SCA_IObject* KX_Scene::AddReplicaObject(class CValue* originalobject,
 	m_ueberExecutionPriority++;
 
 	// lets create a replica
-	KX_GameObject* replica = (KX_GameObject*) AddNodeReplicaObject(NULL,originalobj);
+	KX_GameObject* replica = (KX_GameObject*) AddNodeReplicaObject(nullptr,originalobj);
 
 	// add a timebomb to this object
 	// lifespan of zero means 'this object lives forever'
@@ -928,7 +939,6 @@ SCA_IObject* KX_Scene::AddReplicaObject(class CValue* originalobject,
 	}
 
 	replica->GetSGNode()->UpdateWorldData(0);
-	replica->GetSGNode()->SetBBox(originalobj->GetSGNode()->BBox());
 	// the size is correct, we can add the graphic controller to the physic engine
 	replica->ActivateGraphicController(true);
 
@@ -1021,9 +1031,8 @@ void KX_Scene::DelayedRemoveObject(class CValue* gameobj)
 	}
 }
 
-int KX_Scene::NewRemoveObject(class CValue* gameobj)
+bool KX_Scene::NewRemoveObject(class CValue* gameobj)
 {
-	int ret;
 	KX_GameObject* newobj = (KX_GameObject*) gameobj;
 
 	/* remove property from debug list */
@@ -1041,12 +1050,9 @@ int KX_Scene::NewRemoveObject(class CValue* gameobj)
 	// blender object, that's why we need to check the game object
 	// as only the deletion of the original object must be recorded
 	if (newobj->GetBlenderObject()) {
-		// In some case the game object can contains a NULL blender object e.g default camera.
+		// In some case the game object can contains a nullptr blender object e.g default camera.
 		m_logicmgr->UnregisterGameObj(newobj->GetBlenderObject(), gameobj);
 	}
-
-	//todo: look at this
-	//GetPhysicsEnvironment()->RemovePhysicsController(gameobj->getPhysicsController());
 
 	// remove all sensors/controllers/actuators from logicsystem...
 	
@@ -1062,7 +1068,7 @@ int KX_Scene::NewRemoveObject(class CValue* gameobj)
 		 !(itc==controllers.end());itc++)
 	{
 		m_logicmgr->RemoveController(*itc);
-		(*itc)->ReParent(NULL);
+		(*itc)->ReParent(nullptr);
 	}
 
 	SCA_ActuatorList& actuators = newobj->GetActuators();
@@ -1105,28 +1111,28 @@ int KX_Scene::NewRemoveObject(class CValue* gameobj)
 
 	newobj->RemoveMeshes();
 
-	m_cubeMapManager->InvalidateCubeMapViewpoint(newobj);
+	m_rendererManager->InvalidateViewpoint(newobj);
 
-	ret = 1;
+	bool ret = true;
 	if (newobj->GetGameObjectType()==SCA_IObject::OBJ_LIGHT && m_lightlist->RemoveValue(newobj))
-		ret = newobj->Release();
+		ret = (newobj->Release() != nullptr);
 	if (m_objectlist->RemoveValue(newobj))
-		ret = newobj->Release();
+		ret = (newobj->Release() != nullptr);
 	if (m_tempObjectList->RemoveValue(newobj))
-		ret = newobj->Release();
+		ret = (newobj->Release() != nullptr);
 	if (m_parentlist->RemoveValue(newobj))
-		ret = newobj->Release();
+		ret = (newobj->Release() != nullptr);
 	if (m_inactivelist->RemoveValue(newobj))
-		ret = newobj->Release();
+		ret = (newobj->Release() != nullptr);
 	if (m_euthanasyobjects->RemoveValue(newobj))
-		ret = newobj->Release();
+		ret = (newobj->Release() != nullptr);
 	if (m_animatedlist->RemoveValue(newobj))
-		ret = newobj->Release();
+		ret = (newobj->Release() != nullptr);
 	if (m_fontlist->RemoveValue(newobj)) {
-		ret = newobj->Release();
+		ret = (newobj->Release() != nullptr);
 	}
 	if (m_cameralist->RemoveValue(newobj)) {
-		ret = newobj->Release();
+		ret = (newobj->Release() != nullptr);
 	}
 
 	/* Warning 'newobj' maye be freed now, only compare, don't access */
@@ -1136,15 +1142,13 @@ int KX_Scene::NewRemoveObject(class CValue* gameobj)
 	{
 		//no AddRef done on m_active_camera so no Release
 		//m_active_camera->Release();
-		m_active_camera = NULL;
+		m_active_camera = nullptr;
 	}
 
-	/* currently does nothing, keep in case we need to Unregister something */
-#if 0
-	if (m_sceneConverter)
-		m_sceneConverter->UnregisterGameObject(newobj);
-#endif
-	
+	if (newobj == m_overrideCullingCamera) {
+		m_overrideCullingCamera = nullptr;
+	}
+
 	// return value will be 0 if the object is actually deleted (all reference gone)
 	
 	return ret;
@@ -1162,7 +1166,7 @@ void KX_Scene::ReplaceMesh(class CValue* obj,void* meshobj, bool use_gfx, bool u
 		return;
 	}
 
-	if (use_gfx && mesh != NULL)
+	if (use_gfx && mesh != nullptr)
 	{
 	gameobj->RemoveMeshes();
 	gameobj->AddMesh(mesh);
@@ -1170,8 +1174,8 @@ void KX_Scene::ReplaceMesh(class CValue* obj,void* meshobj, bool use_gfx, bool u
 	if (gameobj->IsDeformable())
 	{
 		BL_DeformableGameObject* newobj = static_cast<BL_DeformableGameObject*>( gameobj );
-		BL_LatticeObject *latobj = NULL;
-		BL_ArmatureObject *armobj = NULL;
+		BL_LatticeObject *latobj = nullptr;
+		BL_ArmatureObject *armobj = nullptr;
 		RAS_Deformer *deformer = newobj->GetDeformer();
 		
 		if (deformer)
@@ -1185,7 +1189,7 @@ void KX_Scene::ReplaceMesh(class CValue* obj,void* meshobj, bool use_gfx, bool u
 				armobj = static_cast<BL_SkinDeformer*>(deformer)->GetArmatureObject();
 			}
 			delete newobj->GetDeformer();
-			newobj->SetDeformer(NULL);
+			newobj->SetDeformer(nullptr);
 		}
 
 		if (mesh->GetMesh()) 
@@ -1199,17 +1203,17 @@ void KX_Scene::ReplaceMesh(class CValue* obj,void* meshobj, bool use_gfx, bool u
 			Mesh* blendmesh = mesh->GetMesh();
 
 			bool bHasModifier = BL_ModifierDeformer::HasCompatibleDeformer(blendobj);
-			bool bHasShapeKey = blendmesh->key != NULL && blendmesh->key->type==KEY_RELATIVE;
-			bool bHasDvert = blendmesh->dvert != NULL;
+			bool bHasShapeKey = blendmesh->key != nullptr && blendmesh->key->type==KEY_RELATIVE;
+			bool bHasDvert = blendmesh->dvert != nullptr;
 			bool bHasArmature = 
 			        armobj &&									// object is armature deform
 					oldblendobj &&								// needed for mesh deform
-					blendmesh->dvert!=NULL;						// mesh has vertex group
+					blendmesh->dvert!=nullptr;						// mesh has vertex group
 #ifdef WITH_BULLET
 			bool bHasSoftBody = (!parentobj && (blendobj->gameflag & OB_SOFT_BODY));
 #endif
 
-			if (oldblendobj==NULL) {
+			if (oldblendobj==nullptr) {
 				if (bHasModifier || bHasShapeKey || bHasDvert || bHasArmature) {
 					CM_FunctionWarning("new mesh is not used in an object from the current scene, you will get incorrect behavior");
 					bHasShapeKey= bHasDvert= bHasArmature=bHasModifier= false;
@@ -1238,8 +1242,8 @@ void KX_Scene::ReplaceMesh(class CValue* obj,void* meshobj, bool use_gfx, bool u
 						m_blenderScene,
 						oldblendobj, blendobj,
 						mesh,
-						NULL,
-					    latobj
+						nullptr,
+						latobj
 					);
 				}
 				newobj->SetDeformer(modifierDeformer);
@@ -1264,7 +1268,7 @@ void KX_Scene::ReplaceMesh(class CValue* obj,void* meshobj, bool use_gfx, bool u
 						oldblendobj, blendobj,
 						mesh,
 						true,
-						NULL
+						nullptr
 					);
 				}
 				newobj->SetDeformer( shapeDeformer);
@@ -1302,117 +1306,64 @@ void KX_Scene::ReplaceMesh(class CValue* obj,void* meshobj, bool use_gfx, bool u
 
 	if (use_phys) { /* update the new assigned mesh with the physics mesh */
 		if (gameobj->GetPhysicsController())
-			gameobj->GetPhysicsController()->ReinstancePhysicsShape(NULL, use_gfx?NULL:mesh);
+			gameobj->GetPhysicsController()->ReinstancePhysicsShape(nullptr, use_gfx?nullptr:mesh);
 	}
+	// Always make sure that the bounding box is updated to the new mesh.
 	gameobj->UpdateBounds(true);
 }
 
 
 KX_Camera* KX_Scene::GetActiveCamera()
 {
-	// NULL if not defined
+	// nullptr if not defined
 	return m_active_camera;
 }
 
-
 void KX_Scene::SetActiveCamera(KX_Camera* cam)
 {
-	// only set if the cam is in the active list? Or add it otherwise?
-	if (!m_cameralist->SearchValue(cam)) {
-		m_cameralist->Add(cam->AddRef());
-		if (cam) {
-			CM_Debug("added cam " << cam->GetName());
-		}
-	}
-
 	m_active_camera = cam;
+}
+
+KX_Camera *KX_Scene::GetOverrideCullingCamera() const
+{
+	return m_overrideCullingCamera;
+}
+
+void KX_Scene::SetOverrideCullingCamera(KX_Camera *cam)
+{
+	m_overrideCullingCamera = cam;
 }
 
 void KX_Scene::SetCameraOnTop(KX_Camera* cam)
 {
-	if (!m_cameralist->SearchValue(cam)) {
-		// adding is always done at the back, so that's all that needs to be done
-		m_cameralist->Add(cam->AddRef());
-		if (cam) {
-			CM_Debug("added cam " << cam->GetName());
-		}
-	}
-	else {
-		// no release and addref just change camera place
-		m_cameralist->RemoveValue(cam);
-		m_cameralist->Add(cam);
-	}
+	// no release and addref just change camera place
+	m_cameralist->RemoveValue(cam);
+	m_cameralist->Add(cam);
 }
 
-void KX_Scene::MarkVisible(RAS_IRasterizer* rasty, KX_GameObject* gameobj,KX_Camera*  cam,int layer)
+void KX_Scene::PhysicsCullingCallback(KX_ClientObjectInfo *objectInfo, void *cullingInfo)
 {
-	// User (Python/Actuator) has forced object invisible...
-	if (!gameobj->GetSGNode() || !gameobj->GetVisible())
-		return;
-	
-	// Shadow lamp layers
-	if (layer && !(gameobj->GetLayer() & layer)) {
-		gameobj->SetCulled(true);
-		return;
-	}
-
-	// If Frustum culling is off, the object is always visible.
-	bool vis = !cam->GetFrustumCulling();
-	
-	// If the camera is inside this node, then the object is visible.
-	if (!vis)
-	{
-		vis = gameobj->GetSGNode()->Inside( cam->GetCameraLocation() );
-	}
-		
-	// Test the object's bound sphere against the view frustum.
-	if (!vis)
-	{
-		SG_BBox &box = gameobj->GetSGNode()->BBox();
-		const MT_Vector3& scale = gameobj->NodeGetWorldScaling();
-		const MT_Scalar radius = fabs(scale[scale.closestAxis()] * box.GetRadius());
-		const MT_Vector3 center = gameobj->NodeGetWorldPosition() + (box.GetCenter() * scale) * gameobj->NodeGetWorldOrientation();
-		switch (cam->SphereInsideFrustum(center, radius))
-		{
-			case KX_Camera::INSIDE:
-				vis = true;
-				break;
-			case KX_Camera::OUTSIDE:
-				vis = false;
-				break;
-			case KX_Camera::INTERSECT:
-				// Test the object's bound box against the view frustum.
-				MT_Vector3 box[8];
-				gameobj->GetSGNode()->GetBBox(box); 
-				vis = cam->BoxInsideFrustum(box) != KX_Camera::OUTSIDE;
-				break;
-		}
-	}
-
-	// Visibility/ non-visibility are marked
-	// elsewhere now.
-	gameobj->SetCulled(!vis);
-}
-
-void KX_Scene::PhysicsCullingCallback(KX_ClientObjectInfo *objectInfo, void* cullingInfo)
-{
+	CullingInfo *info = static_cast<CullingInfo *>(cullingInfo);
 	KX_GameObject* gameobj = objectInfo->m_gameobject;
-	if (!gameobj->GetVisible())
+	if (!gameobj->GetVisible() || !gameobj->UseCulling()) {
 		// ideally, invisible objects should be removed from the culling tree temporarily
 		return;
-	if (((CullingInfo*)cullingInfo)->m_layer && !(gameobj->GetLayer() & ((CullingInfo*)cullingInfo)->m_layer))
+	}
+	if (info->m_layer && !(gameobj->GetLayer() & info->m_layer)) {
 		// used for shadow: object is not in shadow layer
 		return;
+	}
 
 	// make object visible
 	gameobj->SetCulled(false);
+	info->m_nodes.push_back(gameobj->GetCullingNode());
 }
 
-void KX_Scene::CalculateVisibleMeshes(RAS_IRasterizer* rasty,KX_Camera* cam, int layer)
+void KX_Scene::CalculateVisibleMeshes(KX_CullingNodeList& nodes, KX_Camera *cam, int layer)
 {
 	m_boundingBoxManager->Update(false);
 
-	// Update the object boudning volume box if the object had a deformer.
+	// Update the object bounding volume box if the object had a deformer.
 	for (CListValue::iterator<KX_GameObject> it = m_objectlist->GetBegin(), end = m_objectlist->GetEnd(); it != end; ++it) {
 		KX_GameObject *gameobj = *it;
 		if (gameobj->GetDeformer()) {
@@ -1427,9 +1378,19 @@ void KX_Scene::CalculateVisibleMeshes(RAS_IRasterizer* rasty,KX_Camera* cam, int
 
 	m_boundingBoxManager->ClearModified();
 
+	if (!cam->GetFrustumCulling()) {
+		for (CListValue::iterator<KX_GameObject> it = m_objectlist->GetBegin(), end = m_objectlist->GetEnd(); it != end; ++it) {
+			KX_GameObject *gameobj = *it;
+			KX_CullingNode *node = gameobj->GetCullingNode();
+			nodes.push_back(gameobj->GetCullingNode());
+			node->SetCulled(false);
+		}
+
+		return;
+	}
+
 	bool dbvt_culling = false;
-	if (m_dbvt_culling) 
-	{
+	if (m_dbvt_culling) {
 		/* Reset KX_GameObject m_bCulled to true before doing culling
 		 * since DBVT culling will only set it to false.
 		 * This is similar to what RAS_BucketManager does for RAS_MeshSlot culling.
@@ -1441,11 +1402,11 @@ void KX_Scene::CalculateVisibleMeshes(RAS_IRasterizer* rasty,KX_Camera* cam, int
 
 		// test culling through Bullet
 		// get the clip planes
-		const MT_Vector4* cplanes = cam->GetNormalizedClipPlanes();
+		const std::array<MT_Vector4, 6>& cplanes = cam->GetFrustum().GetPlanes();
 		// and convert
 		MT_Vector4 planes[6] = {cplanes[4], cplanes[5], cplanes[0], cplanes[1], cplanes[2], cplanes[3]};
 
-		CullingInfo info(layer);
+		CullingInfo info(layer, nodes);
 
 		float mvmat[16] = {0.0f};
 		cam->GetModelviewMatrix().getValue(mvmat);
@@ -1457,51 +1418,55 @@ void KX_Scene::CalculateVisibleMeshes(RAS_IRasterizer* rasty,KX_Camera* cam, int
 		                                                 mvmat, pmat);
 	}
 	if (!dbvt_culling) {
-		// the physics engine couldn't help us, do it the hard way
-		for (int i = 0; i < m_objectlist->GetCount(); i++)
-		{
-			MarkVisible(rasty, static_cast<KX_GameObject*>(m_objectlist->GetValue(i)), cam, layer);
+		KX_CullingHandler handler(nodes, cam->GetFrustum());
+		for (CListValue::iterator<KX_GameObject> it = m_objectlist->GetBegin(), end = m_objectlist->GetEnd(); it != end; ++it) {
+			KX_GameObject *gameobj = *it;
+			if (gameobj->UseCulling() && gameobj->GetVisible() && (layer == 0 || gameobj->GetLayer() & layer)) {
+				handler.Process(gameobj->GetCullingNode());
+			}
 		}
 	}
 }
 
-void KX_Scene::DrawDebug(RAS_IRasterizer *rasty)
+void KX_Scene::DrawDebug(RAS_DebugDraw& debugDraw, const KX_CullingNodeList& nodes)
 {
-	const bool showBoundingBox = KX_GetActiveEngine()->GetShowBoundingBox();
-	if (showBoundingBox) {
-		for (CListValue::iterator<KX_GameObject> it = m_objectlist->GetBegin(), end = m_objectlist->GetEnd(); it != end; ++it) {
-			KX_GameObject *gameobj = *it;
+	const KX_DebugOption showBoundingBox = KX_GetActiveEngine()->GetShowBoundingBox();
+	if (showBoundingBox != KX_DebugOption::DISABLE) {
+		for (KX_CullingNode *node : nodes) {
+			KX_GameObject *gameobj = node->GetObject();
 
-			if (!gameobj->GetCulled() && gameobj->GetMeshCount() != 0) {
-				const MT_Vector3& scale = gameobj->NodeGetWorldScaling();
-				const MT_Vector3& position = gameobj->NodeGetWorldPosition();
-				const MT_Matrix3x3& orientation = gameobj->NodeGetWorldOrientation();
-				const SG_BBox& box = gameobj->GetSGNode()->BBox();
-				const MT_Vector3& center = box.GetCenter();
+			const MT_Vector3& scale = gameobj->NodeGetWorldScaling();
+			const MT_Vector3& position = gameobj->NodeGetWorldPosition();
+			const MT_Matrix3x3& orientation = gameobj->NodeGetWorldOrientation();
+			const SG_BBox& box = gameobj->GetCullingNode()->GetAabb();
+			const MT_Vector3& center = box.GetCenter();
 
-				rasty->DrawDebugAabb(this, position, orientation, box.GetMin() * scale, box.GetMax() * scale,
-					MT_Vector4(1.0f, 0.0f, 1.0f, 1.0f));
+			debugDraw.DrawAabb(position, orientation, box.GetMin() * scale, box.GetMax() * scale,
+				MT_Vector4(1.0f, 0.0f, 1.0f, 1.0f));
 
-				// Render center in red, green and blue.
-				rasty->DrawDebugLine(this, orientation * center * scale + position,
-					orientation * (center + MT_Vector3(1.0f, 0.0f, 0.0f)) * scale + position,
-					MT_Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-				rasty->DrawDebugLine(this, orientation * center * scale + position,
-					orientation * (center + MT_Vector3(0.0f, 1.0f, 0.0f)) * scale  + position,
-					MT_Vector4(0.0f, 1.0f, 0.0f, 1.0f));
-				rasty->DrawDebugLine(this, orientation * center * scale + position,
-					orientation * (center + MT_Vector3(0.0f, 0.0f, 1.0f)) * scale  + position,
-					MT_Vector4(0.0f, 0.0f, 1.0f, 1.0f));
-			}
+			// Render center in red, green and blue.
+			debugDraw.DrawLine(orientation * center * scale + position,
+				orientation * (center + MT_Vector3(1.0f, 0.0f, 0.0f)) * scale + position,
+				MT_Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+			debugDraw.DrawLine(orientation * center * scale + position,
+				orientation * (center + MT_Vector3(0.0f, 1.0f, 0.0f)) * scale  + position,
+				MT_Vector4(0.0f, 1.0f, 0.0f, 1.0f));
+			debugDraw.DrawLine(orientation * center * scale + position,
+				orientation * (center + MT_Vector3(0.0f, 0.0f, 1.0f)) * scale  + position,
+				MT_Vector4(0.0f, 0.0f, 1.0f, 1.0f));
 		}
 	}
-	// The side effect of a armature is that it was added in the animated object list.
-	for (CListValue::iterator<KX_GameObject> it = m_animatedlist->GetBegin(), end = m_animatedlist->GetEnd(); it != end; ++it) {
-		KX_GameObject *gameobj = *it;
-		if (gameobj->GetGameObjectType() == SCA_IObject::OBJ_ARMATURE) {
-			BL_ArmatureObject *armature = (BL_ArmatureObject *)gameobj;
-			if (armature->GetDrawDebug() || KX_GetActiveEngine()->GetShowArmatures()) {
-				armature->DrawDebugArmature();
+
+	const KX_DebugOption showArmatures = KX_GetActiveEngine()->GetShowArmatures();
+	if (showArmatures != KX_DebugOption::DISABLE) {
+		// The side effect of a armature is that it was added in the animated object list.
+		for (CListValue::iterator<KX_GameObject> it = m_animatedlist->GetBegin(), end = m_animatedlist->GetEnd(); it != end; ++it) {
+			KX_GameObject *gameobj = *it;
+			if (gameobj->GetGameObjectType() == SCA_IObject::OBJ_ARMATURE) {
+				BL_ArmatureObject *armature = (BL_ArmatureObject *)gameobj;
+				if (showArmatures == KX_DebugOption::FORCE || armature->GetDrawDebug()) {
+					armature->DrawDebug(debugDraw);
+				}
 			}
 		}
 	}
@@ -1550,7 +1515,8 @@ static void update_anim_thread_func(TaskPool *pool, void *taskdata, int UNUSED(t
 	RAS_Deformer *deformer;
 
 	bool needs_update;
-	double curtime = *(double*)BLI_task_pool_userdata(pool);
+	KX_Scene::AnimationPoolData *data = (KX_Scene::AnimationPoolData *)BLI_task_pool_userdata(pool);
+	double curtime = data->curtime;
 
 	gameobj = (KX_GameObject*)taskdata;
 
@@ -1628,16 +1594,10 @@ static void update_anim_thread_func(TaskPool *pool, void *taskdata, int UNUSED(t
 
 void KX_Scene::UpdateAnimations(double curtime)
 {
-	TaskPool *pool = BLI_task_pool_create(KX_GetActiveEngine()->GetTaskScheduler(), &curtime);
 	KX_GameObject *gameobj;
 	RAS_Deformer *deformer;
 
-
-	// do the IPO first so that in an Lattice object that deforms a mesh is having animation,
-	// it will have its timestamp updated before calling the deform animation
-	for (CListValue::iterator<KX_GameObject> it = m_animatedlist->GetBegin(), end = m_animatedlist->GetEnd(); it != end; ++it) {
-		(*it)->UpdateActionIPOs();
-	}
+	m_animationPoolData.curtime = curtime;
 
 	for (CListValue::iterator<KX_GameObject> it = m_animatedlist->GetBegin(), end = m_animatedlist->GetEnd(); it != end; ++it) {
 		gameobj = *it;
@@ -1646,11 +1606,10 @@ void KX_Scene::UpdateAnimations(double curtime)
 		if (deformer && deformer->IsDependent())
 			// the parent object has been added to the animated list already, skip it in favor of the parent
 			continue;
-		BLI_task_pool_push(pool, update_anim_thread_func, gameobj, false, TASK_PRIORITY_LOW);
+		BLI_task_pool_push(m_animationPool, update_anim_thread_func, gameobj, false, TASK_PRIORITY_LOW);
 	}
 
-	BLI_task_pool_work_and_wait(pool);
-	BLI_task_pool_free(pool);
+	BLI_task_pool_work_and_wait(m_animationPool);
 
 }
 
@@ -1691,6 +1650,10 @@ void KX_Scene::LogicEndFrame()
 	//prepare obstacle simulation for new frame
 	if (m_obstacleSimulation)
 		m_obstacleSimulation->UpdateObstacles();
+
+	for (CListValue::iterator<KX_FontObject> it = m_fontlist->GetBegin(), end = m_fontlist->GetEnd(); it != end; ++it) {
+		(*it)->UpdateTextFromProperty();
+	}
 }
 
 
@@ -1703,7 +1666,7 @@ void KX_Scene::UpdateParents(double curtime)
 	// we use the SG dynamic list
 	SG_Node* node;
 
-	while ((node = SG_Node::GetNextScheduled(m_sghead)) != NULL)
+	while ((node = SG_Node::GetNextScheduled(m_sghead)) != nullptr)
 	{
 		node->UpdateWorldData(curtime);
 	}
@@ -1715,9 +1678,9 @@ void KX_Scene::UpdateParents(double curtime)
 	//}
 
 	// the list must be empty here
-	assert(m_sghead.Empty());
+	BLI_assert(m_sghead.Empty());
 	// some nodes may be ready for reschedule, move them to schedule list for next time
-	while ((node = SG_Node::GetNextRescheduled(m_sghead)) != NULL)
+	while ((node = SG_Node::GetNextRescheduled(m_sghead)) != nullptr)
 	{
 		node->Schedule(m_sghead);
 	}
@@ -1731,34 +1694,31 @@ RAS_MaterialBucket* KX_Scene::FindBucket(class RAS_IPolyMaterial* polymat, bool 
 
 
 
-void KX_Scene::RenderBuckets(const MT_Transform & cameratransform,
-                             class RAS_IRasterizer* rasty)
+void KX_Scene::RenderBuckets(const KX_CullingNodeList& nodes, const MT_Transform& cameratransform, RAS_Rasterizer *rasty, RAS_OffScreen *offScreen)
 {
-	for (CListValue::iterator<KX_GameObject> it = m_objectlist->GetBegin(), end = m_objectlist->GetEnd(); it != end; ++it) {
+	for (KX_CullingNode *node : nodes) {
 		/* This function update all mesh slot info (e.g culling, color, matrix) from the game object.
 		 * It's done just before the render to be sure of the object color and visibility. */
-		(*it)->UpdateBuckets();
+		node->GetObject()->UpdateBuckets();
 	}
 
-	m_bucketmanager->Renderbuckets(cameratransform,rasty);
+	m_bucketmanager->Renderbuckets(cameratransform, rasty, offScreen);
 	KX_BlenderMaterial::EndFrame(rasty);
 }
 
-void KX_Scene::RenderCubeMaps(RAS_IRasterizer *rasty)
+void KX_Scene::RenderTextureRenderers(KX_TextureRendererManager::RendererCategory category, RAS_Rasterizer *rasty, RAS_OffScreen *offScreen, KX_Camera *camera,
+									  const RAS_Rect& viewport, const RAS_Rect& area)
 {
-	m_cubeMapManager->Render(rasty);
+	m_rendererManager->Render(category, rasty, offScreen, camera, viewport, area);
 }
 
-void KX_Scene::UpdateObjectLods(KX_Camera *cam)
+void KX_Scene::UpdateObjectLods(KX_Camera *cam, const KX_CullingNodeList& nodes)
 {
 	const MT_Vector3& cam_pos = cam->NodeGetWorldPosition();
 	const float lodfactor = cam->GetLodDistanceFactor();
 
-	for (CListValue::iterator<KX_GameObject> it = m_objectlist->GetBegin(), end = m_objectlist->GetEnd(); it != end; ++it) {
-		KX_GameObject *gameobj = *it;
-		if (!gameobj->GetCulled()) {
-			gameobj->UpdateLod(cam_pos, lodfactor);
-		}
+	for (KX_CullingNode *node : nodes) {
+		node->GetObject()->UpdateLod(cam_pos, lodfactor);
 	}
 }
 
@@ -1841,11 +1801,6 @@ MT_Vector3 KX_Scene::GetGravity()
 	return gravity;
 }
 
-void KX_Scene::SetSceneConverter(class KX_BlenderSceneConverter* sceneConverter)
-{
-	m_sceneConverter = sceneConverter;
-}
-
 void KX_Scene::SetPhysicsEnvironment(class PHY_IPhysicsEnvironment* physEnv)
 {
 	m_physicsEnvironment = physEnv;
@@ -1855,19 +1810,11 @@ void KX_Scene::SetPhysicsEnvironment(class PHY_IPhysicsEnvironment* physEnv)
 	}
 }
  
-void KX_Scene::setSuspendedTime(double suspendedtime)
-{
-	m_suspendedtime = suspendedtime;
-}
-double KX_Scene::getSuspendedTime()
-{
-	return m_suspendedtime;
-}
-void KX_Scene::setSuspendedDelta(double suspendeddelta)
+void KX_Scene::SetSuspendedDelta(double suspendeddelta)
 {
 	m_suspendeddelta = suspendeddelta;
 }
-double KX_Scene::getSuspendedDelta()
+double KX_Scene::GetSuspendedDelta() const
 {
 	return m_suspendeddelta;
 }
@@ -1996,21 +1943,15 @@ bool KX_Scene::MergeScene(KX_Scene *other)
 	PHY_IPhysicsEnvironment *env = this->GetPhysicsEnvironment();
 	PHY_IPhysicsEnvironment *env_other = other->GetPhysicsEnvironment();
 
-	if ((env==NULL) != (env_other==NULL)) /* TODO - even when both scenes have NONE physics, the other is loaded with bullet enabled, ??? */
+	if ((env==nullptr) != (env_other==nullptr)) /* TODO - even when both scenes have NONE physics, the other is loaded with bullet enabled, ??? */
 	{
-		CM_FunctionError("physics scenes type differ, aborting\n\tsource " << (int)(env!=NULL) << ", target " << (int)(env_other!=NULL));
+		CM_FunctionError("physics scenes type differ, aborting\n\tsource " << (int)(env!=nullptr) << ", target " << (int)(env_other!=nullptr));
 		return false;
 	}
-
-	if (GetSceneConverter() != other->GetSceneConverter()) {
-		CM_FunctionError("converters differ, aborting");
-		return false;
-	}
-
 
 	GetBucketManager()->MergeBucketManager(other->GetBucketManager(), this);
 	GetBoundingBoxManager()->Merge(other->GetBoundingBoxManager());
-	GetCubeMapManager()->Merge(other->GetCubeMapManager());
+	GetTextureRendererManager()->Merge(other->GetTextureRendererManager());
 
 	/* active + inactive == all ??? - lets hope so */
 	for (CListValue::iterator<KX_GameObject> it = other->GetObjectList()->GetBegin(), end = other->GetObjectList()->GetEnd(); it != end; ++it) {
@@ -2018,7 +1959,7 @@ bool KX_Scene::MergeScene(KX_Scene *other)
 		MergeScene_GameObject(gameobj, this, other);
 
 		/* add properties to debug list for LibLoad objects */
-		if (KX_GetActiveEngine()->GetAutoAddDebugProperties()) {
+		if (KX_GetActiveEngine()->GetFlag(KX_KetsjiEngine::AUTO_ADD_DEBUG_PROPERTIES)) {
 			AddObjectDebugProperties(gameobj);
 		}
 	}
@@ -2074,7 +2015,7 @@ bool KX_Scene::MergeScene(KX_Scene *other)
 	/* move materials across, assume they both use the same scene-converters
 	 * Do this after lights are merged so materials can use the lights in shaders
 	 */
-	GetSceneConverter()->MergeScene(this, other);
+	KX_GetActiveEngine()->GetConverter()->MergeScene(this, other);
 
 	/* merge logic */
 	{
@@ -2114,9 +2055,9 @@ RAS_2DFilterManager *KX_Scene::Get2DFilterManager() const
 	return m_filterManager;
 }
 
-void KX_Scene::Render2DFilters(RAS_IRasterizer *rasty, RAS_ICanvas *canvas, unsigned short target)
+RAS_OffScreen *KX_Scene::Render2DFilters(RAS_Rasterizer *rasty, RAS_ICanvas *canvas, RAS_OffScreen *inputofs, RAS_OffScreen *targetofs)
 {
-	m_filterManager->RenderFilters(rasty, canvas, target);
+	return m_filterManager->RenderFilters(rasty, canvas, inputofs, targetofs);
 }
 
 #ifdef WITH_PYTHON
@@ -2133,7 +2074,7 @@ void KX_Scene::RunDrawingCallbacks(DrawingCallbackType callbackType, KX_Camera *
 		RunPythonCallBackList(list, args, 0, 1);
 	}
 	else {
-		RunPythonCallBackList(list, NULL, 0, 0);
+		RunPythonCallBackList(list, nullptr, 0, 0);
 	}
 }
 
@@ -2141,7 +2082,7 @@ void KX_Scene::RunDrawingCallbacks(DrawingCallbackType callbackType, KX_Camera *
 //Python
 
 PyTypeObject KX_Scene::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"KX_Scene",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -2178,7 +2119,7 @@ PyMethodDef KX_Scene::Methods[] = {
 	/* dict style access */
 	KX_PYMETHODTABLE(KX_Scene, get),
 	
-	{NULL,NULL} //Sentinel
+	{nullptr,nullptr} //Sentinel
 };
 static PyObject *Map_GetItem(PyObject *self_v, PyObject *item)
 {
@@ -2186,9 +2127,9 @@ static PyObject *Map_GetItem(PyObject *self_v, PyObject *item)
 	const char *attr_str= _PyUnicode_AsString(item);
 	PyObject *pyconvert;
 	
-	if (self == NULL) {
+	if (self == nullptr) {
 		PyErr_SetString(PyExc_SystemError, "val = scene[key]: KX_Scene, " BGE_PROXY_ERROR_MSG);
-		return NULL;
+		return nullptr;
 	}
 
 	if (!self->m_attr_dict)
@@ -2204,7 +2145,7 @@ static PyObject *Map_GetItem(PyObject *self_v, PyObject *item)
 	else {
 		if (attr_str)	PyErr_Format(PyExc_KeyError, "value = scene[key]: KX_Scene, key \"%s\" does not exist", attr_str);
 		else			PyErr_SetString(PyExc_KeyError, "value = scene[key]: KX_Scene, key does not exist");
-		return NULL;
+		return nullptr;
 	}
 		
 }
@@ -2213,10 +2154,10 @@ static int Map_SetItem(PyObject *self_v, PyObject *key, PyObject *val)
 {
 	KX_Scene* self = static_cast<KX_Scene*>BGE_PROXY_REF(self_v);
 	const char *attr_str= _PyUnicode_AsString(key);
-	if (attr_str==NULL)
+	if (attr_str==nullptr)
 		PyErr_Clear();
 	
-	if (self == NULL) {
+	if (self == nullptr) {
 		PyErr_SetString(PyExc_SystemError, "scene[key] = value: KX_Scene, " BGE_PROXY_ERROR_MSG);
 		return -1;
 	}
@@ -2224,7 +2165,7 @@ static int Map_SetItem(PyObject *self_v, PyObject *key, PyObject *val)
 	if (!self->m_attr_dict)
 		self->m_attr_dict = PyDict_New();
 
-	if (val==NULL) { /* del ob["key"] */
+	if (val==nullptr) { /* del ob["key"] */
 		int del= 0;
 		
 		if (self->m_attr_dict)
@@ -2242,7 +2183,7 @@ static int Map_SetItem(PyObject *self_v, PyObject *key, PyObject *val)
 	else { /* ob["key"] = value */
 		int set = 0;
 
-		if (self->m_attr_dict==NULL) /* lazy init */
+		if (self->m_attr_dict==nullptr) /* lazy init */
 			self->m_attr_dict= PyDict_New();
 		
 		
@@ -2263,7 +2204,7 @@ static int Seq_Contains(PyObject *self_v, PyObject *value)
 {
 	KX_Scene* self = static_cast<KX_Scene*>BGE_PROXY_REF(self_v);
 	
-	if (self == NULL) {
+	if (self == nullptr) {
 		PyErr_SetString(PyExc_SystemError, "val in scene: KX_Scene, " BGE_PROXY_ERROR_MSG);
 		return -1;
 	}
@@ -2278,49 +2219,49 @@ static int Seq_Contains(PyObject *self_v, PyObject *value)
 }
 
 PyMappingMethods KX_Scene::Mapping = {
-	(lenfunc)NULL,                  /* inquiry mp_length */
+	(lenfunc)nullptr,                  /* inquiry mp_length */
 	(binaryfunc)Map_GetItem,        /* binaryfunc mp_subscript */
 	(objobjargproc)Map_SetItem,     /* objobjargproc mp_ass_subscript */
 };
 
 PySequenceMethods KX_Scene::Sequence = {
-	NULL,                       /* Cant set the len otherwise it can evaluate as false */
-	NULL,                       /* sq_concat */
-	NULL,                       /* sq_repeat */
-	NULL,                       /* sq_item */
-	NULL,                       /* sq_slice */
-	NULL,                       /* sq_ass_item */
-	NULL,                       /* sq_ass_slice */
+	nullptr,                       /* Cant set the len otherwise it can evaluate as false */
+	nullptr,                       /* sq_concat */
+	nullptr,                       /* sq_repeat */
+	nullptr,                       /* sq_item */
+	nullptr,                       /* sq_slice */
+	nullptr,                       /* sq_ass_item */
+	nullptr,                       /* sq_ass_slice */
 	(objobjproc)Seq_Contains,   /* sq_contains */
-	(binaryfunc) NULL,          /* sq_inplace_concat */
-	(ssizeargfunc) NULL,        /* sq_inplace_repeat */
+	(binaryfunc) nullptr,          /* sq_inplace_concat */
+	(ssizeargfunc) nullptr,        /* sq_inplace_repeat */
 };
 
-PyObject *KX_Scene::pyattr_get_name(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_Scene::pyattr_get_name(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_Scene* self = static_cast<KX_Scene*>(self_v);
 	return PyUnicode_FromStdString(self->GetName());
 }
 
-PyObject *KX_Scene::pyattr_get_objects(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_Scene::pyattr_get_objects(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_Scene* self = static_cast<KX_Scene*>(self_v);
 	return self->GetObjectList()->GetProxy();
 }
 
-PyObject *KX_Scene::pyattr_get_objects_inactive(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_Scene::pyattr_get_objects_inactive(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_Scene* self = static_cast<KX_Scene*>(self_v);
 	return self->GetInactiveList()->GetProxy();
 }
 
-PyObject *KX_Scene::pyattr_get_lights(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_Scene::pyattr_get_lights(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_Scene* self = static_cast<KX_Scene*>(self_v);
 	return self->GetLightList()->GetProxy();
 }
 
-PyObject *KX_Scene::pyattr_get_filter_manager(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_Scene::pyattr_get_filter_manager(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_Scene *self = static_cast<KX_Scene*>(self_v);
 	KX_2DFilterManager *filterManager = (KX_2DFilterManager *)self->Get2DFilterManager();
@@ -2328,7 +2269,7 @@ PyObject *KX_Scene::pyattr_get_filter_manager(void *self_v, const KX_PYATTRIBUTE
 	return filterManager->GetProxy();
 }
 
-PyObject *KX_Scene::pyattr_get_world(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_Scene::pyattr_get_world(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_Scene* self = static_cast<KX_Scene*>(self_v);
 	KX_WorldInfo *world = self->GetWorldInfo();
@@ -2341,19 +2282,19 @@ PyObject *KX_Scene::pyattr_get_world(void *self_v, const KX_PYATTRIBUTE_DEF *att
 	}
 }
 
-PyObject *KX_Scene::pyattr_get_texts(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_Scene::pyattr_get_texts(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_Scene *self = static_cast<KX_Scene *>(self_v);
 	return self->GetFontList()->GetProxy();
 }
 
-PyObject *KX_Scene::pyattr_get_cameras(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_Scene::pyattr_get_cameras(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_Scene *self = static_cast<KX_Scene *>(self_v);
 	return self->GetCameraList()->GetProxy();
 }
 
-PyObject *KX_Scene::pyattr_get_active_camera(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_Scene::pyattr_get_active_camera(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_Scene* self = static_cast<KX_Scene*>(self_v);
 	KX_Camera* cam= self->GetActiveCamera();
@@ -2363,8 +2304,7 @@ PyObject *KX_Scene::pyattr_get_active_camera(void *self_v, const KX_PYATTRIBUTE_
 		Py_RETURN_NONE;
 }
 
-
-int KX_Scene::pyattr_set_active_camera(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int KX_Scene::pyattr_set_active_camera(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	KX_Scene* self = static_cast<KX_Scene*>(self_v);
 	KX_Camera *camOb;
@@ -2376,13 +2316,33 @@ int KX_Scene::pyattr_set_active_camera(void *self_v, const KX_PYATTRIBUTE_DEF *a
 	return PY_SET_ATTR_SUCCESS;
 }
 
+PyObject *KX_Scene::pyattr_get_overrideCullingCamera(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+{
+	KX_Scene *self = static_cast<KX_Scene*>(self_v);
+	KX_Camera *cam = self->GetOverrideCullingCamera();
+	return (cam) ? cam->GetProxy() : Py_None;
+}
+
+int KX_Scene::pyattr_set_overrideCullingCamera(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+{
+	KX_Scene *self = static_cast<KX_Scene*>(self_v);
+	KX_Camera *cam;
+
+	if (!ConvertPythonToCamera(self, value, &cam, true, "scene.active_camera = value: KX_Scene")) {
+		return PY_SET_ATTR_FAIL;
+	}
+
+	self->SetOverrideCullingCamera(cam);
+	return PY_SET_ATTR_SUCCESS;
+}
+
 static std::map<const std::string, KX_Scene::DrawingCallbackType> callbacksTable = {
 	{"pre_draw", KX_Scene::PRE_DRAW},
 	{"pre_draw_setup", KX_Scene::PRE_DRAW_SETUP},
 	{"post_draw", KX_Scene::POST_DRAW}
 };
 
-PyObject *KX_Scene::pyattr_get_drawing_callback(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_Scene::pyattr_get_drawing_callback(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_Scene *self = static_cast<KX_Scene *>(self_v);
 
@@ -2396,7 +2356,7 @@ PyObject *KX_Scene::pyattr_get_drawing_callback(void *self_v, const KX_PYATTRIBU
 	return self->m_drawCallbacks[type];
 }
 
-int KX_Scene::pyattr_set_drawing_callback(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int KX_Scene::pyattr_set_drawing_callback(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	KX_Scene *self = static_cast<KX_Scene *>(self_v);
 
@@ -2415,14 +2375,14 @@ int KX_Scene::pyattr_set_drawing_callback(void *self_v, const KX_PYATTRIBUTE_DEF
 	return PY_SET_ATTR_SUCCESS;
 }
 
-PyObject *KX_Scene::pyattr_get_gravity(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_Scene::pyattr_get_gravity(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_Scene* self = static_cast<KX_Scene*>(self_v);
 
 	return PyObjectFrom(self->GetGravity());
 }
 
-int KX_Scene::pyattr_set_gravity(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int KX_Scene::pyattr_set_gravity(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	KX_Scene* self = static_cast<KX_Scene*>(self_v);
 
@@ -2444,6 +2404,7 @@ PyAttributeDef KX_Scene::Attributes[] = {
 	KX_PYATTRIBUTE_RO_FUNCTION("filterManager",		KX_Scene, pyattr_get_filter_manager),
 	KX_PYATTRIBUTE_RO_FUNCTION("world",				KX_Scene, pyattr_get_world),
 	KX_PYATTRIBUTE_RW_FUNCTION("active_camera",		KX_Scene, pyattr_get_active_camera, pyattr_set_active_camera),
+	KX_PYATTRIBUTE_RW_FUNCTION("overrideCullingCamera",KX_Scene, pyattr_get_overrideCullingCamera, pyattr_set_overrideCullingCamera),
 	KX_PYATTRIBUTE_RW_FUNCTION("pre_draw",			KX_Scene, pyattr_get_drawing_callback, pyattr_set_drawing_callback),
 	KX_PYATTRIBUTE_RW_FUNCTION("post_draw",			KX_Scene, pyattr_get_drawing_callback, pyattr_set_drawing_callback),
 	KX_PYATTRIBUTE_RW_FUNCTION("pre_draw_setup",	KX_Scene, pyattr_get_drawing_callback, pyattr_set_drawing_callback),
@@ -2465,15 +2426,15 @@ KX_PYMETHODDEF_DOC(KX_Scene, addObject,
 	float time = 0.0f;
 
 	if (!PyArg_ParseTuple(args, "O|Of:addObject", &pyob, &pyreference, &time))
-		return NULL;
+		return nullptr;
 
 	if (!ConvertPythonToGameObject(m_logicmgr, pyob, &ob, false, "scene.addObject(object, reference, time): KX_Scene (first argument)") ||
 		!ConvertPythonToGameObject(m_logicmgr, pyreference, &reference, true, "scene.addObject(object, reference, time): KX_Scene (second argument)"))
-		return NULL;
+		return nullptr;
 
 	if (!m_inactivelist->SearchValue(ob)) {
 		PyErr_Format(PyExc_ValueError, "scene.addObject(object, reference, time): KX_Scene (first argument): object must be in an inactive layer");
-		return NULL;
+		return nullptr;
 	}
 	SCA_IObject *replica = AddReplicaObject((SCA_IObject*)ob, reference, time);
 	
@@ -2510,7 +2471,7 @@ KX_PYMETHODDEF_DOC(KX_Scene, replace,
 	char* name;
 	
 	if (!PyArg_ParseTuple(args, "s:replace", &name))
-		return NULL;
+		return nullptr;
 	
     if (KX_GetActiveEngine()->ReplaceScene(m_sceneName, name))
         Py_RETURN_TRUE;
@@ -2554,7 +2515,7 @@ KX_PYMETHODDEF_DOC(KX_Scene, get, "")
 	PyObject *ret;
 
 	if (!PyArg_ParseTuple(args, "O|O:get", &key, &def))
-		return NULL;
+		return nullptr;
 	
 	if (m_attr_dict && (ret=PyDict_GetItem(m_attr_dict, key))) {
 		Py_INCREF(ret);

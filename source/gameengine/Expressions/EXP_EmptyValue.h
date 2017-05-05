@@ -21,26 +21,18 @@
 
 #include "EXP_Value.h"
 
-class CListValue;
-
-class CEmptyValue : public CPropValue  
+class CEmptyValue : public CPropValue
 {
 public:
 	CEmptyValue();
-	virtual					~CEmptyValue();
+	virtual ~CEmptyValue();
 
 	virtual const std::string GetText();
-	virtual double			GetNumber();
-	virtual int				GetValueType();
-	bool					IsInside(CValue* testpoint,bool bBorderInclude=true);
-	CValue *				Calc(VALUE_OPERATOR op, CValue *val);
-	CValue *				CalcFinal(VALUE_DATA_TYPE dtype, VALUE_OPERATOR op, CValue *val);
-	virtual CValue*			GetReplica();
-
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:CEmptyValue")
-#endif
+	virtual double GetNumber();
+	virtual int GetValueType();
+	virtual CValue *Calc(VALUE_OPERATOR op, CValue *val);
+	virtual CValue *CalcFinal(VALUE_DATA_TYPE dtype, VALUE_OPERATOR op, CValue *val);
+	virtual CValue *GetReplica();
 };
 
-#endif  /* __EXP_EMPTYVALUE_H__ */
+#endif  // __EXP_EMPTYVALUE_H__

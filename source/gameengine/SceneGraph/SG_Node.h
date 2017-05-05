@@ -33,42 +33,18 @@
 #define __SG_NODE_H__
 
 #include "SG_QList.h"
-#include "SG_BBox.h"
 #include "SG_ParentRelation.h"
-#include <vector>
 
+#include "MT_Transform.h"
+
+#include "CM_Thread.h"
+
+#include <vector>
+#include <memory>
 
 class SG_Controller;
+class SG_Familly;
 class SG_Node;
-
-// used for debugging: stage of the game engine main loop at which a Scenegraph modification is done
-enum SG_Stage
-{
-	SG_STAGE_UNKNOWN = 0,
-	SG_STAGE_NETWORK,
-	SG_STAGE_NETWORK_UPDATE,
-	SG_STAGE_PHYSICS1,
-	SG_STAGE_PHYSICS1_UPDATE,
-	SG_STAGE_CONTROLLER,
-	SG_STAGE_CONTROLLER_UPDATE,
-	SG_STAGE_ACTUATOR,
-	SG_STAGE_ACTUATOR_UPDATE,
-	SG_STAGE_ANIMATION_UPDATE,
-	SG_STAGE_PHYSICS2,
-	SG_STAGE_PHYSICS2_UPDATE,
-	SG_STAGE_SCENE,
-	SG_STAGE_RENDER,
-	SG_STAGE_CONVERTER,
-	SG_STAGE_CULLING,
-	SG_STAGE_MAX
-};
-
-extern SG_Stage gSG_Stage;
-
-inline void SG_SetActiveStage(SG_Stage stage)
-{
-	gSG_Stage = stage;
-}
 
 typedef std::vector<SG_Controller *> SGControllerList;
 
@@ -85,7 +61,7 @@ typedef bool (*SG_RescheduleUpdateCallback)(SG_Node *sgnode, void *clientobj, vo
  * with replicated nodes and their children.
  * The second is called when a node is destroyed and again
  * is their for synchronization purposes
- * These callbacks may both be NULL.
+ * These callbacks may both be nullptr.
  * The efficacy of this approach has not been proved some
  * alternatives might be to perform all replication and destruction
  * externally.
@@ -95,11 +71,11 @@ typedef bool (*SG_RescheduleUpdateCallback)(SG_Node *sgnode, void *clientobj, vo
  */
 struct SG_Callbacks {
 	SG_Callbacks()
-	:m_replicafunc(NULL),
-	m_destructionfunc(NULL),
-	m_updatefunc(NULL),
-	m_schedulefunc(NULL),
-	m_reschedulefunc(NULL)
+	:m_replicafunc(nullptr),
+	m_destructionfunc(nullptr),
+	m_updatefunc(nullptr),
+	m_schedulefunc(nullptr),
+	m_reschedulefunc(nullptr)
 	{
 	}
 	
@@ -205,12 +181,14 @@ public:
 	 * the children of this node and update their world data.
 	 */
 	void UpdateWorldData(double time, bool parentUpdated = false);
+	void UpdateWorldDataThread(double time, bool parentUpdated = false);
 
 	/**
 	 * Update the simulation time of this node. Iterate through
 	 * the children nodes and update their simulated time.
 	 */
 	void SetSimulatedTime(double time, bool recurse);
+	void SetSimulatedTimeThread(double time, bool recurse);
 
 	/**
 	 * Schedule this node for update by placing it in head queue
@@ -283,7 +261,7 @@ public:
 	 * passed to the callback functions when they are
 	 * activated so you can synchronize these external objects
 	 * upon replication and destruction
-	 * This may be NULL.
+	 * This may be nullptr.
 	 */
 	void *GetSGClientObject() const;
 
@@ -330,7 +308,7 @@ public:
 	 * local coordinates of this object. If not then the translation
 	 * is assumed to be in global coordinates. In this case
 	 * you must provide a pointer to the parent of this object if it
-	 * exists otherwise if there is no parent set it to NULL
+	 * exists otherwise if there is no parent set it to nullptr
 	 */
 	void RelativeTranslate(const MT_Vector3& trans, const SG_Node *parent, bool local);
 	void SetLocalPosition(const MT_Vector3& trans);
@@ -356,14 +334,8 @@ public:
 
 	bool ComputeWorldTransforms(const SG_Node *parent, bool& parentUpdated);
 
-	/**
-	 * Bounding box functions.
-	 */
-	SG_BBox& BBox();
-	void SetBBox(SG_BBox& bbox);
-
-	bool Inside(const MT_Vector3 &point) const;
-	void GetBBox(MT_Vector3 *box) const;
+	const std::shared_ptr<SG_Familly>& GetFamilly() const;
+	void SetFamilly(const std::shared_ptr<SG_Familly>& familly);
 
 	bool IsModified();
 	bool IsDirty();
@@ -388,6 +360,8 @@ protected:
 	bool UpdateSpatialData(const SG_Node *parent, double time, bool& parentUpdated);
 
 private:
+	void UpdateWorldDataThreadSchedule(double time, bool parentUpdated = false);
+
 	void ProcessSGReplica(SG_Node **replica);
 
 	void *m_SGclientObject;
@@ -401,7 +375,7 @@ private:
 	NodeList m_children;
 
 	/**
-	 * The parent of this node may be NULL
+	 * The parent of this node may be nullptr
 	 */
 	SG_Node *m_SGparent;
 
@@ -413,16 +387,13 @@ private:
 	MT_Matrix3x3 m_worldRotation;
 	MT_Vector3 m_worldScaling;
 
-	SG_ParentRelation *m_parent_relation;
+	std::unique_ptr<SG_ParentRelation> m_parent_relation;
 
-	SG_BBox m_bbox;
+	std::shared_ptr<SG_Familly> m_familly;
+	CM_ThreadMutex m_mutex;
+
 	bool m_modified;
 	bool m_ogldirty; // true if the openGL matrix for this object must be recomputed
-
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:SG_Node")
-#endif
 };
 
 #endif  // __SG_NODE_H__

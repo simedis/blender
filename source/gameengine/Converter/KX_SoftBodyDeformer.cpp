@@ -65,17 +65,17 @@ KX_SoftBodyDeformer::~KX_SoftBodyDeformer()
 {
 }
 
-void KX_SoftBodyDeformer::Relink(std::map<void *, void *>& map)
+void KX_SoftBodyDeformer::Relink(std::map<SCA_IObject *, SCA_IObject *>& map)
 {
-	void *h_obj = map[m_gameobj];
+	BL_DeformableGameObject *obj = static_cast<BL_DeformableGameObject *>(map[m_gameobj]);
 
-	if (h_obj) {
-		m_gameobj = (BL_DeformableGameObject *)h_obj;
+	if (obj) {
+		m_gameobj = obj;
 		m_mesh = m_gameobj->GetMesh(0);
 	}
 	else {
-		m_gameobj = NULL;
-		m_mesh = NULL;
+		m_gameobj = nullptr;
+		m_mesh = nullptr;
 	}
 }
 

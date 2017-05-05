@@ -34,7 +34,7 @@
 
 #include "KX_Globals.h"
 
-#include "RAS_IRasterizer.h"
+#include "RAS_Rasterizer.h"
 
 #include "BLI_string.h"
 #include "BLI_path_util.h"
@@ -46,7 +46,7 @@
 
 #include "CM_Message.h"
 
-GPG_Canvas::GPG_Canvas(RAS_IRasterizer *rasty, GHOST_IWindow *window)
+GPG_Canvas::GPG_Canvas(RAS_Rasterizer *rasty, GHOST_IWindow *window)
 	: RAS_ICanvas(rasty),
 	m_window(window),
 	m_width(0),
@@ -75,19 +75,9 @@ int GPG_Canvas::GetHeight() const
 	return m_height;
 }
 
-const RAS_Rect &GPG_Canvas::GetDisplayArea() const
-{
-	return m_displayarea;
-}
-
-void GPG_Canvas::SetDisplayArea(RAS_Rect *rect)
-{
-	m_displayarea = *rect;
-}
-
 RAS_Rect &GPG_Canvas::GetWindowArea()
 {
-	return m_displayarea;
+	return m_area;
 }
 
 void GPG_Canvas::BeginFrame()
@@ -112,10 +102,10 @@ void GPG_Canvas::Resize(int width, int height)
 	m_height = height;
 
 	// initialize area so that it's available for game logic on frame 1 (ImageViewport)
-	m_displayarea.SetLeft(0);
-	m_displayarea.SetBottom(0);
-	m_displayarea.SetRight(width);
-	m_displayarea.SetTop(height);
+	m_area.SetLeft(0);
+	m_area.SetBottom(0);
+	m_area.SetRight(width);
+	m_area.SetTop(height);
 }
 
 void GPG_Canvas::SetViewPort(int x1, int y1, int x2, int y2)

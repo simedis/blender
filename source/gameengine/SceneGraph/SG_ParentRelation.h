@@ -61,7 +61,7 @@ public:
 	 * Update the childs local and global coordinates
 	 * based upon the parents global coordinates.
 	 * You must also handle the case when this node has no
-	 * parent (parent == NULL). Usually you should just
+	 * parent (parent == nullptr). Usually you should just
 	 * copy the local coordinates of the child to the
 	 * world coordinates.
 	 */
@@ -110,11 +110,6 @@ protected:
 	 * Copy construction should not be implemented
 	 */
 	SG_ParentRelation(const SG_ParentRelation &);
-
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:SG_ParentRelation")
-#endif
 };
 
 #endif  // __SG_PARENTRELATION_H__

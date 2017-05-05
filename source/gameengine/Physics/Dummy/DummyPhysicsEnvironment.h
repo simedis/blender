@@ -71,13 +71,13 @@ public:
 	//complex constraint for vehicles
 	virtual PHY_IVehicle *GetVehicleConstraint(int constraintId)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	// Character physics wrapper
 	virtual PHY_ICharacter *GetCharacterController(class KX_GameObject *ob)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	virtual PHY_IPhysicsController *RayTest(PHY_IRayCastFilterCallback &filterCallback, float fromX, float fromY, float fromZ, float toX, float toY, float toZ);
@@ -106,11 +106,11 @@ public:
 	}
 	virtual PHY_IPhysicsController *CreateSphereController(float radius, const class MT_Vector3& position)
 	{
-		return NULL;
+		return nullptr;
 	}
 	virtual PHY_IPhysicsController *CreateConeController(float coneradius, float coneheight)
 	{
-		return NULL;
+		return nullptr;
 	}
 
 	virtual void SetConstraintParam(int constraintId, int param, float value, float value1)
@@ -127,7 +127,8 @@ public:
 		// Dummy, nothing to do here
 	}
 
-	virtual void ConvertObject(KX_GameObject *gameobj,
+	virtual void ConvertObject(KX_BlenderSceneConverter& converter,
+							   KX_GameObject *gameobj,
 	                           RAS_MeshObject *meshobj,
 	                           DerivedMesh *dm,
 	                           KX_Scene *kxscene,
@@ -140,10 +141,6 @@ public:
 		// All we need to do is handle the motionstate (we're supposed to own it)
 		delete motionstate;
 	}
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:DummyPhysicsEnvironment")
-#endif
 };
 
 #endif  /* __DUMMYPHYSICSENVIRONMENT_H__ */

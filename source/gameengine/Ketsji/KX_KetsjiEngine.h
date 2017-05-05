@@ -38,33 +38,39 @@
 #include <string>
 #include "KX_ISystem.h"
 #include "KX_Scene.h"
+#include "KX_TimeCategoryLogger.h"
 #include "EXP_Python.h"
 #include "KX_WorldInfo.h"
+#include "RAS_CameraData.h"
+#include "RAS_Rasterizer.h"
 #include <vector>
 
 struct TaskScheduler;
-class KX_TimeCategoryLogger;
 class KX_ISystem;
-class KX_ISceneConverter;
+class KX_BlenderConverter;
 class KX_NetworkMessageManager;
 class CListValue;
 class RAS_ICanvas;
-class RAS_IRasterizer;
+class RAS_OffScreen;
 class SCA_IInputDevice;
 
-#define LEFT_EYE  1
-#define RIGHT_EYE 2
-
-enum KX_ExitRequestMode
+enum class KX_ExitRequest
 {
-	KX_EXIT_REQUEST_NO_REQUEST = 0,
-	KX_EXIT_REQUEST_QUIT_GAME,
-	KX_EXIT_REQUEST_RESTART_GAME,
-	KX_EXIT_REQUEST_START_OTHER_GAME,
-	KX_EXIT_REQUEST_NO_SCENES_LEFT,
-	KX_EXIT_REQUEST_BLENDER_ESC,
-	KX_EXIT_REQUEST_OUTSIDE,
-	KX_EXIT_REQUEST_MAX
+	NO_REQUEST = 0,
+	QUIT_GAME,
+	RESTART_GAME,
+	START_OTHER_GAME,
+	NO_SCENES_LEFT,
+	BLENDER_ESC,
+	OUTSIDE,
+	MAX
+};
+
+enum class KX_DebugOption
+{
+	DISABLE = 0,
+	FORCE,
+	ALLOW
 };
 
 typedef struct {
@@ -76,14 +82,66 @@ typedef struct {
  */
 class KX_KetsjiEngine
 {
+public:
+	enum FlagType
+	{
+		FLAG_NONE = 0,
+		/// Show profiling info on the game display?
+		SHOW_PROFILE = (1 << 0),
+		/// Show the framerate on the game display?
+		SHOW_FRAMERATE = (1 << 1),
+		/// Show debug properties on the game display.
+		SHOW_DEBUG_PROPERTIES = (1 << 2),
+		/// Whether or not to lock animation updates to the animation framerate?
+		RESTRICT_ANIMATION = (1 << 3),
+		/// Display of fixed frames?
+		FIXED_FRAMERATE = (1 << 4),
+		/// BGE relies on a external clock or its own internal clock?
+		USE_EXTERNAL_CLOCK = (1 << 5),
+		/// Automatic add debug properties to the debug list.
+		AUTO_ADD_DEBUG_PROPERTIES = (1 << 6),
+		/// Use override camera?
+		CAMERA_OVERRIDE = (1 << 7)
+	};
 
 private:
+	struct CameraRenderData
+	{
+		CameraRenderData(KX_Camera *rendercam, KX_Camera *cullingcam, const RAS_Rect& area, const RAS_Rect& viewport, RAS_Rasterizer::StereoEye eye);
+		CameraRenderData(const CameraRenderData& other);
+		~CameraRenderData();
+
+		/// Rendered camera, could be a temporary camera in case of stereo.
+		KX_Camera *m_renderCamera;
+		KX_Camera *m_cullingCamera;
+		RAS_Rect m_area;
+		RAS_Rect m_viewport;
+		RAS_Rasterizer::StereoEye m_eye;
+	};
+
+	struct SceneRenderData
+	{
+		SceneRenderData(KX_Scene *scene);
+
+		KX_Scene *m_scene;
+		std::vector<CameraRenderData> m_cameraDataList;
+	};
+
+	/// Data used to render a frame.
+	struct FrameRenderData
+	{
+		FrameRenderData(RAS_Rasterizer::OffScreenType ofsType);
+
+		RAS_Rasterizer::OffScreenType m_ofsType;
+		std::vector<SceneRenderData> m_sceneDataList;
+	};
+
 	/// 2D Canvas (2D Rendering Device Context)
 	RAS_ICanvas *m_canvas;
 	/// 3D Rasterizer (3D Rendering)
-	RAS_IRasterizer *m_rasterizer;
+	RAS_Rasterizer *m_rasterizer;
 	KX_ISystem *m_kxsystem;
-	KX_ISceneConverter *m_sceneconverter;
+	KX_BlenderConverter *m_converter;
 	KX_NetworkMessageManager *m_networkMessageManager;
 #ifdef WITH_PYTHON
 	/// \note borrowed from sys.modules["__main__"], don't manage ref's
@@ -104,16 +162,10 @@ private:
 
 	/// The current list of scenes.
 	CListValue *m_scenes;
-	/// State variable recording the presence of object debug info in the current scene list.
-	bool m_propertiesPresent;
 
 	bool m_bInitialized;
-	int m_activecam;
-	bool m_fixedFramerate;
-	bool m_useExternalClock;
 
-	bool m_firstframe;
-	int m_currentFrame;
+	FlagType m_flags;
 
 	/// current logic game time
 	double m_frameTime;
@@ -129,42 +181,29 @@ private:
 	double m_previousRealTime;
 
 	/// maximum number of consecutive logic frame
-	static int m_maxLogicFrame;
+	int m_maxLogicFrame;
 	/// maximum number of consecutive physics frame
-	static int m_maxPhysicsFrame;
-	static double m_ticrate;
+	int m_maxPhysicsFrame;
+	double m_ticrate;
 	/// for animation playback only - ipo and action
-	static double m_anim_framerate;
+	double m_anim_framerate;
 
-	static bool m_restrict_anim_fps;
-
-	static double m_suspendedtime;
-	static double m_suspendeddelta;
-
-	static bool				m_doRender;  /* whether or not the scene should be rendered after the logic frame */
+	bool m_doRender;  /* whether or not the scene should be rendered after the logic frame */
 
 	/// Key used to exit the BGE
-	static short m_exitkey;
+	short m_exitkey;
 
-	int m_exitcode;
+	KX_ExitRequest m_exitcode;
 	std::string m_exitstring;
 
 	float m_cameraZoom;
 
-	bool m_overrideCam;
 	std::string m_overrideSceneName;
-
-	bool m_overrideCamUseOrtho;
+	RAS_CameraData m_overrideCamData;
 	MT_CmMatrix4x4 m_overrideCamProjMat;
 	MT_CmMatrix4x4 m_overrideCamViewMat;
-	float m_overrideCamNear;
-	float m_overrideCamFar;
-	float m_overrideCamLens;
 	/// Default camera zoom.
 	float m_overrideCamZoom;
-
-	bool m_stereo;
-	int m_curreye;
 
 	/// Categories for profiling display.
 	typedef enum {
@@ -183,43 +222,21 @@ private:
 	} KX_TimeCategory;
 
 	/// Time logger.
-	KX_TimeCategoryLogger *m_logger;
+	KX_TimeCategoryLogger m_logger;
 
 	/// Labels for profiling display.
-	static const char m_profileLabels[tc_numCategories][15];
+	static const std::string m_profileLabels[tc_numCategories];
 	/// Last estimated framerate
-	static double m_average_framerate;
-	/// Show the framerate on the game display?
-	bool m_show_framerate;
-	/// Show profiling info on the game display?
-	bool m_show_profile;
-	/// Show any debug (scene) object properties on the game display?
-	bool m_showProperties;
-	/// Show background behind text for readability?
-	bool m_showBackground;
-	/// Show debug properties on the game display
-	bool m_show_debug_properties;
-	/// Automatic add debug properties to the debug list
-	bool m_autoAddDebugProperties;
-
-	/// Hide cursor every frame?
-	bool m_hideCursor;
+	double m_average_framerate;
 
 	/// Enable debug draw of culling bounding boxes.
-	bool m_showBoundingBox;
+	KX_DebugOption m_showBoundingBox;
 	/// Enable debug draw armatures.
-	bool m_showArmature;
-
-	/// Override framing bars color?
-	bool m_overrideFrameColor;
-	/// Red component of framing bar color.
-	float m_overrideFrameColorR;
-	/// Green component of framing bar color.
-	float m_overrideFrameColorG;
-	/// Blue component of framing bar color.
-	float m_overrideFrameColorB;
-	/// Alpha component of framing bar color.
-	float m_overrideFrameColorA;
+	KX_DebugOption m_showArmature;
+	/// Enable debug draw of camera frustum.
+	KX_DebugOption m_showCameraFrustum;
+	/// Enable debug light shadow frustum.
+	KX_DebugOption m_showShadowFrustum;
 
 	/// Settings that doesn't go away with Game Actuator
 	GlobalSettings m_globalsettings;
@@ -235,13 +252,44 @@ private:
 	 * The render functions, called after and which update animations,
 	 * will see the first scene as active and will proceed to it,
 	 * but it will cause some negative current frame on actions because of the
-	 * total pause duration not setted.
+	 * total pause duration not set.
 	 */
-	void UpdateSuspendedScenes();
+	void UpdateSuspendedScenes(double framestep);
 
-	void RenderFrame(KX_Scene *scene, KX_Camera *cam, unsigned short pass);
-	void PostRenderScene(KX_Scene *scene, unsigned short target);
+	/// Update and return the projection matrix of a camera depending on the viewport.
+	MT_Matrix4x4 GetCameraProjectionMatrix(KX_Scene *scene, KX_Camera *cam, RAS_Rasterizer::StereoEye eye,
+										   const RAS_Rect& viewport, const RAS_Rect& area) const;
+	CameraRenderData GetCameraRenderData(KX_Scene *scene, KX_Camera *camera, KX_Camera *overrideCullingCam, const RAS_Rect& displayArea,
+											  RAS_Rasterizer::StereoEye eye, bool usestereo);
+	/// Compute frame render data per eyes (in case of stereo), scenes and camera.
+	bool GetFrameRenderData(std::vector<FrameRenderData>& frameDataList);
+
+	void RenderCamera(KX_Scene *scene, const CameraRenderData& cameraFrameData, RAS_OffScreen *offScreen, unsigned short pass, bool isFirstScene);
+	RAS_OffScreen *PostRenderScene(KX_Scene *scene, RAS_OffScreen *inputofs, RAS_OffScreen *targetofs);
 	void RenderDebugProperties();
+	/// Debug draw cameras frustum of a scene.
+	void DrawDebugCameraFrustum(KX_Scene *scene, RAS_DebugDraw& debugDraw, const CameraRenderData& cameraFrameData);
+	/// Debug draw lights shadow frustum of a scene.
+	void DrawDebugShadowFrustum(KX_Scene *scene, RAS_DebugDraw& debugDraw);
+
+	/**
+	 * Processes all scheduled scene activity.
+	 * At the end, if the scene lists have changed,
+	 * SceneListsChanged(void) is called.
+	 * \see SceneListsChanged(void).
+	 */
+	void ProcessScheduledScenes(void);
+
+	/**
+	 * This method is invoked when the scene lists have changed.
+	 */
+	void RemoveScheduledScenes(void);
+	void AddScheduledScenes(void);
+	void ReplaceScheduledScenes(void);
+	void PostProcessScene(KX_Scene *scene);
+
+	void BeginFrame();
+	void EndFrame();
 
 public:
 	KX_KetsjiEngine(KX_ISystem *system);
@@ -250,7 +298,7 @@ public:
 	/// set the devices and stuff. the client must take care of creating these
 	void SetInputDevice(SCA_IInputDevice *inputDevice);
 	void SetCanvas(RAS_ICanvas *canvas);
-	void SetRasterizer(RAS_IRasterizer *rasterizer);
+	void SetRasterizer(RAS_Rasterizer *rasterizer);
 	void SetNetworkMessageManager(KX_NetworkMessageManager *manager);
 #ifdef WITH_PYTHON
 	void SetPyNamespace(PyObject *pythondictionary);
@@ -263,13 +311,13 @@ public:
 	bool SetPyLogicCallbackList(PyObject *list);
 	void RunLogicCallbacks();
 #endif
-	void SetSceneConverter(KX_ISceneConverter *sceneconverter);
-	KX_ISceneConverter *GetSceneConverter()
+	void SetConverter(KX_BlenderConverter *converter);
+	KX_BlenderConverter *GetConverter()
 	{
-		return m_sceneconverter;
+		return m_converter;
 	}
 
-	RAS_IRasterizer *GetRasterizer()
+	RAS_Rasterizer *GetRasterizer()
 	{
 		return m_rasterizer;
 	}
@@ -296,13 +344,13 @@ public:
 	void Render();
 	void RenderShadowBuffers(KX_Scene *scene);
 
-	void StartEngine(bool clearIpo);
+	void StartEngine();
 	void StopEngine();
 	void Export(const std::string& filename);
 
-	void RequestExit(int exitrequestmode);
+	void RequestExit(KX_ExitRequest exitrequestmode);
 	void SetNameNextGame(const std::string& nextgame);
-	int GetExitCode();
+	KX_ExitRequest GetExitCode();
 	const std::string& GetExitString();
 
 	CListValue *CurrentScenes();
@@ -315,48 +363,25 @@ public:
 	void SuspendScene(const std::string& scenename);
 	void ResumeScene(const std::string& scenename);
 
-	void GetSceneViewport(KX_Scene *scene, KX_Camera *cam, RAS_Rect& area, RAS_Rect& viewport);
+	void GetSceneViewport(KX_Scene *scene, KX_Camera *cam, const RAS_Rect& displayArea, RAS_Rect& area, RAS_Rect& viewport);
 
 	/// Sets zoom for camera objects, useful only with extend and scale framing mode.
 	void SetCameraZoom(float camzoom);
-
-	void EnableCameraOverride(const std::string& forscene);
-
-	void SetCameraOverrideUseOrtho(bool useOrtho);
-	void SetCameraOverrideProjectionMatrix(const MT_CmMatrix4x4& mat);
-	void SetCameraOverrideViewMatrix(const MT_CmMatrix4x4& mat);
-	void SetCameraOverrideClipping(float near, float far);
-	void SetCameraOverrideLens(float lens);
 	/// Sets zoom for default camera, = 2 in embedded mode.
 	void SetCameraOverrideZoom(float camzoom);
+	/// Get the camera zoom for the passed camera.
+	float GetCameraZoom(KX_Camera *camera) const;
+
+	void EnableCameraOverride(const std::string& forscene, const MT_CmMatrix4x4& projmat, const MT_CmMatrix4x4& viewmat, const RAS_CameraData& camdata);
 
 	// Update animations for object in this scene
 	void UpdateAnimations(KX_Scene *scene);
 
-	/**
-	 * Sets display of fixed frames.
-	 * \param fixedFramerate New setting for display all frames.
-	 */
-	void SetUseFixedFramerate(bool fixedFramerate);
+	bool GetFlag(FlagType flag) const;
+	/// Enable or disable a set of flags.
+	void SetFlag(FlagType flag, bool enable);
 
-	/**
-	 * Returns display of fixed frames.
-	 * \return Current setting for display all frames.
-	 */
-	bool GetUseFixedFramerate(void) const;
-
-	/**
-	 * Sets if the BGE relies on a external clock or its own internal clock
-	 */
-	void SetUseExternalClock(bool bUseExternalClock);
-
-	/**
-	 * Returns if we rely on an external clock
-	 * \return Current setting
-	 */
-	bool GetUseExternalClock(void) const;
-
-	/**
+	/*
 	 * Returns next render frame game time
 	 */
 	double GetClockTime(void) const;
@@ -378,59 +403,43 @@ public:
 	double GetRealTime(void) const;
 
 	/**
-	 * Returns the difference between the local time of the scene (when it
-	 * was running and not suspended) and the "curtime"
-	 */
-	static double GetSuspendedDelta();
-
-	/**
 	 * Gets the number of logic updates per second.
 	 */
-	static double GetTicRate();
+	double GetTicRate();
 	/**
 	 * Sets the number of logic updates per second.
 	 */
-	static void SetTicRate(double ticrate);
+	void SetTicRate(double ticrate);
 	/**
 	 * Gets the maximum number of logic frame before render frame
 	 */
-	static int GetMaxLogicFrame();
+	int GetMaxLogicFrame();
 	/**
 	 * Sets the maximum number of logic frame before render frame
 	 */
-	static void SetMaxLogicFrame(int frame);
+	void SetMaxLogicFrame(int frame);
 	/**
 	 * Gets the maximum number of physics frame before render frame
 	 */
-	static int GetMaxPhysicsFrame();
+	int GetMaxPhysicsFrame();
 	/**
 	 * Sets the maximum number of physics frame before render frame
 	 */
-	static void SetMaxPhysicsFrame(int frame);
-
-	/**
-	 * Gets whether or not to lock animation updates to the animframerate
-	 */
-	static bool GetRestrictAnimationFPS();
-
-	/**
-	 * Sets whether or not to lock animation updates to the animframerate
-	 */
-	static void SetRestrictAnimationFPS(bool bRestrictAnimFPS);
+	void SetMaxPhysicsFrame(int frame);
 
 	/**
 	 * Gets the framerate for playing animations. (actions and ipos)
 	 */
-	static double GetAnimFrameRate();
+	double GetAnimFrameRate();
 	/**
 	 * Sets the framerate for playing animations. (actions and ipos)
 	 */
-	static void SetAnimFrameRate(double framerate);
+	void SetAnimFrameRate(double framerate);
 
 	/**
 	 * Gets the last estimated average framerate
 	 */
-	static double GetAverageFrameRate();
+	double GetAverageFrameRate();
 
 	/**
 	 * Gets the time scale multiplier 
@@ -442,129 +451,42 @@ public:
 	 */
 	void SetTimeScale(double scale);
 
-	static void SetExitKey(short key);
+	void SetExitKey(short key);
 
-	static short GetExitKey();
+	short GetExitKey();
 
 	/**
 	 * Activate or deactivates the render of the scene after the logic frame
 	 * \param render	true (render) or false (do not render)
 	 */
-	static void SetRender(bool render);
+	void SetRender(bool render);
 	/**
 	 * Get the current render flag value
 	 */
-	static bool GetRender();
-
-	/**
-	 * \Sets the display for frame rate on or off.
-	 */
-	void SetShowFramerate(bool frameRate);
-
-	/**
-	 * \Gets the display for frame rate on or off.
-	 */
-	bool GetShowFramerate();
-
-	/**
-	 * \Sets the display for individual components on or off.
-	 */
-	void SetShowProfile(bool profile);
-
-	/**
-	 * \Gets the display for individual components on or off.
-	 */
-	bool GetShowProfile();
-
-	/**
-	 * \Sets the display of scene object debug properties on or off.
-	 */
-	void SetShowProperties(bool properties);
-
-	/**
-	 * \Gets the display of scene object debug properties on or off.
-	 */
-	bool GetShowProperties();
-
-	/**
-	 * \Sets if the auto adding of scene object debug properties on or off.
-	 */
-	bool GetAutoAddDebugProperties();
-
-	/**
-	 * \Sets the auto adding of scene object debug properties on or off.
-	 */
-	void SetAutoAddDebugProperties(bool add);
-
-	/**
-	 * Activates or deactivates timing information display.
-	 * \param frameRate		Display for frame rate on or off.
-	 * \param profile		Display for individual components on or off.
-	 * \param properties	Display of scene object debug properties on or off.
-	 */
-	void SetTimingDisplay(bool frameRate, bool profile, bool properties);
-
-	/**
-	 * Returns status of timing information display.
-	 * \param frameRate		Display for frame rate on or off.
-	 * \param profile		Display for individual components on or off.
-	 * \param properties	Display of scene object debug properties on or off.
-	 */
-	void GetTimingDisplay(bool& frameRate, bool& profile, bool& properties) const;
-
-	/**
-	 * Sets cursor hiding on every frame.
-	 * \param hideCursor Turns hiding on or off.
-	 */
-	void SetHideCursor(bool hideCursor);
-
-	/**
-	 * Returns the current setting for cursor hiding.
-	 * \return The current setting for cursor hiding.
-	 */
-	bool GetHideCursor(void) const;
-
-	/// Returns the current setting for bounding box debug.
-	void SetShowBoundingBox(bool show);
+	bool GetRender();
 
 	/// Allow debug bounding box debug.
-	bool GetShowBoundingBox() const;
-
-	/// Returns the current setting for armatures debug.
-	void SetShowArmatures(bool show);
+	void SetShowBoundingBox(KX_DebugOption mode);
+	/// Returns the current setting for bounding box debug.
+	KX_DebugOption GetShowBoundingBox() const;
 
 	/// Allow debug armatures.
-	bool GetShowArmatures() const;
+	void SetShowArmatures(KX_DebugOption mode);
+	/// Returns the current setting for armatures debug.
+	KX_DebugOption GetShowArmatures() const;
 
-	/**
-	 * Enables/disables the use of the framing bar color of the Blender file's scenes.
-	 * \param overrideFrameColor The new setting.
-	 */
-	void SetUseOverrideFrameColor(bool overrideFrameColor);
+	/// Allow debug camera frustum.
+	void SetShowCameraFrustum(KX_DebugOption mode);
+	/// Returns the current setting for camera frustum debug.
+	KX_DebugOption GetShowCameraFrustum() const;
 
-	/**
-	 * Check if the frame color is being overridden.
-	 */
-	bool GetUseOverrideFrameColor(void) const;
-
-	/**
-	 * Set the color used for framing bar color instead of the one in the Blender file's scenes.
-	 * \param r Red component of the override color.
-	 * \param g Green component of the override color.
-	 * \param b Blue component of the override color.
-	 */
-	void SetOverrideFrameColor(float r, float g, float b, float a);
-
-	/**
-	 * Returns the color used for framing bar color instead of the one in the Blender file's scenes.
-	 * \param r Red component of the override color.
-	 * \param g Green component of the override color.
-	 * \param b Blue component of the override color.
-	 */
-	void GetOverrideFrameColor(float& r, float& g, float& b, float& a) const;
+	/// Allow debug light shadow frustum.
+	void SetShowShadowFrustum(KX_DebugOption mode);
+	/// Returns the current setting for light shadow frustum debug.
+	KX_DebugOption GetShowShadowFrustum() const;
 
 	KX_Scene *CreateScene(const std::string& scenename);
-	KX_Scene *CreateScene(Scene *scene, bool libloading = false);
+	KX_Scene *CreateScene(Scene *scene, bool libloading);
 
 	GlobalSettings *GetGlobalSettings(void);
 	void SetGlobalSettings(GlobalSettings *gs);
@@ -575,30 +497,6 @@ public:
 	 * It's only called from Blenderplayer.
 	 */
 	void Resize();
-
-protected:
-	/**
-	 * Processes all scheduled scene activity.
-	 * At the end, if the scene lists have changed,
-	 * SceneListsChanged(void) is called.
-	 * \see SceneListsChanged(void).
-	 */
-	void ProcessScheduledScenes(void);
-
-	/**
-	 * This method is invoked when the scene lists have changed.
-	 */
-	void RemoveScheduledScenes(void);
-	void AddScheduledScenes(void);
-	void ReplaceScheduledScenes(void);
-	void PostProcessScene(KX_Scene *scene);
-
-	void BeginFrame();
-	void EndFrame();
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:KX_KetsjiEngine")
-#endif
 };
 
 #endif  /* __KX_KETSJIENGINE_H__ */

@@ -163,6 +163,7 @@ set(SRC
 	shader/nodes/node_shader_background.c
 	shader/nodes/node_shader_bsdf_anisotropic.c
 	shader/nodes/node_shader_bsdf_diffuse.c
+	shader/nodes/node_shader_bsdf_principled.c
 	shader/nodes/node_shader_bsdf_glass.c
 	shader/nodes/node_shader_bsdf_glossy.c
 	shader/nodes/node_shader_bsdf_toon.c
@@ -181,7 +182,9 @@ set(SRC
 	shader/nodes/node_shader_light_path.c
 	shader/nodes/node_shader_mix_shader.c
 	shader/nodes/node_shader_normal_map.c
+	shader/nodes/node_shader_object.c
 	shader/nodes/node_shader_object_info.c
+	shader/nodes/node_shader_time.c
 	shader/nodes/node_shader_hair_info.c
 	shader/nodes/node_shader_output_lamp.c
 	shader/nodes/node_shader_output_material.c

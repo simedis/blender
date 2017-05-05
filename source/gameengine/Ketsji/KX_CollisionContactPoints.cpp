@@ -47,7 +47,7 @@ std::string KX_CollisionContactPoint::GetName()
 #ifdef WITH_PYTHON
 
 PyTypeObject KX_CollisionContactPoint::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"KX_CollisionContactPoint",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -69,7 +69,7 @@ PyTypeObject KX_CollisionContactPoint::Type = {
 };
 
 PyMethodDef KX_CollisionContactPoint::Methods[] = {
-	{NULL, NULL} //Sentinel
+	{nullptr, nullptr} //Sentinel
 };
 
 PyAttributeDef KX_CollisionContactPoint::Attributes[] = {
@@ -83,43 +83,43 @@ PyAttributeDef KX_CollisionContactPoint::Attributes[] = {
 	KX_PYATTRIBUTE_NULL //Sentinel
 };
 
-PyObject *KX_CollisionContactPoint::pyattr_get_local_point_a(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_CollisionContactPoint::pyattr_get_local_point_a(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_CollisionContactPoint *self = static_cast<KX_CollisionContactPoint *>(self_v);
 	return PyObjectFrom(self->m_collData->GetLocalPointA(self->m_index, self->m_firstObject));
 }
 
-PyObject *KX_CollisionContactPoint::pyattr_get_local_point_b(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_CollisionContactPoint::pyattr_get_local_point_b(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_CollisionContactPoint *self = static_cast<KX_CollisionContactPoint *>(self_v);
 	return PyObjectFrom(self->m_collData->GetLocalPointB(self->m_index, self->m_firstObject));
 }
 
-PyObject *KX_CollisionContactPoint::pyattr_get_world_point(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_CollisionContactPoint::pyattr_get_world_point(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_CollisionContactPoint *self = static_cast<KX_CollisionContactPoint *>(self_v);
 	return PyObjectFrom(self->m_collData->GetWorldPoint(self->m_index, self->m_firstObject));
 }
 
-PyObject *KX_CollisionContactPoint::pyattr_get_normal(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_CollisionContactPoint::pyattr_get_normal(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_CollisionContactPoint *self = static_cast<KX_CollisionContactPoint *>(self_v);
 	return PyObjectFrom(self->m_collData->GetNormal(self->m_index, self->m_firstObject));
 }
 
-PyObject *KX_CollisionContactPoint::pyattr_get_combined_friction(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_CollisionContactPoint::pyattr_get_combined_friction(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_CollisionContactPoint *self = static_cast<KX_CollisionContactPoint *>(self_v);
 	return PyFloat_FromDouble(self->m_collData->GetCombinedFriction(self->m_index, self->m_firstObject));
 }
 
-PyObject *KX_CollisionContactPoint::pyattr_get_combined_restitution(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_CollisionContactPoint::pyattr_get_combined_restitution(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_CollisionContactPoint *self = static_cast<KX_CollisionContactPoint *>(self_v);
 	return PyFloat_FromDouble(self->m_collData->GetCombinedRestitution(self->m_index, self->m_firstObject));
 }
 
-PyObject *KX_CollisionContactPoint::pyattr_get_applied_impulse(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_CollisionContactPoint::pyattr_get_applied_impulse(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_CollisionContactPoint *self = static_cast<KX_CollisionContactPoint *>(self_v);
 	return PyFloat_FromDouble(self->m_collData->GetAppliedImpulse(self->m_index, self->m_firstObject));
@@ -152,12 +152,12 @@ static PyObject *kx_collision_contact_point_list_get_sensors_item_cb(void *self_
 CListWrapper *KX_CollisionContactPointList::GetListWrapper()
 {
 	return (new CListWrapper(this,
-							 NULL, // No base python proxy.
-							 NULL,
+							 nullptr, // No base python proxy.
+							 nullptr,
 							 kx_collision_contact_point_list_get_sensors_size_cb,
 							 kx_collision_contact_point_list_get_sensors_item_cb,
-							 NULL,
-							 NULL));
+							 nullptr,
+							 nullptr));
 }
 
 #endif  // WITH_PYTHON

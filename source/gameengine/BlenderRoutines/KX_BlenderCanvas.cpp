@@ -43,7 +43,7 @@
 
 #include "BKE_image.h"
 
-#include "RAS_IRasterizer.h"
+#include "RAS_Rasterizer.h"
 
 #include "GHOST_IWindow.h"
 
@@ -56,7 +56,7 @@ extern "C" {
 #  include "wm_window.h"
 }
 
-KX_BlenderCanvas::KX_BlenderCanvas(RAS_IRasterizer *rasty, wmWindowManager *wm, wmWindow *win, RAS_Rect &rect, struct ARegion *ar)
+KX_BlenderCanvas::KX_BlenderCanvas(RAS_Rasterizer *rasty, wmWindowManager *wm, wmWindow *win, RAS_Rect &rect, struct ARegion *ar)
 	:RAS_ICanvas(rasty),
 	m_wm(wm),
 	m_win(win),
@@ -170,16 +170,6 @@ float KX_BlenderCanvas::GetMouseNormalizedY(int y)
 	return float(y) / this->GetHeight();
 }
 
-const RAS_Rect &KX_BlenderCanvas::GetDisplayArea() const
-{
-	return m_displayarea;
-}
-
-void KX_BlenderCanvas::SetDisplayArea(RAS_Rect *rect)
-{
-	m_displayarea = *rect;
-}
-
 RAS_Rect &KX_BlenderCanvas::GetWindowArea()
 {
 	return m_area_rect;
@@ -274,7 +264,7 @@ void KX_BlenderCanvas::MakeScreenShot(const std::string& filename)
 	}
 
 	/* initialize image file format data */
-	Scene *scene = (screen) ? screen->scene : NULL;
+	Scene *scene = (screen) ? screen->scene : nullptr;
 	ImageFormatData *im_format = (ImageFormatData *)MEM_mallocN(sizeof(ImageFormatData), "im_format");
 
 	if (scene) {

@@ -89,6 +89,12 @@ base class --- :class:`PyObjectPlus`
          
          This can be set directly from python to avoid using the :class:`KX_SceneActuator`.
 
+   .. attribute:: overrideCullingCamera
+
+      The override camera used for scene culling, if set to None the culling is proceeded with the camera used to render.
+
+      :type: :class:`KX_Camera` or None
+
    .. attribute:: world
 
       The current active world, (read-only).
@@ -140,7 +146,7 @@ base class --- :class:`PyObjectPlus`
    .. attribute:: pre_draw_setup
 
       A list of callables to be run before the drawing setup (i.e., before the model view and projection matrices are computed). 
-      The callbacks can take as argument the rendered camera.
+      The callbacks can take as argument the rendered camera, the camera could be temporary in case of stereo rendering.
 
       :type: list
 

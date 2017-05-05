@@ -32,11 +32,7 @@
 #ifndef __RAS_ICANVAS_H__
 #define __RAS_ICANVAS_H__
 
-#ifdef WITH_CXX_GUARDEDALLOC
-#include "MEM_guardedalloc.h"
-#endif
-
-#include "RAS_IRasterizer.h" // for RAS_IRasterizer::HdrType
+#include "RAS_Rasterizer.h" // for RAS_Rasterizer::HdrType
 
 class RAS_Rect;
 struct TaskScheduler;
@@ -56,7 +52,7 @@ public:
 		MOUSE_NORMAL
 	};
 
-	RAS_ICanvas(RAS_IRasterizer *rasty);
+	RAS_ICanvas(RAS_Rasterizer *rasty);
 	virtual ~RAS_ICanvas();
 
 	virtual void Init() = 0;
@@ -87,8 +83,8 @@ public:
 	void SetSamples(int samples);
 	int GetSamples() const;
 
-	void SetHdrType(RAS_IRasterizer::HdrType type);
-	RAS_IRasterizer::HdrType GetHdrType() const;
+	void SetHdrType(RAS_Rasterizer::HdrType type);
+	RAS_Rasterizer::HdrType GetHdrType() const;
 
 	virtual int GetWidth() const = 0;
 	virtual int GetHeight() const = 0;
@@ -104,9 +100,6 @@ public:
 
 	virtual float GetMouseNormalizedX(int x) = 0;
 	virtual float GetMouseNormalizedY(int y) = 0;
-
-	virtual const RAS_Rect &GetDisplayArea() const = 0;
-	virtual void SetDisplayArea(RAS_Rect *rect) = 0;
 
 	/**
 	 * Used to get canvas area within blender.
@@ -149,21 +142,21 @@ public:
 	virtual void SetFullScreen(bool enable) = 0;
 	virtual bool GetFullScreen() = 0;
 
-	RAS_IRasterizer *GetRasterizer()
+	RAS_Rasterizer *GetRasterizer()
 	{
 		return m_rasterizer;
 	}
 
 protected:
 	int m_samples;
-	RAS_IRasterizer::HdrType m_hdrType;
+	RAS_Rasterizer::HdrType m_hdrType;
 
 	RAS_MouseState m_mousestate;
 	/// frame number for screenshots.
 	int m_frame;
 	TaskScheduler *m_taskscheduler;
 	TaskPool *m_taskpool;
-	RAS_IRasterizer *m_rasterizer;
+	RAS_Rasterizer *m_rasterizer;
 
 	/**
 	 * Saves screenshot data to a file. The actual compression and disk I/O is performed in
@@ -178,10 +171,6 @@ protected:
 	 */
 	void save_screenshot(const char *path, int dumpsx, int dumpsy, unsigned int *dumprect,
 	                     ImageFormatData *im_format);
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:RAS_ICanvas")
-#endif
 };
 
 #endif  // __RAS_ICANVAS_H__

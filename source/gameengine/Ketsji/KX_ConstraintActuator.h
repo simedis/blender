@@ -115,7 +115,6 @@ protected:
 		KX_ACT_CONSTRAINT_LOCAL = 1024,
 		KX_ACT_CONSTRAINT_DOROTFH = 2048
 	};
-	bool IsValidMode(KX_CONSTRAINTTYPE m);
 	/// \see KX_RayCast
 	bool RayHit(KX_ClientObjectInfo *client, KX_RayCast *result, void *UNUSED(data));
 	/// \see KX_RayCast
@@ -144,8 +143,8 @@ protected:
 	/* Python interface ---------------------------------------------------- */
 	/* --------------------------------------------------------------------- */
 
-	static int pyattr_check_direction(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef);
-	static int pyattr_check_min(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_check_direction(PyObjectPlus *self_v, const struct KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_check_min(PyObjectPlus *self_v, const struct KX_PYATTRIBUTE_DEF *attrdef);
 
 };
 

@@ -851,14 +851,22 @@ typedef struct GameData {
 	short exitkey;
 	short pythonkeys[4];
 	short vsync; /* Controls vsync: off, on, or adaptive (if supported) */
-	short ticrate, maxlogicstep, physubstep, maxphystep;
 	short obstacleSimulation;
+	short ticrate, maxlogicstep, physubstep, maxphystep;
+	float timeScale;
 	float levelHeight;
 	float deactivationtime, lineardeactthreshold, angulardeactthreshold;
+
+	/* Debug options */
+	short showBoundingBox;
+	short showArmatures;
+	short showCameraFrustum;
+	short showShadowFrustum;
 
 	/* Scene LoD */
 	short lodflag, pad2;
 	int scehysteresis;
+	int pad3;
 
 } GameData;
 
@@ -903,11 +911,17 @@ typedef struct GameData {
 #define GAME_SHOW_MOUSE						(1 << 14)
 #define GAME_GLSL_NO_COLOR_MANAGEMENT		(1 << 15)
 #define GAME_SHOW_OBSTACLE_SIMULATION		(1 << 16)
-#define GAME_SHOW_BOUNDING_BOX				(1 << 18)
-#define GAME_SHOW_ARMATURES					(1 << 19)
+#ifdef DNA_DEPRECATED
+#  define GAME_SHOW_BOUNDING_BOX			(1 << 18)
+#  define GAME_SHOW_ARMATURES				(1 << 19)
+#endif
 #define GAME_PYTHON_CONSOLE					(1 << 20)
 #define GAME_GLSL_NO_ENV_LIGHTING			(1 << 21)
 /* Note: GameData.flag is now an int (max 32 flags). A short could only take 16 flags */
+
+#define GAME_DEBUG_DISABLE	0
+#define GAME_DEBUG_FORCE	1
+#define GAME_DEBUG_ALLOW	2
 
 /* GameData.playerflag */
 #define GAME_PLAYER_FULLSCREEN				(1 << 0)
@@ -1184,12 +1198,51 @@ typedef enum eGP_BrushEdit_SettingsFlag {
 	GP_BRUSHEDIT_FLAG_APPLY_STRENGTH = (1 << 2),
 	/* apply brush to thickness */
 	GP_BRUSHEDIT_FLAG_APPLY_THICKNESS = (1 << 3),
-	/* apply interpolation to all layers */
-	GP_BRUSHEDIT_FLAG_INTERPOLATE_ALL_LAYERS = (1 << 4),
-	/* apply interpolation to only selected */
-	GP_BRUSHEDIT_FLAG_INTERPOLATE_ONLY_SELECTED = (1 << 5)
-
 } eGP_BrushEdit_SettingsFlag;
+
+
+/* Settings for GP Interpolation Operators */
+typedef struct GP_Interpolate_Settings {
+	short flag;                        /* eGP_Interpolate_SettingsFlag */
+	
+	char type;                         /* eGP_Interpolate_Type - Interpolation Mode */ 
+	char easing;                       /* eBezTriple_Easing - Easing mode (if easing equation used) */
+	
+	float back;                        /* BEZT_IPO_BACK */
+	float amplitude, period;           /* BEZT_IPO_ELASTIC */
+	
+	struct CurveMapping *custom_ipo;   /* custom interpolation curve (for use with GP_IPO_CURVEMAP) */
+} GP_Interpolate_Settings;
+
+/* GP_Interpolate_Settings.flag */
+typedef enum eGP_Interpolate_SettingsFlag {
+	/* apply interpolation to all layers */
+	GP_TOOLFLAG_INTERPOLATE_ALL_LAYERS    = (1 << 0),
+	/* apply interpolation to only selected */
+	GP_TOOLFLAG_INTERPOLATE_ONLY_SELECTED = (1 << 1),
+} eGP_Interpolate_SettingsFlag;
+
+/* GP_Interpolate_Settings.type */
+typedef enum eGP_Interpolate_Type {
+	/* Traditional Linear Interpolation */
+	GP_IPO_LINEAR   = 0,
+	
+	/* CurveMap Defined Interpolation */
+	GP_IPO_CURVEMAP = 1,
+	
+	/* Easing Equations */
+	GP_IPO_BACK = 3,
+	GP_IPO_BOUNCE = 4,
+	GP_IPO_CIRC = 5,
+	GP_IPO_CUBIC = 6,
+	GP_IPO_ELASTIC = 7,
+	GP_IPO_EXPO = 8,
+	GP_IPO_QUAD = 9,
+	GP_IPO_QUART = 10,
+	GP_IPO_QUINT = 11,
+	GP_IPO_SINE = 12,
+} eGP_Interpolate_Type;
+
 
 /* *************************************************************** */
 /* Transform Orientations */
@@ -1407,7 +1460,10 @@ typedef struct ToolSettings {
 	
 	/* Grease Pencil Sculpt */
 	struct GP_BrushEdit_Settings gp_sculpt;
-
+	
+	/* Grease Pencil Interpolation Tool(s) */
+	struct GP_Interpolate_Settings gp_interpolate;
+	
 	/* Grease Pencil Drawing Brushes (bGPDbrush) */
 	ListBase gp_brushes; 
 
@@ -1646,6 +1702,7 @@ typedef struct Scene {
 #define SCER_LOCK_FRAME_SELECTION	(1<<1)
 	/* timeline/keyframe jumping - only selected items (on by default) */
 #define SCE_KEYS_NO_SELONLY	(1<<2)
+#define SCER_SHOW_SUBFRAME	(1<<3)
 
 /* mode (int now) */
 #define R_OSA			0x0001

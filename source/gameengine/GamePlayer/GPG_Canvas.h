@@ -41,7 +41,7 @@
 
 #include "GHOST_IWindow.h"
 
-class RAS_IRasterizer;
+class RAS_Rasterizer;
 
 class GPG_Canvas : public RAS_ICanvas
 {
@@ -55,12 +55,12 @@ protected:
 	/** Rect that defines the area used for rendering,
 	 * relative to the context.
 	 */
-	RAS_Rect m_displayarea;
+	RAS_Rect m_area;
 
 	int m_viewport[4];
 
 public:
-	GPG_Canvas(RAS_IRasterizer *rasty, GHOST_IWindow *window);
+	GPG_Canvas(RAS_Rasterizer *rasty, GHOST_IWindow *window);
 	virtual ~GPG_Canvas();
 
 	/**
@@ -69,8 +69,6 @@ public:
 
 	virtual int GetWidth() const;
 	virtual int GetHeight() const;
-	virtual const RAS_Rect &GetDisplayArea() const;
-	virtual void SetDisplayArea(RAS_Rect *rect);
 	virtual RAS_Rect &GetWindowArea();
 	virtual void BeginFrame();
 

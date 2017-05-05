@@ -89,19 +89,19 @@ bool KX_ParentActuator::UnlinkObject(SCA_IObject* clientobj)
 	if (clientobj == m_ob)
 	{
 		// this object is being deleted, we cannot continue to track it.
-		m_ob = NULL;
+		m_ob = nullptr;
 		return true;
 	}
 	return false;
 }
 
-void KX_ParentActuator::Relink(std::map<void *, void *>& obj_map)
+void KX_ParentActuator::Relink(std::map<SCA_IObject *, SCA_IObject *>& obj_map)
 {
-	void *h_obj = obj_map[m_ob];
-	if (h_obj) {
+	SCA_IObject *obj = obj_map[m_ob];
+	if (obj) {
 		if (m_ob)
 			m_ob->UnregisterActuator(this);
-		m_ob = (SCA_IObject *)h_obj;
+		m_ob = obj;
 		m_ob->RegisterActuator(this);
 	}
 }
@@ -138,7 +138,7 @@ bool KX_ParentActuator::Update()
 
 /* Integration hooks ------------------------------------------------------- */
 PyTypeObject KX_ParentActuator::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"KX_ParentActuator",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -160,7 +160,7 @@ PyTypeObject KX_ParentActuator::Type = {
 };
 
 PyMethodDef KX_ParentActuator::Methods[] = {
-	{NULL,NULL} //Sentinel
+	{nullptr,nullptr} //Sentinel
 };
 
 PyAttributeDef KX_ParentActuator::Attributes[] = {
@@ -171,7 +171,7 @@ PyAttributeDef KX_ParentActuator::Attributes[] = {
 	KX_PYATTRIBUTE_NULL	//Sentinel
 };
 
-PyObject *KX_ParentActuator::pyattr_get_object(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_ParentActuator::pyattr_get_object(PyObjectPlus *self, const struct KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_ParentActuator* actuator = static_cast<KX_ParentActuator*>(self);
 	if (!actuator->m_ob)
@@ -180,7 +180,7 @@ PyObject *KX_ParentActuator::pyattr_get_object(void *self, const struct KX_PYATT
 		return actuator->m_ob->GetProxy();
 }
 
-int KX_ParentActuator::pyattr_set_object(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int KX_ParentActuator::pyattr_set_object(PyObjectPlus *self, const struct KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	KX_ParentActuator* actuator = static_cast<KX_ParentActuator*>(self);
 	KX_GameObject *gameobj;
@@ -188,7 +188,7 @@ int KX_ParentActuator::pyattr_set_object(void *self, const struct KX_PYATTRIBUTE
 	if (!ConvertPythonToGameObject(actuator->GetLogicManager(), value, &gameobj, true, "actuator.object = value: KX_ParentActuator"))
 		return PY_SET_ATTR_FAIL; // ConvertPythonToGameObject sets the error
 		
-	if (actuator->m_ob != NULL)
+	if (actuator->m_ob != nullptr)
 		actuator->m_ob->UnregisterActuator(actuator);
 
 	actuator->m_ob = (SCA_IObject*) gameobj;

@@ -58,13 +58,13 @@ extern "C" {
 	void StartKetsjiShell(struct bContext *C, struct ARegion *ar, rcti *cam_frame, int always_use_expand_framing);
 }
 
-static BlendFileData *load_game_data(char *filename)
+static BlendFileData *load_game_data(const char *filename)
 {
 	ReportList reports;
 	BlendFileData *bfd;
 	
 	BKE_reports_init(&reports, RPT_STORE);
-	bfd= BLO_read_from_file(filename, &reports);
+	bfd= BLO_read_from_file(filename, &reports, BLO_READ_SKIP_USERDEF);
 
 	if (!bfd) {
 		CM_Error("loading " << filename << " failed: ");
@@ -83,13 +83,13 @@ extern "C" void StartKetsjiShell(struct bContext *C, struct ARegion *ar, rcti *c
 	Scene *startscene = CTX_data_scene(C);
 	Main* maggie1 = CTX_data_main(C);
 
-	int exitrequested = KX_EXIT_REQUEST_NO_REQUEST;
+	KX_ExitRequest exitrequested = KX_ExitRequest::NO_REQUEST;
 	Main* blenderdata = maggie1;
 
 	char* startscenename = startscene->id.name + 2;
 	char pathname[FILE_MAXDIR+FILE_MAXFILE];
 	std::string exitstring = "";
-	BlendFileData *bfd = NULL;
+	BlendFileData *bfd = nullptr;
 
 	BLI_strncpy(pathname, blenderdata->name, sizeof(pathname));
 
@@ -110,9 +110,9 @@ extern "C" void StartKetsjiShell(struct bContext *C, struct ARegion *ar, rcti *c
 
 	do
 	{
-		// if we got an exitcode 3 (KX_EXIT_REQUEST_START_OTHER_GAME) load a different file
-		if (exitrequested == KX_EXIT_REQUEST_START_OTHER_GAME || exitrequested == KX_EXIT_REQUEST_RESTART_GAME) {
-			exitrequested = KX_EXIT_REQUEST_NO_REQUEST;
+		// if we got an exitcode 3 (KX_ExitRequest::START_OTHER_GAME) load a different file
+		if (exitrequested == KX_ExitRequest::START_OTHER_GAME || exitrequested == KX_ExitRequest::RESTART_GAME) {
+			exitrequested = KX_ExitRequest::NO_REQUEST;
 			if (bfd) {
 				BLO_blendfiledata_free(bfd);
 			}
@@ -153,51 +153,51 @@ extern "C" void StartKetsjiShell(struct bContext *C, struct ARegion *ar, rcti *c
 			}
 			// else forget it, we can't find it
 			else {
-				exitrequested = KX_EXIT_REQUEST_QUIT_GAME;
+				exitrequested = KX_ExitRequest::QUIT_GAME;
 			}
 		}
 
 		Scene *scene = bfd ? bfd->curscene : (Scene *)BLI_findstring(&blenderdata->scene, startscenename, offsetof(ID, name) + 2);
 
-		RAS_IRasterizer::StereoMode stereoMode = RAS_IRasterizer::RAS_STEREO_NOSTEREO;
+		RAS_Rasterizer::StereoMode stereoMode = RAS_Rasterizer::RAS_STEREO_NOSTEREO;
 		if (scene) {
 			// Quad buffered needs a special window.
 			if (scene->gm.stereoflag == STEREO_ENABLED) {
-				if (scene->gm.stereomode != RAS_IRasterizer::RAS_STEREO_QUADBUFFERED) {
+				if (scene->gm.stereomode != RAS_Rasterizer::RAS_STEREO_QUADBUFFERED) {
 					switch (scene->gm.stereomode) {
 						case STEREO_QUADBUFFERED:
 						{
-							stereoMode = RAS_IRasterizer::RAS_STEREO_QUADBUFFERED;
+							stereoMode = RAS_Rasterizer::RAS_STEREO_QUADBUFFERED;
 							break;
 						}
 						case STEREO_ABOVEBELOW:
 						{
-							stereoMode = RAS_IRasterizer::RAS_STEREO_ABOVEBELOW;
+							stereoMode = RAS_Rasterizer::RAS_STEREO_ABOVEBELOW;
 							break;
 						}
 						case STEREO_INTERLACED:
 						{
-							stereoMode = RAS_IRasterizer::RAS_STEREO_INTERLACED;
+							stereoMode = RAS_Rasterizer::RAS_STEREO_INTERLACED;
 							break;
 						}
 						case STEREO_ANAGLYPH:
 						{
-							stereoMode = RAS_IRasterizer::RAS_STEREO_ANAGLYPH;
+							stereoMode = RAS_Rasterizer::RAS_STEREO_ANAGLYPH;
 							break;
 						}
 						case STEREO_SIDEBYSIDE:
 						{
-							stereoMode = RAS_IRasterizer::RAS_STEREO_SIDEBYSIDE;
+							stereoMode = RAS_Rasterizer::RAS_STEREO_SIDEBYSIDE;
 							break;
 						}
 						case STEREO_VINTERLACE:
 						{
-							stereoMode = RAS_IRasterizer::RAS_STEREO_VINTERLACE;
+							stereoMode = RAS_Rasterizer::RAS_STEREO_VINTERLACE;
 							break;
 						}
 						case STEREO_3DTVTOPBOTTOM:
 						{
-							stereoMode = RAS_IRasterizer::RAS_STEREO_3DTVTOPBOTTOM;
+							stereoMode = RAS_Rasterizer::RAS_STEREO_3DTVTOPBOTTOM;
 							break;
 						}
 					}
@@ -206,7 +206,7 @@ extern "C" void StartKetsjiShell(struct bContext *C, struct ARegion *ar, rcti *c
 		}
 
 		GHOST_ISystem *system = GHOST_ISystem::getSystem();
-		LA_BlenderLauncher launcher = LA_BlenderLauncher(system, blenderdata, scene, &gs, stereoMode, 0, NULL, C, cam_frame, ar, always_use_expand_framing);
+		LA_BlenderLauncher launcher = LA_BlenderLauncher(system, blenderdata, scene, &gs, stereoMode, 0, nullptr, C, cam_frame, ar, always_use_expand_framing);
 #ifdef WITH_PYTHON
 		launcher.SetPythonGlobalDict(globalDict);
 #endif  // WITH_PYTHON
@@ -223,7 +223,7 @@ extern "C" void StartKetsjiShell(struct bContext *C, struct ARegion *ar, rcti *c
 
 		launcher.ExitEngine();
 	
-	} while (exitrequested == KX_EXIT_REQUEST_RESTART_GAME || exitrequested == KX_EXIT_REQUEST_START_OTHER_GAME);
+	} while (exitrequested == KX_ExitRequest::RESTART_GAME || exitrequested == KX_ExitRequest::START_OTHER_GAME);
 	
 	if (bfd) {
 		BLO_blendfiledata_free(bfd);

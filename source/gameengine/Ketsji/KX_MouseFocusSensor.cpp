@@ -39,7 +39,7 @@
 #include "MT_Vector3.h"
 #include "RAS_FramingManager.h"
 #include "RAS_ICanvas.h"
-#include "RAS_IRasterizer.h"
+#include "RAS_Rasterizer.h"
 #include "RAS_MeshObject.h"
 #include "SCA_IScene.h"
 #include "KX_Scene.h"
@@ -68,6 +68,7 @@ KX_MouseFocusSensor::KX_MouseFocusSensor(SCA_MouseManager* eventmgr,
 										 const std::string& propname,
 										 bool bFindMaterial,
 										 bool bXRay,
+										 int mask,
 										 KX_Scene* kxscene,
 										 KX_KetsjiEngine *kxengine,
 										 SCA_IObject* gameobj)
@@ -75,6 +76,7 @@ KX_MouseFocusSensor::KX_MouseFocusSensor(SCA_MouseManager* eventmgr,
 	  m_focusmode(focusmode),
 	  m_bCollisionPulse(bCollisionPulse),
 	  m_bXRay(bXRay),
+	  m_mask(mask),
 	  m_bFindMaterial(bFindMaterial),
 	  m_propertyname(propname),
 	  m_kxscene(kxscene),
@@ -88,7 +90,7 @@ void KX_MouseFocusSensor::Init()
 	m_mouse_over_in_previous_frame = (m_invert)?true:false;
 	m_positive_event = false;
 	m_hitObject = 0;
-	m_hitObject_Last = NULL;
+	m_hitObject_Last = nullptr;
 	m_reset = true;
 	
 	m_hitPosition.setValue(0,0,0);
@@ -175,7 +177,7 @@ bool KX_MouseFocusSensor::RayHit(KX_ClientObjectInfo *client_info, KX_RayCast *r
 				}
 			}
 			else {
-				bFound = hitKXObj->GetProperty(m_propertyname) != NULL;
+				bFound = hitKXObj->GetProperty(m_propertyname) != nullptr;
 			}
 		}
 
@@ -207,6 +209,12 @@ bool KX_MouseFocusSensor::NeedRayCast(KX_ClientObjectInfo *client, void *UNUSED(
 		CM_Error("invalid client type " << client->m_type << " found ray casting");
 		return false;
 	}
+
+	// The current object is not in the proper layer.
+	if (!(hitKXObj->GetUserCollisionGroup() & m_mask)) {
+		return false;
+	}
+
 	if (m_bXRay && m_propertyname.size() != 0)
 	{
 		if (m_bFindMaterial)
@@ -225,7 +233,7 @@ bool KX_MouseFocusSensor::NeedRayCast(KX_ClientObjectInfo *client, void *UNUSED(
 		}
 		else
 		{
-			if (hitKXObj->GetProperty(m_propertyname) == NULL)
+			if (hitKXObj->GetProperty(m_propertyname) == nullptr)
 				return false;
 		}
 	}
@@ -276,9 +284,11 @@ bool KX_MouseFocusSensor::ParentObjectHasFocusCamera(KX_Camera *cam)
 	 * division by 0.0...*/
 	
 	RAS_Rect area, viewport;
-	short m_y_inv = m_kxengine->GetCanvas()->GetHeight()-m_y;
-	
-	m_kxengine->GetSceneViewport(m_kxscene, cam, area, viewport);
+	RAS_ICanvas *canvas = m_kxengine->GetCanvas();
+	short m_y_inv = canvas->GetHeight()-m_y;
+
+	const RAS_Rect displayArea = m_kxengine->GetRasterizer()->GetRenderArea(canvas, RAS_Rasterizer::RAS_STEREO_LEFTEYE);
+	m_kxengine->GetSceneViewport(m_kxscene, cam, displayArea, area, viewport);
 	
 	/* Check if the mouse is in the viewport */
 	if ((	m_x < viewport.GetRight() &&	// less than right
@@ -354,7 +364,7 @@ bool KX_MouseFocusSensor::ParentObjectHasFocusCamera(KX_Camera *cam)
 	PHY_IPhysicsEnvironment* physics_environment = m_kxscene->GetPhysicsEnvironment();
 
 	// get UV mapping
-	KX_RayCast::Callback<KX_MouseFocusSensor, void> callback(this,physics_controller,NULL,false,true);
+	KX_RayCast::Callback<KX_MouseFocusSensor, void> callback(this,physics_controller,nullptr,false,true);
 	 
 	KX_RayCast::RayTest(physics_environment, m_prevSourcePoint, m_prevTargetPoint, callback);
 	
@@ -420,7 +430,7 @@ const MT_Vector2& KX_MouseFocusSensor::HitUV() const
 
 /* Integration hooks ------------------------------------------------------- */
 PyTypeObject KX_MouseFocusSensor::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"KX_MouseFocusSensor",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -442,7 +452,7 @@ PyTypeObject KX_MouseFocusSensor::Type = {
 };
 
 PyMethodDef KX_MouseFocusSensor::Methods[] = {
-	{NULL,NULL} //Sentinel
+	{nullptr,nullptr} //Sentinel
 };
 
 PyAttributeDef KX_MouseFocusSensor::Attributes[] = {
@@ -455,25 +465,26 @@ PyAttributeDef KX_MouseFocusSensor::Attributes[] = {
 	KX_PYATTRIBUTE_RO_FUNCTION("hitUV",		KX_MouseFocusSensor, pyattr_get_hit_uv),
 	KX_PYATTRIBUTE_BOOL_RW("usePulseFocus",	KX_MouseFocusSensor, m_bCollisionPulse),
 	KX_PYATTRIBUTE_BOOL_RW("useXRay",		KX_MouseFocusSensor, m_bXRay),
+	KX_PYATTRIBUTE_INT_RW("mask", 1, (1 << OB_MAX_COL_MASKS) - 1, true, KX_MouseFocusSensor, m_mask),
 	KX_PYATTRIBUTE_BOOL_RW("useMaterial", KX_MouseFocusSensor, m_bFindMaterial),
 	KX_PYATTRIBUTE_STRING_RW("propName", 0, MAX_PROP_NAME, false, KX_MouseFocusSensor, m_propertyname),
 	KX_PYATTRIBUTE_NULL	//Sentinel
 };
 
 /* Attributes */
-PyObject *KX_MouseFocusSensor::pyattr_get_ray_source(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_MouseFocusSensor::pyattr_get_ray_source(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_MouseFocusSensor* self = static_cast<KX_MouseFocusSensor*>(self_v);
 	return PyObjectFrom(self->RaySource());
 }
 
-PyObject *KX_MouseFocusSensor::pyattr_get_ray_target(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_MouseFocusSensor::pyattr_get_ray_target(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_MouseFocusSensor* self = static_cast<KX_MouseFocusSensor*>(self_v);
 	return PyObjectFrom(self->RayTarget());
 }
 
-PyObject *KX_MouseFocusSensor::pyattr_get_ray_direction(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_MouseFocusSensor::pyattr_get_ray_direction(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_MouseFocusSensor* self = static_cast<KX_MouseFocusSensor*>(self_v);
 	MT_Vector3 dir = self->RayTarget() - self->RaySource();
@@ -482,7 +493,7 @@ PyObject *KX_MouseFocusSensor::pyattr_get_ray_direction(void *self_v, const KX_P
 	return PyObjectFrom(dir);
 }
 
-PyObject *KX_MouseFocusSensor::pyattr_get_hit_object(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_MouseFocusSensor::pyattr_get_hit_object(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_MouseFocusSensor* self = static_cast<KX_MouseFocusSensor*>(self_v);
 	
@@ -492,19 +503,19 @@ PyObject *KX_MouseFocusSensor::pyattr_get_hit_object(void *self_v, const KX_PYAT
 	Py_RETURN_NONE;
 }
 
-PyObject *KX_MouseFocusSensor::pyattr_get_hit_position(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_MouseFocusSensor::pyattr_get_hit_position(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_MouseFocusSensor* self = static_cast<KX_MouseFocusSensor*>(self_v);
 	return PyObjectFrom(self->HitPosition());
 }
 
-PyObject *KX_MouseFocusSensor::pyattr_get_hit_normal(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_MouseFocusSensor::pyattr_get_hit_normal(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_MouseFocusSensor* self = static_cast<KX_MouseFocusSensor*>(self_v);
 	return PyObjectFrom(self->HitNormal());
 }
 
-PyObject *KX_MouseFocusSensor::pyattr_get_hit_uv(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_MouseFocusSensor::pyattr_get_hit_uv(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_MouseFocusSensor* self = static_cast<KX_MouseFocusSensor*>(self_v);
 	return PyObjectFrom(self->HitUV());

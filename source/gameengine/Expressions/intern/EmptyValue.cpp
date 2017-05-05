@@ -17,11 +17,6 @@
  */
 
 #include "EXP_EmptyValue.h"
-#include "EXP_IntValue.h"
-#include "EXP_FloatValue.h"
-#include "EXP_StringValue.h"
-#include "EXP_ErrorValue.h"
-#include "EXP_ListValue.h"
 
 CEmptyValue::CEmptyValue()
 {
@@ -49,11 +44,6 @@ double CEmptyValue::GetNumber()
 int CEmptyValue::GetValueType()
 {
 	return VALUE_EMPTY_TYPE;
-}
-
-bool CEmptyValue::IsInside(CValue *testpoint, bool bBorderInclude)
-{
-	return true;
 }
 
 const std::string CEmptyValue::GetText()

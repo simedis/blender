@@ -32,8 +32,10 @@
 #ifndef __RAS_DISPLAY_MATERIAL_BUCKET_H__
 #define __RAS_DISPLAY_MATERIAL_BUCKET_H__
 
+#include "CM_RefCount.h"
+
 #include "RAS_MeshSlot.h"
-#include "RAS_IRasterizer.h" // needed for RAS_IRasterizer::StorageType and RAS_IRasterizer::AttribLayerList
+#include "RAS_Rasterizer.h" // needed for RAS_Rasterizer::StorageType and RAS_Rasterizer::AttribLayerList
 
 #include "MT_Transform.h"
 
@@ -49,16 +51,14 @@ class RAS_InstancingBuffer;
 
 typedef std::vector<RAS_Deformer *> RAS_DeformerList;
 
-class RAS_DisplayArrayBucket
+class RAS_DisplayArrayBucket : public CM_RefCount<RAS_DisplayArrayBucket>
 {
 private:
-	/// The number of mesh slot using it.
-	unsigned int m_refcount;
 	/// The parent bucket.
 	RAS_MaterialBucket *m_bucket;
 	/// The display array = list of vertexes and indexes.
 	RAS_IDisplayArray *m_displayArray;
-	/// The parent mesh object, it can be NULL for text objects.
+	/// The parent mesh object, it can be nullptr for text objects.
 	RAS_MeshObject *m_mesh;
 	/// The material mesh.
 	RAS_MeshMaterial *m_meshMaterial;
@@ -67,8 +67,6 @@ private:
 	/// The list of all deformer usign this display array.
 	RAS_DeformerList m_deformerList;
 
-	/// True if the display array is not frequently modified and can use display list.
-	bool m_useDisplayList;
 	/// As m_useDisplayList but without rasterizer value.
 	bool m_useVao;
 
@@ -86,20 +84,16 @@ private:
 	RAS_InstancingBuffer *m_instancingBuffer;
 
 	/// The attribute's layers used by the couple mesh material.
-	RAS_IRasterizer::AttribLayerList m_attribLayers;
+	RAS_Rasterizer::AttribLayerList m_attribLayers;
 
 	RAS_DisplayArrayDownwardNode m_downwardNode;
 	RAS_DisplayArrayUpwardNode m_upwardNode;
 	RAS_DisplayArrayDownwardNode m_instancingNode;
+	RAS_DisplayArrayDownwardNode m_batchingNode;
 
 public:
 	RAS_DisplayArrayBucket(RAS_MaterialBucket *bucket, RAS_IDisplayArray *array, RAS_MeshObject *mesh, RAS_MeshMaterial *meshmat);
 	~RAS_DisplayArrayBucket();
-
-	/// \section Reference Count Management.
-	RAS_DisplayArrayBucket *AddRef();
-	RAS_DisplayArrayBucket *Release();
-	unsigned int GetRefCount() const;
 
 	/// \section Replication
 	RAS_DisplayArrayBucket *GetReplica();
@@ -107,7 +101,6 @@ public:
 
 	/// \section Accesor
 	RAS_IDisplayArray *GetDisplayArray() const;
-	RAS_MaterialBucket *GetMaterialBucket() const;
 	RAS_MeshObject *GetMesh() const;
 	RAS_MeshMaterial *GetMeshMaterial() const;
 
@@ -125,15 +118,15 @@ public:
 	void RemoveDeformer(RAS_Deformer *deformer);
 
 	/// \section Render Infos
-	bool UseDisplayList() const;
 	bool UseVao() const;
+	bool UseBatching() const;
 
 	/// Update render infos.
-	void UpdateActiveMeshSlots(RAS_IRasterizer *rasty);
+	void UpdateActiveMeshSlots(RAS_Rasterizer *rasty);
 	/// Set the mesh object as unmodified flag.
 	void SetDisplayArrayUnmodified();
 	/// Notice the storage info that the indices list (polygons) changed.
-	void SetPolygonsModified(RAS_IRasterizer *rasty);
+	void SetPolygonsModified(RAS_Rasterizer *rasty);
 
 	RAS_IStorageInfo *GetStorageInfo() const;
 	void SetStorageInfo(RAS_IStorageInfo *info);
@@ -144,14 +137,15 @@ public:
 	 */
 	void GenerateAttribLayers();
 
-	void SetAttribLayers(RAS_IRasterizer *rasty) const;
+	void SetAttribLayers(RAS_Rasterizer *rasty) const;
 
 	void GenerateTree(RAS_MaterialDownwardNode *downwardRoot, RAS_MaterialUpwardNode *upwardRoot,
-					  RAS_UpwardTreeLeafs *upwardLeafs, RAS_IRasterizer *rasty, bool sort, bool instancing);
+					  RAS_UpwardTreeLeafs *upwardLeafs, RAS_Rasterizer *rasty, bool sort, bool instancing);
 	void BindUpwardNode(const RAS_RenderNodeArguments& args);
 	void UnbindUpwardNode(const RAS_RenderNodeArguments& args);
 	void RunDownwardNode(const RAS_RenderNodeArguments& args);
 	void RunInstancingNode(const RAS_RenderNodeArguments& args);
+	void RunBatchingNode(const RAS_RenderNodeArguments& args);
 
 	/// Replace the material bucket of this display array bucket by the one given.
 	void ChangeMaterialBucket(RAS_MaterialBucket *bucket);

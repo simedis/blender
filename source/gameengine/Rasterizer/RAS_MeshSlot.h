@@ -62,6 +62,9 @@ public:
 	DerivedMesh *m_pDerivedMesh;
 	RAS_MeshUser *m_meshUser;
 
+	/// Batch index used for batching render.
+	short m_batchPartIndex;
+
 	RAS_MeshSlot();
 	RAS_MeshSlot(const RAS_MeshSlot& slot);
 	virtual ~RAS_MeshSlot();
@@ -71,13 +74,13 @@ public:
 	RAS_IDisplayArray *GetDisplayArray();
 	void SetDeformer(RAS_Deformer *deformer);
 	void SetMeshUser(RAS_MeshUser *user);
+	/** Set the display array bucket and display array of this mesh slot.
+	 * \param arrayBucket The new display array bucket, its reference count must be already incremented.
+	 */
+	void SetDisplayArrayBucket(RAS_DisplayArrayBucket *arrayBucket);
 
 	void GenerateTree(RAS_DisplayArrayUpwardNode *root, RAS_UpwardTreeLeafs *leafs);
 	void RunNode(const RAS_RenderNodeArguments& args);
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:RAS_MeshSlot")
-#endif
 };
 
 typedef std::vector<RAS_MeshSlot *> RAS_MeshSlotList;

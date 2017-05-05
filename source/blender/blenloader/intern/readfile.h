@@ -81,6 +81,8 @@ typedef struct FileData {
 	int id_name_offs;       /* used to retrieve ID names from (bhead+1) */
 	int globalf, fileflags; /* for do_versions patching */
 	
+	eBLOReadSkip skip_flags;  /* skip some data-blocks */
+
 	struct OldNewMap *datamap;
 	struct OldNewMap *globmap;
 	struct OldNewMap *libmap;
@@ -170,6 +172,8 @@ void blo_do_versions_250(struct FileData *fd, struct Library *lib, struct Main *
 void blo_do_versions_260(struct FileData *fd, struct Library *lib, struct Main *main);
 void blo_do_versions_270(struct FileData *fd, struct Library *lib, struct Main *main);
 void blo_do_versions_upbge(struct FileData *fd, struct Library *lib, struct Main *main);
+
+void do_versions_after_linking_270(struct Main *main);
 
 #endif
 

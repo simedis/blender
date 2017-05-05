@@ -30,7 +30,7 @@
 #include "KX_KetsjiEngine.h"
 #include "KX_ISystem.h"
 
-#include "RAS_IRasterizer.h"
+#include "RAS_Rasterizer.h"
 
 #include "SCA_IInputDevice.h"
 
@@ -38,10 +38,9 @@
 
 class KX_Scene;
 class KX_ISystem;
-class KX_ISceneConverter;
+class KX_BlenderConverter;
 class KX_NetworkMessageManager;
 class RAS_ICanvas;
-class RAS_IRasterizer;
 class DEV_EventConsumer;
 class DEV_InputDevice;
 class GHOST_ISystem;
@@ -58,7 +57,7 @@ protected:
 	KX_Scene *m_kxStartScene;
 
 	/// \section Exit state.
-	int m_exitRequested;
+	KX_ExitRequest m_exitRequested;
 	std::string m_exitString;
 	GlobalSettings *m_globalSettings;
 
@@ -75,9 +74,9 @@ protected:
 	/// The game engine's canvas abstraction.
 	RAS_ICanvas *m_canvas;
 	/// The rasterizer.
-	RAS_IRasterizer *m_rasterizer;
+	RAS_Rasterizer *m_rasterizer;
 	/// Converts Blender data files.
-	KX_ISceneConverter *m_sceneConverter;
+	KX_BlenderConverter *m_converter;
 	/// Manage messages.
 	KX_NetworkMessageManager *m_networkMessageManager;
 
@@ -90,7 +89,7 @@ protected:
 	int m_samples;
 
 	/// The render stereo mode passed in constructor.
-	RAS_IRasterizer::StereoMode m_stereoMode;
+	RAS_Rasterizer::StereoMode m_stereoMode;
 
 	/// argc and argv need to be passed on to python
 	int m_argc;
@@ -99,7 +98,7 @@ protected:
 	/// Saved data to restore at the game end.
 	struct SavedData {
 		int vsync;
-		RAS_IRasterizer::MipmapOption mipmap;
+		RAS_Rasterizer::MipmapOption mipmap;
 		int anisotropic;
 	} m_savedData;
 
@@ -115,15 +114,18 @@ protected:
 	/// Execute engine render, overrided to render background.
 	virtual void RenderEngine();
 
+#ifdef WITH_PYTHON
 	/** Return true if the user use a valid python script for main loop and copy the python code
 	 * to pythonCode and file name to pythonFileName. Else return false.
 	 * This function print itself error messages for invalid script name and only pythonCode
 	 * value must be freed.
 	 */
-	virtual bool GetMainLoopPythonCode(char **pythonCode, char **pythonFileName);
+	virtual bool GetPythonMainLoopCode(std::string& pythonCode, std::string& pythonFileName);
+	virtual void RunPythonMainLoop(const std::string& pythonCode);
+#endif  // WITH_PYTHON
 
-	virtual RAS_ICanvas *CreateCanvas(RAS_IRasterizer *rasty) = 0;
-	virtual RAS_IRasterizer::DrawType GetRasterizerDrawMode() = 0;
+	virtual RAS_ICanvas *CreateCanvas(RAS_Rasterizer *rasty) = 0;
+	virtual RAS_Rasterizer::DrawType GetRasterizerDrawMode() = 0;
 	virtual bool GetUseAlwaysExpandFraming() = 0;
 	virtual void InitCamera() = 0;
 	virtual void InitPython() = 0;
@@ -133,7 +135,7 @@ protected:
 
 public:
 	LA_Launcher(GHOST_ISystem *system, Main *maggie, Scene *scene, GlobalSettings *gs,
-				RAS_IRasterizer::StereoMode stereoMode, int samples, int argc, char **argv);
+				RAS_Rasterizer::StereoMode stereoMode, int samples, int argc, char **argv);
 	virtual ~LA_Launcher();
 
 #ifdef WITH_PYTHON
@@ -141,7 +143,7 @@ public:
 	void SetPythonGlobalDict(PyObject *globalDict);
 #endif  // WITH_PYTHON
 
-	int GetExitRequested();
+	KX_ExitRequest GetExitRequested();
 	const std::string& GetExitString();
 	GlobalSettings *GetGlobalSettings();
 

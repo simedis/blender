@@ -422,6 +422,12 @@ void vec_math_add(vec3 v1, vec3 v2, out vec3 outvec, out float outval)
 	outval = (abs(outvec[0]) + abs(outvec[1]) + abs(outvec[2])) / 3.0;
 }
 
+void vec_math_mul(vec3 v1, vec3 v2, out vec3 outvec, out float outval)
+{
+	outvec = v1 * v2;
+	outval = (abs(outvec[0]) + abs(outvec[1]) + abs(outvec[2])) / 3.0;
+}
+
 void vec_math_sub(vec3 v1, vec3 v2, out vec3 outvec, out float outval)
 {
 	outvec = v1 - v2;
@@ -448,6 +454,13 @@ void vec_math_dot(vec3 v1, vec3 v2, out vec3 outvec, out float outval)
 void vec_math_cross(vec3 v1, vec3 v2, out vec3 outvec, out float outval)
 {
 	outvec = cross(v1, v2);
+	outval = length(outvec);
+	outvec /= outval;
+}
+
+void vec_math_reflect(vec3 v1, vec3 v2, out vec3 outvec, out float outval)
+{
+	outvec = reflect(v1, v2);
 	outval = length(outvec);
 	outvec /= outval;
 }
@@ -973,9 +986,9 @@ void texture_wood_sin(vec3 vec, out float value, out vec4 color, out vec3 normal
 	normal = vec3(0.0, 0.0, 0.0);
 }
 
-void texture_image(vec3 vec, sampler2D ima, out float value, out vec4 color, out vec3 normal)
+void texture_image(vec3 vec, float lodbias, sampler2D ima, out float value, out vec4 color, out vec3 normal)
 {
-	color = texture2D(ima, (vec.xy + vec2(1.0, 1.0)) * 0.5);
+	color = texture2D(ima, (vec.xy + vec2(1.0, 1.0)) * 0.5, lodbias);
 	value = color.a;
 
 	normal.x = 2.0 * (color.r - 0.5);
@@ -1398,10 +1411,10 @@ void mtex_cube_map(vec3 co, samplerCube ima, float lodbias, out float value, out
 }
 
 void mtex_cube_map_refl_from_refldir(
-        samplerCube ima, vec3 reflecteddirection, out float value, out vec4 color)
+        samplerCube ima, vec3 reflecteddirection, float lodbias, out float value, out vec4 color)
 {
-        color = textureCube(ima, reflecteddirection);
-        value = 1.0;
+        color = textureCube(ima, reflecteddirection, lodbias);
+        value = color.a;
 }
 
 vec4 mtex_cube_map_refl_color(samplerCube ima, mat4 viewmatrixinverse, float lodbias, vec3 vn, vec3 viewdirection)
@@ -1452,6 +1465,22 @@ void mtex_cube_map_refl_refr(
 void mtex_image(vec3 texco, sampler2D ima, float lodbias, out float value, out vec4 color)
 {
 	color = texture2D(ima, texco.xy, lodbias);
+	value = 1.0;
+}
+
+void mtex_image_refl(vec3 I, vec4 camerafac, sampler2D ima, float lodbias, mat4 objectmatrix, mat4 viewmatrix, vec3 vp, vec3 vn, out float value, out vec4 color)
+{
+	vec4 projvec = gl_ProjectionMatrix * vec4(I, 1.0);
+	vec3 window = vec3(mtex_2d_mapping(projvec.xyz / projvec.w).xy * camerafac.xy + camerafac.zw, 0.0);
+
+	vec3 Z  = normalize(vec3(viewmatrix * objectmatrix * vec4( 0.0, 0.0, 1.0, 0.0)));
+
+	vec3 reflecteddirection = reflect(vp, vn) - reflect(vp, Z);
+
+	// 0.25 is an artistic constant, normal map distortion needs to be scaled down to give proper results
+	vec2 uv = window.xy + vec2(reflecteddirection.x, reflecteddirection.y) * 0.25;
+
+	color = texture2D(ima, uv, lodbias);
 	value = 1.0;
 }
 
@@ -2548,11 +2577,19 @@ void shade_alpha_obcolor(vec4 col, vec4 obcol, out vec4 outcol)
 
 /*********** NEW SHADER UTILITIES **************/
 
-float fresnel_dielectric(vec3 Incoming, vec3 Normal, float eta)
+float fresnel_dielectric_0(float eta)
+{
+	/* compute fresnel reflactance at normal incidence => cosi = 1.0 */
+	float A = (eta - 1.0) / (eta + 1.0);
+
+	return A * A;
+}
+
+float fresnel_dielectric_cos(float cosi, float eta)
 {
 	/* compute fresnel reflectance without explicitly computing
 	 * the refracted direction */
-	float c = abs(dot(Incoming, Normal));
+	float c = abs(cosi);
 	float g = eta * eta - 1.0 + c * c;
 	float result;
 
@@ -2567,6 +2604,13 @@ float fresnel_dielectric(vec3 Incoming, vec3 Normal, float eta)
 	}
 
 	return result;
+}
+
+float fresnel_dielectric(vec3 Incoming, vec3 Normal, float eta)
+{
+	/* compute fresnel reflectance without explicitly computing
+	 * the refracted direction */
+	return fresnel_dielectric_cos(dot(Incoming, Normal), eta);
 }
 
 float hypot(float x, float y)
@@ -2662,6 +2706,57 @@ float floorfrac(float x, out int i)
 	return x - i;
 }
 
+
+/* Principled BSDF operations */
+
+float sqr(float a)
+{
+	return a*a;
+}
+
+float schlick_fresnel(float u)
+{
+	float m = clamp(1.0 - u, 0.0, 1.0);
+	float m2 = m * m;
+	return m2 * m2 * m; // pow(m,5)
+}
+
+float GTR1(float NdotH, float a)
+{
+	if (a >= 1.0) return M_1_PI;
+	float a2 = a*a;
+	float t = 1.0 + (a2 - 1.0) * NdotH*NdotH;
+	return (a2 - 1.0) / (M_PI * log(a2) * t);
+}
+
+float GTR2(float NdotH, float a)
+{
+	float a2 = a*a;
+	float t = 1.0 + (a2 - 1.0) * NdotH*NdotH;
+	return a2 / (M_PI * t*t);
+}
+
+float GTR2_aniso(float NdotH, float HdotX, float HdotY, float ax, float ay)
+{
+	return 1.0 / (M_PI * ax*ay * sqr(sqr(HdotX / ax) + sqr(HdotY / ay) + NdotH*NdotH));
+}
+
+float smithG_GGX(float NdotV, float alphaG)
+{
+	float a = alphaG*alphaG;
+	float b = NdotV*NdotV;
+	return 1.0 / (NdotV + sqrt(a + b - a * b));
+}
+
+vec3 rotate_vector(vec3 p, vec3 n, float theta) {
+	return (
+	           p * cos(theta) + cross(n, p) *
+	           sin(theta) + n * dot(p, n) *
+	           (1.0 - cos(theta))
+	       );
+}
+
+
 /*********** NEW SHADER NODES ***************/
 
 #define NUM_LIGHTS 3
@@ -2721,6 +2816,126 @@ void node_bsdf_glass(vec4 color, float roughness, float ior, vec3 N, out vec4 re
 void node_bsdf_toon(vec4 color, float size, float tsmooth, vec3 N, out vec4 result)
 {
 	node_bsdf_diffuse(color, 0.0, N, result);
+}
+
+void node_bsdf_principled(vec4 base_color, float subsurface, vec3 subsurface_radius, vec4 subsurface_color, float metallic, float specular,
+	float specular_tint, float roughness, float anisotropic, float anisotropic_rotation, float sheen, float sheen_tint, float clearcoat,
+	float clearcoat_gloss, float ior, float transparency, float refraction_roughness, vec3 N, vec3 CN, vec3 T, vec3 I, out vec4 result)
+{
+	/* ambient light */
+	// TODO: set ambient light to an appropriate value
+	vec3 L = vec3(mix(0.1, 0.03, metallic)) * base_color.rgb;
+
+	float eta = (2.0 / (1.0 - sqrt(0.08 * specular))) - 1.0;
+
+	/* set the viewing vector */
+	vec3 V = -normalize(I);
+
+	/* get the tangent */
+	vec3 Tangent = T;
+	if (T == vec3(0.0)) {
+		// if no tangent is set, use a default tangent
+		Tangent = vec3(1.0, 0.0, 0.0);
+		if (N.x != 0.0 || N.y != 0.0) {
+			vec3 N_xz = normalize(vec3(N.x, 0.0, N.z));
+
+			vec3 axis = normalize(cross(vec3(0.0, 0.0, 1.0), N_xz));
+			float angle = acos(dot(vec3(0.0, 0.0, 1.0), N_xz));
+
+			Tangent = normalize(rotate_vector(vec3(1.0, 0.0, 0.0), axis, angle));
+		}
+	}
+
+	/* rotate tangent */
+	if (anisotropic_rotation != 0.0) {
+		Tangent = rotate_vector(Tangent, N, anisotropic_rotation * 2.0 * M_PI);
+	}
+
+	/* calculate the tangent and bitangent */
+	vec3 Y = normalize(cross(N, Tangent));
+	vec3 X = cross(Y, N);
+
+	/* fresnel normalization parameters */
+	float F0 = fresnel_dielectric_0(eta);
+	float F0_norm = 1.0 / (1.0 - F0);
+
+	/* directional lights */
+	for (int i = 0; i < NUM_LIGHTS; i++) {
+		vec3 light_position_world = gl_LightSource[i].position.xyz;
+		vec3 light_position = normalize(gl_NormalMatrix * light_position_world);
+
+		vec3 H = normalize(light_position + V);
+
+		vec3 light_specular = gl_LightSource[i].specular.rgb;
+
+		float NdotL = dot(N, light_position);
+		float NdotV = dot(N, V);
+		float LdotH = dot(light_position, H);
+
+		vec3 diffuse_and_specular_bsdf = vec3(0.0);
+		if (NdotL >= 0.0 && NdotV >= 0.0) {
+			float NdotH = dot(N, H);
+
+			float Cdlum = 0.3 * base_color.r + 0.6 * base_color.g + 0.1 * base_color.b; // luminance approx.
+
+			vec3 Ctint = Cdlum > 0 ? base_color.rgb / Cdlum : vec3(1.0); // normalize lum. to isolate hue+sat
+			vec3 Cspec0 = mix(specular * 0.08 * mix(vec3(1.0), Ctint, specular_tint), base_color.rgb, metallic);
+			vec3 Csheen = mix(vec3(1.0), Ctint, sheen_tint);
+
+			// Diffuse fresnel - go from 1 at normal incidence to .5 at grazing
+			// and mix in diffuse retro-reflection based on roughness
+
+			float FL = schlick_fresnel(NdotL), FV = schlick_fresnel(NdotV);
+			float Fd90 = 0.5 + 2.0 * LdotH*LdotH * roughness;
+			float Fd = mix(1.0, Fd90, FL) * mix(1.0, Fd90, FV);
+
+			// Based on Hanrahan-Krueger brdf approximation of isotropic bssrdf
+			// 1.25 scale is used to (roughly) preserve albedo
+			// Fss90 used to "flatten" retroreflection based on roughness
+			float Fss90 = LdotH*LdotH * roughness;
+			float Fss = mix(1.0, Fss90, FL) * mix(1.0, Fss90, FV);
+			float ss = 1.25 * (Fss * (1.0 / (NdotL + NdotV) - 0.5) + 0.5);
+
+			// specular
+			float aspect = sqrt(1.0 - anisotropic * 0.9);
+			float a = sqr(roughness);
+			float ax = max(0.001, a / aspect);
+			float ay = max(0.001, a * aspect);
+			float Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay); //GTR2(NdotH, a);
+			float FH = (fresnel_dielectric_cos(LdotH, eta) - F0) * F0_norm;
+			vec3 Fs = mix(Cspec0, vec3(1.0), FH);
+			float roughg = sqr(roughness * 0.5 + 0.5);
+			float Gs = smithG_GGX(NdotL, roughg) * smithG_GGX(NdotV, roughg);
+
+			// sheen
+			vec3 Fsheen = schlick_fresnel(LdotH) * sheen * Csheen;
+
+			diffuse_and_specular_bsdf = (M_1_PI * mix(Fd, ss, subsurface) * base_color.rgb + Fsheen)
+			                            * (1.0 - metallic) + Gs * Fs * Ds;
+		}
+		diffuse_and_specular_bsdf *= max(NdotL, 0.0);
+
+		float CNdotL = dot(CN, light_position);
+		float CNdotV = dot(CN, V);
+
+		vec3 clearcoat_bsdf = vec3(0.0);
+		if (CNdotL >= 0.0 && CNdotV >= 0.0 && clearcoat > 0.0) {
+			float CNdotH = dot(CN, H);
+			//float FH = schlick_fresnel(LdotH);
+
+			// clearcoat (ior = 1.5 -> F0 = 0.04)
+			float Dr = GTR1(CNdotH, mix(0.1, 0.001, clearcoat_gloss));
+			float Fr = fresnel_dielectric_cos(LdotH, 1.5); //mix(0.04, 1.0, FH);
+			float Gr = smithG_GGX(CNdotL, 0.25) * smithG_GGX(CNdotV, 0.25);
+
+			clearcoat_bsdf = clearcoat * Gr * Fr * Dr * vec3(0.25);
+		}
+		clearcoat_bsdf *= max(CNdotL, 0.0);
+
+		L += light_specular * (diffuse_and_specular_bsdf + clearcoat_bsdf);
+	}
+
+	result = vec4(L, 1.0);
 }
 
 void node_bsdf_translucent(vec4 color, vec3 N, out vec4 result)
@@ -3706,6 +3921,8 @@ void node_light_path(
 	out float is_transmission_ray,
 	out float ray_length,
 	out float ray_depth,
+	out float diffuse_depth,
+	out float glossy_depth,
 	out float transparent_depth,
 	out float transmission_depth)
 {
@@ -3718,6 +3935,8 @@ void node_light_path(
 	is_transmission_ray = 0.0;
 	ray_length = 1.0;
 	ray_depth = 1.0;
+	diffuse_depth = 1.0;
+	glossy_depth = 1.0;
 	transparent_depth = 1.0;
 	transmission_depth = 1.0;
 }
@@ -3729,12 +3948,12 @@ void node_light_falloff(float strength, float tsmooth, out float quadratic, out 
 	constant = strength;
 }
 
-void node_object_info(out vec3 location, out float object_index, out float material_index, out float random)
+void node_object_info(mat4 obmat, vec3 info, out vec3 location, out float object_index, out float material_index, out float random)
 {
-	location = vec3(0.0);
-	object_index = 0.0;
-	material_index = 0.0;
-	random = 0.0;
+	location = obmat[3].xyz;
+	object_index = info.x;
+	material_index = info.y;
+	random = info.z;
 }
 
 void node_normal_map(vec4 tangent, vec3 normal, vec3 texnormal, out vec3 outnormal)
@@ -3783,7 +4002,7 @@ void node_output_world(vec4 surface, vec4 volume, out vec4 result)
 	result = surface;
 }
 
-void parallax_out(vec3 texco, vec3 vp, vec4 tangent, vec3 vn, vec3 size, mat3 mat, sampler2D ima, float scale, float numsteps,
+void parallax_out(vec3 texco, vec3 vp, vec4 tangent, vec3 vn, vec3 size, mat3 mat, sampler2D ima, float numsteps,
 				  float bumpscale, float discarduv, out vec3 ptexcoord)
 {
 	vec3 binormal = cross(-vn, tangent.xyz) * tangent.w;
@@ -3791,7 +4010,7 @@ void parallax_out(vec3 texco, vec3 vp, vec4 tangent, vec3 vn, vec3 size, mat3 ma
 	vec3 vv = normalize(vvec);
 
 	// The uv shift per depth step, multitply by rotation and after size.
-	vec2 delta = (vec3(-vv.x, vv.y, 0.0) * mat * size * bumpscale / vv.z).xy;
+	vec2 delta = (vec3(-vv.x, gl_FrontFacing ? vv.y : -vv.y, 0.0) * mat * size * bumpscale / vv.z).xy;
 
 	float height = 0.0;
 

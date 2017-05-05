@@ -98,7 +98,7 @@ bool KX_GameActuator::Update()
 			if (m_ketsjiengine)
 			{
 				std::string exitstring = "start other game";
-				m_ketsjiengine->RequestExit(KX_EXIT_REQUEST_START_OTHER_GAME);
+				m_ketsjiengine->RequestExit(KX_ExitRequest::START_OTHER_GAME);
 				m_ketsjiengine->SetNameNextGame(m_filename);
 				m_scene->AddDebugProperty((this)->GetParent(), exitstring);
 			}
@@ -110,7 +110,7 @@ bool KX_GameActuator::Update()
 			if (m_ketsjiengine)
 			{
 				std::string exitstring = "restarting game";
-				m_ketsjiengine->RequestExit(KX_EXIT_REQUEST_RESTART_GAME);
+				m_ketsjiengine->RequestExit(KX_ExitRequest::RESTART_GAME);
 				m_ketsjiengine->SetNameNextGame(m_filename);
 				m_scene->AddDebugProperty((this)->GetParent(), exitstring);
 			}
@@ -121,7 +121,7 @@ bool KX_GameActuator::Update()
 			if (m_ketsjiengine)
 			{
 				std::string exitstring = "quiting game";
-				m_ketsjiengine->RequestExit(KX_EXIT_REQUEST_QUIT_GAME);
+				m_ketsjiengine->RequestExit(KX_ExitRequest::QUIT_GAME);
 				m_scene->AddDebugProperty((this)->GetParent(), exitstring);
 			}
 			break;
@@ -171,7 +171,7 @@ bool KX_GameActuator::Update()
 
 /* Integration hooks ------------------------------------------------------- */
 PyTypeObject KX_GameActuator::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"KX_GameActuator",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -194,7 +194,7 @@ PyTypeObject KX_GameActuator::Type = {
 
 PyMethodDef KX_GameActuator::Methods[] =
 {
-	{NULL,NULL} //Sentinel
+	{nullptr,nullptr} //Sentinel
 };
 
 PyAttributeDef KX_GameActuator::Attributes[] = {

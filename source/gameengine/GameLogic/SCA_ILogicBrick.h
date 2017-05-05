@@ -54,9 +54,7 @@ protected:
 	std::string			m_text;
 	std::string			m_name;
 	//unsigned long		m_drawcolor;
-	void RegisterEvent(CValue* eventval);
 	void RemoveEvent();
-	CValue* GetEvent();
 
 public:
 	SCA_ILogicBrick(SCA_IObject* gameobj);
@@ -68,7 +66,7 @@ public:
 	SCA_IObject*	GetParent() { return m_gameobj; }
 
 	virtual void	ReParent(SCA_IObject* parent);
-	virtual void	Relink(std::map<void *, void *>& obj_map);
+	virtual void	Relink(std::map<SCA_IObject *, SCA_IObject *>& obj_map);
 	virtual void Delete() { Release(); }
 
 	// act as a BoolValue (with value IsPositiveTrigger)
@@ -101,7 +99,7 @@ public:
 	// inside a longer list that contains elements of other objects. 
 	// Sorting is done only between the elements of the same object.
 	// head is the head of the combined list
-	// current points to the first element of the object in the list, NULL if none yet
+	// current points to the first element of the object in the list, nullptr if none yet
 	void			    InsertSelfActiveQList(SG_QList& head, SG_QList** current)
 	{
 		if (!*current)
@@ -136,10 +134,10 @@ public:
 #ifdef WITH_PYTHON
 	// python methods
 	
-	static PyObject*	pyattr_get_owner(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject*	pyattr_get_owner(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
 
 	// check that attribute is a property
-	static int CheckProperty(void *self, const PyAttributeDef *attrdef);
+	static int CheckProperty(PyObjectPlus *self, const PyAttributeDef *attrdef);
 
 	enum KX_BOOL_TYPE {
 		KX_BOOL_NODEF = 0,

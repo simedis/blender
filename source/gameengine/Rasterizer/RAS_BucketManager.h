@@ -37,6 +37,7 @@
 
 #include <vector>
 
+class RAS_OffScreen;
 class SCA_IScene;
 
 class RAS_BucketManager
@@ -94,12 +95,12 @@ public:
 	RAS_BucketManager();
 	virtual ~RAS_BucketManager();
 
-	void Renderbuckets(const MT_Transform & cameratrans, RAS_IRasterizer *rasty);
+	void Renderbuckets(const MT_Transform & cameratrans, RAS_Rasterizer *rasty, RAS_OffScreen *offScreen);
 
 	RAS_MaterialBucket *FindBucket(RAS_IPolyMaterial *material, bool &bucketCreated);
 
-	void ReleaseDisplayLists(RAS_IPolyMaterial *material = NULL);
-	void ReleaseMaterials(RAS_IPolyMaterial *material = NULL);
+	void ReleaseDisplayLists(RAS_IPolyMaterial *material = nullptr);
+	void ReleaseMaterials(RAS_IPolyMaterial *material = nullptr);
 
 	// freeing scenes only
 	void RemoveMaterial(RAS_IPolyMaterial *mat);
@@ -112,13 +113,8 @@ public:
 	}
 
 private:
-	void RenderBasicBuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, BucketType bucketType);
-	void RenderSortedBuckets(const MT_Transform& cameratrans, RAS_IRasterizer *rasty, BucketType bucketType);
-
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:RAS_BucketManager")
-#endif
+	void RenderBasicBuckets(const MT_Transform& cameratrans, RAS_Rasterizer *rasty, BucketType bucketType);
+	void RenderSortedBuckets(const MT_Transform& cameratrans, RAS_Rasterizer *rasty, BucketType bucketType);
 };
 
 #endif // __RAS_BUCKETMANAGER_H__

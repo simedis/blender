@@ -141,7 +141,7 @@ bool KX_ConstraintActuator::RayHit(KX_ClientObjectInfo *client, KX_RayCast *resu
 			}
 		}
 		else {
-			bFound = m_hitObject->GetProperty(m_property) != NULL;
+			bFound = m_hitObject->GetProperty(m_property) != nullptr;
 		}
 	}
 	// update the hit status
@@ -456,7 +456,7 @@ bool KX_ConstraintActuator::Update(double curtime, bool frame)
 					// the object is not dynamic, it won't support setting speed
 					goto CHECK_TIME;
 				}
-				m_hitObject = NULL;
+				m_hitObject = nullptr;
 				// distance of Fh area is stored in m_minimum
 				MT_Vector3 topoint = position + (m_minimumBound+spc->GetRadius()) * direction;
 				KX_RayCast::Callback<KX_ConstraintActuator, void> callback(this, spc);
@@ -551,18 +551,6 @@ void KX_ConstraintActuator::Clamp(MT_Scalar &var,
 	}
 }
 
-
-bool KX_ConstraintActuator::IsValidMode(KX_ConstraintActuator::KX_CONSTRAINTTYPE m) 
-{
-	bool res = false;
-
-	if ( (m > KX_ACT_CONSTRAINT_NODEF) && (m < KX_ACT_CONSTRAINT_MAX)) {
-		res = true;
-	}
-
-	return res;
-}
-
 #ifdef WITH_PYTHON
 
 /* ------------------------------------------------------------------------- */
@@ -571,7 +559,7 @@ bool KX_ConstraintActuator::IsValidMode(KX_ConstraintActuator::KX_CONSTRAINTTYPE
 
 /* Integration hooks ------------------------------------------------------- */
 PyTypeObject KX_ConstraintActuator::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"KX_ConstraintActuator",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -593,7 +581,7 @@ PyTypeObject KX_ConstraintActuator::Type = {
 };
 
 PyMethodDef KX_ConstraintActuator::Methods[] = {
-	{NULL,NULL} //Sentinel
+	{nullptr,nullptr} //Sentinel
 };
 
 PyAttributeDef KX_ConstraintActuator::Attributes[] = {
@@ -611,9 +599,9 @@ PyAttributeDef KX_ConstraintActuator::Attributes[] = {
 	KX_PYATTRIBUTE_NULL	//Sentinel
 };
 
-int KX_ConstraintActuator::pyattr_check_direction(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef)
+int KX_ConstraintActuator::pyattr_check_direction(PyObjectPlus *self_v, const struct KX_PYATTRIBUTE_DEF *attrdef)
 {
-	KX_ConstraintActuator* act = static_cast<KX_ConstraintActuator*>(self);
+	KX_ConstraintActuator* act = static_cast<KX_ConstraintActuator*>(self_v);
 	MT_Vector3 dir(act->m_refDirection);
 	MT_Scalar len = dir.length();
 	if (MT_fuzzyZero(len)) {

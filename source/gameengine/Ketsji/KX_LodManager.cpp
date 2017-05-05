@@ -92,9 +92,9 @@ inline bool KX_LodManager::LodLevelIterator::operator>(float distance2) const
 	return SQUARE(m_levels[m_index]->GetDistance() - GetHysteresis(m_index)) > distance2;
 }
 
-KX_LodManager::KX_LodManager(Object *ob, KX_Scene* scene, KX_BlenderSceneConverter* converter, bool libloading)
+KX_LodManager::KX_LodManager(Object *ob, KX_Scene *scene, KX_BlenderSceneConverter& converter, bool libloading)
 	:m_refcount(1),
-	m_distanceFactor(1.0f)
+	m_distanceFactor(ob->lodfactor)
 {
 	if (BLI_listbase_count_ex(&ob->lodlevels, 2) > 1) {
 		Mesh *lodmesh = (Mesh *)ob->data;
@@ -134,6 +134,11 @@ KX_LodManager::~KX_LodManager()
 	}
 }
 
+std::string KX_LodManager::GetName()
+{
+	return "KX_LodManager";
+}
+
 unsigned int KX_LodManager::GetLevelCount() const
 {
 	return m_levels.size();
@@ -163,13 +168,13 @@ KX_LodLevel *KX_LodManager::GetLevel(KX_Scene *scene, short previouslod, float d
 	}
 
 	const unsigned short level = *it;
-	return (level == previouslod) ? NULL : m_levels[level];
+	return (level == previouslod) ? nullptr : m_levels[level];
 }
 
 #ifdef WITH_PYTHON
 
 PyTypeObject KX_LodManager::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"KX_LodManager",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -191,7 +196,7 @@ PyTypeObject KX_LodManager::Type = {
 };
 
 PyMethodDef KX_LodManager::Methods[] = {
-	{NULL, NULL} // Sentinel
+	{nullptr, nullptr} // Sentinel
 };
 
 PyAttributeDef KX_LodManager::Attributes[] = {
@@ -210,27 +215,27 @@ static PyObject *kx_lod_manager_get_levels_item_cb(void *self_v, int index)
 	return ((KX_LodManager *)self_v)->GetLevel(index)->GetProxy();
 }
 
-PyObject *KX_LodManager::pyattr_get_levels(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_LodManager::pyattr_get_levels(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	return (new CListWrapper(self_v,
 							 ((KX_LodManager *)self_v)->GetProxy(),
-							 NULL,
+							 nullptr,
 							 kx_lod_manager_get_levels_size_cb,
 							 kx_lod_manager_get_levels_item_cb,
-							 NULL,
-							 NULL))->NewProxy(true);
+							 nullptr,
+							 nullptr))->NewProxy(true);
 }
 
 bool ConvertPythonToLodManager(PyObject *value, KX_LodManager **object, bool py_none_ok, const char *error_prefix)
 {
-	if (value == NULL) {
-		PyErr_Format(PyExc_TypeError, "%s, python pointer NULL, should never happen", error_prefix);
-		*object = NULL;
+	if (value == nullptr) {
+		PyErr_Format(PyExc_TypeError, "%s, python pointer nullptr, should never happen", error_prefix);
+		*object = nullptr;
 		return false;
 	}
 
 	if (value == Py_None) {
-		*object = NULL;
+		*object = nullptr;
 
 		if (py_none_ok) {
 			return true;
@@ -245,7 +250,7 @@ bool ConvertPythonToLodManager(PyObject *value, KX_LodManager **object, bool py_
 		*object = static_cast<KX_LodManager *>BGE_PROXY_REF(value);
 
 		/* sets the error */
-		if (*object == NULL) {
+		if (*object == nullptr) {
 			PyErr_Format(PyExc_SystemError, "%s, " BGE_PROXY_ERROR_MSG, error_prefix);
 			return false;
 		}
@@ -253,7 +258,7 @@ bool ConvertPythonToLodManager(PyObject *value, KX_LodManager **object, bool py_
 		return true;
 	}
 
-	*object = NULL;
+	*object = nullptr;
 
 	if (py_none_ok) {
 		PyErr_Format(PyExc_TypeError, "%s, expect a KX_LodManager or None", error_prefix);

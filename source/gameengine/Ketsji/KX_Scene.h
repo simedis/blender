@@ -34,6 +34,8 @@
 
 
 #include "KX_PhysicsEngineEnums.h"
+#include "KX_TextureRendererManager.h" // For KX_TextureRendererManager::RendererCategory.
+#include "KX_CullingNode.h" // For KX_CullingNodeList.
 
 #include <vector>
 #include <set>
@@ -45,7 +47,6 @@
 
 #include "RAS_FramingManager.h"
 #include "RAS_Rect.h"
-
 
 #include "EXP_PyObjectPlus.h"
 #include "EXP_Value.h"
@@ -73,13 +74,13 @@ class KX_WorldInfo;
 class KX_Camera;
 class KX_GameObject;
 class KX_LightObject;
-class KX_CubeMapManager;
 class RAS_BoundingBoxManager;
 class RAS_BucketManager;
 class RAS_MaterialBucket;
 class RAS_IPolyMaterial;
-class RAS_IRasterizer;
-class RAS_IRenderTools;
+class RAS_Rasterizer;
+class RAS_DebugDraw;
+class RAS_OffScreen;
 class RAS_2DFilterManager;
 class KX_2DFilterManager;
 class SCA_JoystickManager;
@@ -87,10 +88,7 @@ class btCollisionShape;
 class KX_BlenderSceneConverter;
 struct KX_ClientObjectInfo;
 class KX_ObstacleSimulation;
-
-#ifdef WITH_CXX_GUARDEDALLOC
-#include "MEM_guardedalloc.h"
-#endif
+struct TaskPool;
 
 /* for ID freeing */
 #define IS_TAGGED(_id) ((_id) && (((ID *)_id)->tag & LIB_TAG_DOIT))
@@ -109,6 +107,11 @@ public:
 		MAX_DRAW_CALLBACK
 	};
 
+	struct AnimationPoolData
+	{
+		double curtime;
+	};
+
 private:
 	Py_Header
 
@@ -119,11 +122,17 @@ private:
 
 	struct CullingInfo {
 		int m_layer;
-		CullingInfo(int layer) : m_layer(layer) {}
+		KX_CullingNodeList& m_nodes;
+
+		CullingInfo(int layer, KX_CullingNodeList& nodes)
+			:m_layer(layer),
+			m_nodes(nodes)
+		{
+		}
 	};
 
 protected:
-	KX_CubeMapManager *m_cubeMapManager;
+	KX_TextureRendererManager *m_rendererManager;
 	RAS_BucketManager*	m_bucketmanager;
 
 	/// Manager used to update all the mesh bounding box.
@@ -162,19 +171,11 @@ protected:
 	SCA_MouseManager*		m_mousemgr;
 	SCA_TimeEventManager*	m_timemgr;
 
-	// Scene converter where many scene entities are registered
-	// Used to deregister objects that are deleted
-	class KX_BlenderSceneConverter*		m_sceneConverter;
 	/**
 	 * physics engine abstraction
 	 */
 	//e_PhysicsEngine m_physicsEngine; //who needs this ?
 	class PHY_IPhysicsEnvironment*		m_physicsEnvironment;
-
-	/**
-	 * Does this scene clear the z-buffer?
-	 */
-	bool m_isclearingZbuffer;
 
 	/**
 	 * The name of the scene
@@ -206,13 +207,15 @@ protected:
 	 * The active camera for the scene
 	 */
 	KX_Camera* m_active_camera;
+	/// The active camera for scene culling.
+	KX_Camera *m_overrideCullingCamera;
 
 	/**
 	 * Another temporary variable outstaying its welcome
 	 * used in AddReplicaObject to map game objects to their
 	 * replicas so pointers can be updated.
 	 */
-	std::map<void *, void *> m_map_gameobject_to_replica;
+	std::map<SCA_IObject *, SCA_IObject *> m_map_gameobject_to_replica;
 
 	/**
 	 * Another temporary variable outstaying its welcome
@@ -250,6 +253,7 @@ protected:
 	 * Suspend (freeze) the entire scene.
 	 */
 	bool m_suspend;
+	double m_suspendeddelta;
 
 	/**
 	 * Radius in Manhattan distance of the box for activity culling.
@@ -286,17 +290,16 @@ protected:
 	/**
 	 * Visibility testing functions.
 	 */
-	void MarkVisible(RAS_IRasterizer* rasty, KX_GameObject* gameobj, KX_Camera*cam, int layer=0);
 	static void PhysicsCullingCallback(KX_ClientObjectInfo* objectInfo, void* cullingInfo);
-
-	double				m_suspendedtime;
-	double				m_suspendeddelta;
 
 	struct Scene* m_blenderScene;
 
 	KX_2DFilterManager *m_filterManager;
 
 	KX_ObstacleSimulation* m_obstacleSimulation;
+
+	AnimationPoolData m_animationPoolData;
+	TaskPool *m_animationPool;
 
 	/**
 	 * LOD Hysteresis settings
@@ -315,12 +318,12 @@ public:
 	~KX_Scene();
 
 	RAS_BucketManager* GetBucketManager();
-	KX_CubeMapManager *GetCubeMapManager();
+	KX_TextureRendererManager *GetTextureRendererManager() const;
 	RAS_BoundingBoxManager *GetBoundingBoxManager();
 	RAS_MaterialBucket*	FindBucket(RAS_IPolyMaterial* polymat, bool &bucketCreated);
-	void RenderBuckets(const MT_Transform& cameratransform,
-	                   RAS_IRasterizer* rasty);
-	void RenderCubeMaps(RAS_IRasterizer *rasty);
+	void RenderBuckets(const KX_CullingNodeList& nodes, const MT_Transform& cameratransform, RAS_Rasterizer *rasty, RAS_OffScreen *offScreen);
+	void RenderTextureRenderers(KX_TextureRendererManager::RendererCategory category, RAS_Rasterizer *rasty, RAS_OffScreen *offScreen,
+								KX_Camera *sceneCamera, const RAS_Rect& viewport, const RAS_Rect& area);
 
 	/**
 	 * Update all transforms according to the scenegraph.
@@ -346,7 +349,7 @@ public:
 	void RemoveDupliGroup(CValue *gameobj);
 	void DelayedRemoveObject(CValue* gameobj);
 	
-	int NewRemoveObject(CValue* gameobj);
+	bool NewRemoveObject(CValue* gameobj);
 	void ReplaceMesh(CValue* gameobj,
 	                 void* meshob, bool use_gfx, bool use_phys);
 
@@ -409,6 +412,9 @@ public:
 	SetActiveCamera(
 		class KX_Camera*
 	);
+
+	KX_Camera *GetOverrideCullingCamera() const;
+	void SetOverrideCullingCamera(KX_Camera *cam);
 
 	/**
 	 * Move this camera to the end of the list so that it is rendered last.
@@ -482,10 +488,8 @@ public:
 
 	void SetWorldInfo(class KX_WorldInfo* wi);
 	KX_WorldInfo* GetWorldInfo();
-	void CalculateVisibleMeshes(RAS_IRasterizer* rasty, KX_Camera *cam, int layer=0);
-	void DrawDebug(RAS_IRasterizer *rasty);
-	KX_Camera* GetpCamera();
-	KX_BlenderSceneConverter *GetSceneConverter() { return m_sceneConverter; }
+	void CalculateVisibleMeshes(KX_CullingNodeList& nodes, KX_Camera *cam, int layer=0);
+	void DrawDebug(RAS_DebugDraw& debugDraw, const KX_CullingNodeList& nodes);
 
 	/**
 	 * Replicate the logic bricks associated to this object.
@@ -501,7 +505,7 @@ public:
 	void Resume();
 
 	/// Update the mesh for objects based on level of detail settings
-	void UpdateObjectLods(KX_Camera *cam);
+	void UpdateObjectLods(KX_Camera *cam, const KX_CullingNodeList& nodes);
 
 	// LoD Hysteresis functions
 	void SetLodHysteresis(bool active);
@@ -518,8 +522,6 @@ public:
 	// Set the radius of the activity culling box.
 	void SetActivityCullingRadius(float f);
 	bool IsSuspended();
-	bool IsClearingZBuffer();
-	void EnableZBufferClearing(bool isclearingZbuffer);
 	// use of DBVT tree for camera culling
 	void SetDbvtCulling(bool b) { m_dbvt_culling = b; }
 	bool GetDbvtCulling() { return m_dbvt_culling; }
@@ -544,7 +546,7 @@ public:
 	 * 2D Filters
 	 */
 	RAS_2DFilterManager *Get2DFilterManager() const;
-	void Render2DFilters(RAS_IRasterizer *rasty, RAS_ICanvas *canvas, unsigned short target);
+	RAS_OffScreen *Render2DFilters(RAS_Rasterizer *rasty, RAS_ICanvas *canvas, RAS_OffScreen *inputofs, RAS_OffScreen *targetofs);
 
 	KX_ObstacleSimulation* GetObstacleSimulation() { return m_obstacleSimulation; }
 
@@ -570,20 +572,22 @@ public:
 
 
 	/* attributes */
-	static PyObject*	pyattr_get_name(void* self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static PyObject*	pyattr_get_objects(void* self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static PyObject*	pyattr_get_objects_inactive(void* self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static PyObject*	pyattr_get_lights(void* self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static PyObject*	pyattr_get_texts(void* self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static PyObject*	pyattr_get_cameras(void* self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static PyObject*	pyattr_get_filter_manager(void* self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static PyObject*	pyattr_get_world(void* self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static PyObject*	pyattr_get_active_camera(void* self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int			pyattr_set_active_camera(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
-	static PyObject*	pyattr_get_drawing_callback(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int			pyattr_set_drawing_callback(void *selv_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
-	static PyObject*	pyattr_get_gravity(void* self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int			pyattr_set_gravity(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject*	pyattr_get_name(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject*	pyattr_get_objects(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject*	pyattr_get_objects_inactive(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject*	pyattr_get_lights(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject*	pyattr_get_texts(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject*	pyattr_get_cameras(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject*	pyattr_get_filter_manager(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject*	pyattr_get_world(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject*	pyattr_get_active_camera(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int			pyattr_set_active_camera(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject*	pyattr_get_overrideCullingCamera(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int			pyattr_set_overrideCullingCamera(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject*	pyattr_get_drawing_callback(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int			pyattr_set_drawing_callback(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject*	pyattr_get_gravity(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int			pyattr_set_gravity(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
 
 	virtual PyObject *py_repr(void) { return PyUnicode_FromStdString(GetName()); }
 	
@@ -598,23 +602,15 @@ public:
 #endif
 
 	/**
-	 * Sets the time the scene was suspended
-	 */ 
-	void setSuspendedTime(double suspendedtime);
-	/**
-	 * Returns the "curtime" the scene was suspended
-	 */ 
-	double getSuspendedTime();
-	/**
 	 * Sets the difference between the local time of the scene (when it
 	 * was running and not suspended) and the "curtime"
 	 */ 
-	void setSuspendedDelta(double suspendeddelta);
+	void SetSuspendedDelta(double suspendeddelta);
 	/**
 	 * Returns the difference between the local time of the scene (when it
 	 * was running and not suspended) and the "curtime"
 	 */
-	double getSuspendedDelta();
+	double GetSuspendedDelta() const;
 	/**
 	 * Returns the Blender scene this was made from
 	 */

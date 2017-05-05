@@ -37,6 +37,7 @@
 #include "BL_Action.h"
 #include "BL_ActionManager.h"
 #include "KX_GameObject.h"
+#include "KX_Globals.h"
 #include <string>
 #include "MEM_guardedalloc.h"
 #include "DNA_nla_types.h"
@@ -115,14 +116,9 @@ void BL_ActionActuator::ProcessReplica()
 	
 }
 
-void BL_ActionActuator::SetBlendTime(float newtime)
-{
-	m_blendframe = newtime;
-}
-
 void BL_ActionActuator::SetLocalTime(float curtime)
 {
-	float dt = (curtime-m_starttime)*KX_KetsjiEngine::GetAnimFrameRate();
+	float dt = (curtime - m_starttime) * KX_GetActiveEngine()->GetAnimFrameRate();
 
 	if (m_endframe < m_startframe)
 		dt = -dt;
@@ -161,7 +157,7 @@ void BL_ActionActuator::ResetStartTime(float curtime)
 {
 	float dt = m_localtime - m_startframe;
 
-	m_starttime = curtime - dt / (KX_KetsjiEngine::GetAnimFrameRate());
+	m_starttime = curtime - dt / KX_GetActiveEngine()->GetAnimFrameRate();
 	//SetLocalTime(curtime);
 }
 
@@ -356,35 +352,35 @@ void BL_ActionActuator::DecLink()
 PyObject *BL_ActionActuator::PyGetChannel(PyObject *value)
 {
 	PyErr_SetString(PyExc_NotImplementedError, "BL_ActionActuator.getChannel() no longer works, please use BL_ArmatureObject.channels instead");
-	return NULL;
+	return nullptr;
 #if 0 // XXX To be removed in a later version (first removed in 2.64)
 	const char *string= _PyUnicode_AsString(value);
 
 	if (GetParent()->GetGameObjectType() != SCA_IObject::OBJ_ARMATURE)
 	{
 		PyErr_SetString(PyExc_NotImplementedError, "actuator.getChannel(): Only armatures support channels");
-		return NULL;
+		return nullptr;
 	}
 	
 	if (!string) {
 		PyErr_SetString(PyExc_TypeError, "expected a single string");
-		return NULL;
+		return nullptr;
 	}
 	
 	bPoseChannel *pchan;
 	
-	if (m_userpose==NULL && m_pose==NULL) {
+	if (m_userpose==nullptr && m_pose==nullptr) {
 		BL_ArmatureObject *obj = (BL_ArmatureObject*)GetParent();
 		obj->GetPose(&m_pose); /* Get the underlying pose from the armature */
 	}
 	
-	// BKE_pose_channel_find_name accounts for NULL pose, run on both in case one exists but
+	// BKE_pose_channel_find_name accounts for nullptr pose, run on both in case one exists but
 	// the channel doesnt
 	if (		!(pchan=BKE_pose_channel_find_name(m_userpose, string)) &&
 			!(pchan=BKE_pose_channel_find_name(m_pose, string))  )
 	{
 		PyErr_SetString(PyExc_ValueError, "channel doesnt exist");
-		return NULL;
+		return nullptr;
 	}
 
 	PyObject *ret = PyTuple_New(3);
@@ -426,32 +422,32 @@ KX_PYMETHODDEF_DOC(BL_ActionActuator, setChannel,
 "\t               as an offset from the bone's rest position.\n")
 {
 	PyErr_SetString(PyExc_NotImplementedError, "BL_ActionActuator.setChannel() no longer works, please use BL_ArmatureObject.channels instead");
-	return NULL;
+	return nullptr;
 
 #if 0 // XXX To be removed in a later version (first removed in 2.64)
 	BL_ArmatureObject *obj = (BL_ArmatureObject*)GetParent();
 	char *string;
-	PyObject *pymat= NULL;
-	PyObject *pyloc= NULL, *pysize= NULL, *pyquat= NULL;
+	PyObject *pymat= nullptr;
+	PyObject *pyloc= nullptr, *pysize= nullptr, *pyquat= nullptr;
 	bPoseChannel *pchan;
 
 	if (GetParent()->GetGameObjectType() != SCA_IObject::OBJ_ARMATURE)
 	{
 		PyErr_SetString(PyExc_NotImplementedError, "actuator.setChannel(): Only armatures support channels");
-		return NULL;
+		return nullptr;
 	}
 	
 	if (PyTuple_Size(args)==2) {
 		if (!PyArg_ParseTuple(args,"sO:setChannel", &string, &pymat)) // matrix
-			return NULL;
+			return nullptr;
 	}
 	else if (PyTuple_Size(args)==4) {
 		if (!PyArg_ParseTuple(args,"sOOO:setChannel", &string, &pyloc, &pysize, &pyquat)) // loc/size/quat
-			return NULL;
+			return nullptr;
 	}
 	else {
 		PyErr_SetString(PyExc_ValueError, "Expected a string and a 4x4 matrix (2 args) or a string and loc/size/quat sequences (4 args)");
-		return NULL;
+		return nullptr;
 	}
 	
 	if (pymat) {
@@ -459,7 +455,7 @@ KX_PYMETHODDEF_DOC(BL_ActionActuator, setChannel,
 		MT_Matrix4x4 mat;
 		
 		if (!PyMatTo(pymat, mat))
-			return NULL;
+			return nullptr;
 		
 		mat.getValue((float*)matrix);
 		
@@ -485,7 +481,7 @@ KX_PYMETHODDEF_DOC(BL_ActionActuator, setChannel,
 		MT_Quaternion quat;
 		
 		if (!PyVecTo(pyloc, loc) || !PyVecTo(pysize, size) || !PyQuatTo(pyquat, quat))
-			return NULL;
+			return nullptr;
 		
 		// same as above
 		if (!m_userpose) {
@@ -504,9 +500,9 @@ KX_PYMETHODDEF_DOC(BL_ActionActuator, setChannel,
 		}
 	}
 	
-	if (pchan==NULL) {
+	if (pchan==nullptr) {
 		PyErr_SetString(PyExc_ValueError, "Channel could not be found, use the 'channelNames' attribute to get a list of valid channels");
-		return NULL;
+		return nullptr;
 	}
 	
 	Py_RETURN_NONE;
@@ -518,7 +514,7 @@ KX_PYMETHODDEF_DOC(BL_ActionActuator, setChannel,
 /* ------------------------------------------------------------------------- */
 
 PyTypeObject BL_ActionActuator::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"BL_ActionActuator",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -542,7 +538,7 @@ PyTypeObject BL_ActionActuator::Type = {
 PyMethodDef BL_ActionActuator::Methods[] = {
 	{"getChannel", (PyCFunction) BL_ActionActuator::sPyGetChannel, METH_O},
 	KX_PYMETHODTABLE(BL_ActionActuator, setChannel),
-	{NULL,NULL} //Sentinel
+	{nullptr,nullptr} //Sentinel
 };
 
 PyAttributeDef BL_ActionActuator::Attributes[] = {
@@ -563,13 +559,13 @@ PyAttributeDef BL_ActionActuator::Attributes[] = {
 	KX_PYATTRIBUTE_NULL //Sentinel
 };
 
-PyObject *BL_ActionActuator::pyattr_get_action(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *BL_ActionActuator::pyattr_get_action(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	BL_ActionActuator* self = static_cast<BL_ActionActuator*>(self_v);
 	return PyUnicode_FromString(self->GetAction() ? self->GetAction()->id.name+2 : "");
 }
 
-int BL_ActionActuator::pyattr_set_action(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int BL_ActionActuator::pyattr_set_action(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	BL_ActionActuator* self = static_cast<BL_ActionActuator*>(self_v);
 	
@@ -579,7 +575,7 @@ int BL_ActionActuator::pyattr_set_action(void *self_v, const KX_PYATTRIBUTE_DEF 
 		return PY_SET_ATTR_FAIL;
 	}
 
-	bAction *action= NULL;
+	bAction *action= nullptr;
 	std::string val = _PyUnicode_AsString(value);
 	
 	if (val != "")
@@ -597,10 +593,10 @@ int BL_ActionActuator::pyattr_set_action(void *self_v, const KX_PYATTRIBUTE_DEF 
 
 }
 
-PyObject *BL_ActionActuator::pyattr_get_channel_names(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *BL_ActionActuator::pyattr_get_channel_names(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	PyErr_SetString(PyExc_NotImplementedError, "BL_ActionActuator.channelNames no longer works, please use BL_ArmatureObject.channels instead");
-	return NULL;
+	return nullptr;
 
 #if 0 // XXX To be removed in a later version (first removed in 2.64)
 	BL_ActionActuator* self = static_cast<BL_ActionActuator*>(self_v);
@@ -610,7 +606,7 @@ PyObject *BL_ActionActuator::pyattr_get_channel_names(void *self_v, const KX_PYA
 	if (self->GetParent()->GetGameObjectType() != SCA_IObject::OBJ_ARMATURE)
 	{
 		PyErr_SetString(PyExc_NotImplementedError, "actuator.channelNames: Only armatures support channels");
-		return NULL;
+		return nullptr;
 	}
 
 	bPose *pose= ((BL_ArmatureObject*)self->GetParent())->GetOrigPose();
@@ -628,13 +624,13 @@ PyObject *BL_ActionActuator::pyattr_get_channel_names(void *self_v, const KX_PYA
 #endif
 }
 
-PyObject *BL_ActionActuator::pyattr_get_use_continue(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *BL_ActionActuator::pyattr_get_use_continue(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	BL_ActionActuator* self = static_cast<BL_ActionActuator*>(self_v);
 	return PyBool_FromLong(self->m_flag & ACT_FLAG_CONTINUE);
 }
 
-int BL_ActionActuator::pyattr_set_use_continue(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int BL_ActionActuator::pyattr_set_use_continue(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	BL_ActionActuator* self = static_cast<BL_ActionActuator*>(self_v);
 	
@@ -646,13 +642,13 @@ int BL_ActionActuator::pyattr_set_use_continue(void *self_v, const KX_PYATTRIBUT
 	return PY_SET_ATTR_SUCCESS;
 }
 
-PyObject *BL_ActionActuator::pyattr_get_frame(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *BL_ActionActuator::pyattr_get_frame(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	BL_ActionActuator* self = static_cast<BL_ActionActuator*>(self_v);
 	return PyFloat_FromDouble(((KX_GameObject*)self->m_gameobj)->GetActionFrame(self->m_layer));
 }
 
-int BL_ActionActuator::pyattr_set_frame(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int BL_ActionActuator::pyattr_set_frame(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	BL_ActionActuator* self = static_cast<BL_ActionActuator*>(self_v);
 	

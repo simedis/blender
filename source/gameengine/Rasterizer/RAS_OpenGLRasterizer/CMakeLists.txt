@@ -47,15 +47,20 @@ set(INC
 set(INC_SYS
 	../../../../intern/moto/include
 	${GLEW_INCLUDE_PATH}
+	${BOOST_INCLUDE_DIR}
 )
 
 set(SRC
+	RAS_OpenGLDebugDraw.cpp
 	RAS_OpenGLLight.cpp
+	RAS_OpenGLQuery.cpp
 	RAS_OpenGLSync.cpp
 	RAS_OpenGLRasterizer.cpp
 	RAS_StorageVBO.cpp
 
+	RAS_OpenGLDebugDraw.h
 	RAS_OpenGLLight.h
+	RAS_OpenGLQuery.h
 	RAS_OpenGLSync.h
 	RAS_OpenGLRasterizer.h
 	RAS_StorageVBO.h

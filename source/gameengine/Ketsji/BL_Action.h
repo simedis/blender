@@ -30,10 +30,6 @@
 #include <string>
 #include <vector>
 
-#ifdef WITH_CXX_GUARDEDALLOC
-#include "MEM_guardedalloc.h"
-#endif
-
 class BL_Action
 {
 private:
@@ -72,6 +68,9 @@ private:
 	 * to the object.
 	 */
 	bool m_appliedToObject;
+
+	/// Set to true when the action was updated and applied. Back to false in the IPO update (UpdateIPO).
+	bool m_requestIpo;
 	bool m_calc_localtime;
 
 	// The last update time to avoid double animation update.
@@ -125,7 +124,6 @@ public:
 	// Mutators
 	void SetFrame(float frame);
 	void SetPlayMode(short play_mode);
-	void SetTimes(float start, float end);
 
 	enum
 	{
@@ -149,10 +147,6 @@ public:
 		ACT_IPOFLAG_ADD = 4,
 		ACT_IPOFLAG_CHILD = 8,
 	};
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:BL_Action")
-#endif
 };
 
 #endif  /* BL_ACTION */

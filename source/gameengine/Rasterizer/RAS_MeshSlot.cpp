@@ -48,14 +48,15 @@
 
 // mesh slot
 RAS_MeshSlot::RAS_MeshSlot()
-	:m_displayArray(NULL),
-	m_node(this, &RAS_MeshSlot::RunNode, NULL),
-	m_bucket(NULL),
-	m_displayArrayBucket(NULL),
-	m_mesh(NULL),
-	m_pDeformer(NULL),
-	m_pDerivedMesh(NULL),
-	m_meshUser(NULL)
+	:m_displayArray(nullptr),
+	m_node(this, std::mem_fn(&RAS_MeshSlot::RunNode), nullptr),
+	m_bucket(nullptr),
+	m_displayArrayBucket(nullptr),
+	m_mesh(nullptr),
+	m_pDeformer(nullptr),
+	m_pDerivedMesh(nullptr),
+	m_meshUser(nullptr),
+	m_batchPartIndex(-1)
 {
 }
 
@@ -73,15 +74,16 @@ RAS_MeshSlot::~RAS_MeshSlot()
 
 RAS_MeshSlot::RAS_MeshSlot(const RAS_MeshSlot& slot)
 {
-	m_pDeformer = NULL;
-	m_pDerivedMesh = NULL;
-	m_meshUser = NULL;
+	m_pDeformer = nullptr;
+	m_pDerivedMesh = nullptr;
+	m_meshUser = nullptr;
+	m_batchPartIndex = -1;
 	m_mesh = slot.m_mesh;
 	m_meshMaterial = slot.m_meshMaterial;
 	m_bucket = slot.m_bucket;
 	m_displayArrayBucket = slot.m_displayArrayBucket;
 	m_displayArray = slot.m_displayArray;
-	m_node = RAS_MeshSlotUpwardNode(this, &RAS_MeshSlot::RunNode, NULL);
+	m_node = RAS_MeshSlotUpwardNode(this, std::mem_fn(&RAS_MeshSlot::RunNode), nullptr);
 
 	if (m_displayArrayBucket) {
 		m_displayArrayBucket->AddRef();
@@ -115,7 +117,7 @@ void RAS_MeshSlot::SetDeformer(RAS_Deformer *deformer)
 		if (deformer->ShareVertexArray()) {
 			// this deformer uses the base vertex array, first release the current ones
 			m_displayArrayBucket->Release();
-			m_displayArrayBucket = NULL;
+			m_displayArrayBucket = nullptr;
 			// then hook to the base ones
 			if (m_meshMaterial && m_meshMaterial->m_baseslot) {
 				m_displayArrayBucket = m_meshMaterial->m_baseslot->m_displayArrayBucket->AddRef();
@@ -137,12 +139,12 @@ void RAS_MeshSlot::SetDeformer(RAS_Deformer *deformer)
 			else {
 				// the deformer is not using vertex array (Modifier), release them
 				m_displayArrayBucket->Release();
-				m_displayArrayBucket = m_bucket->FindDisplayArrayBucket(NULL, m_mesh);
+				m_displayArrayBucket = m_bucket->FindDisplayArrayBucket(nullptr, m_mesh);
 				if (m_displayArrayBucket) {
 					m_displayArrayBucket->AddRef();
 				}
 				else {
-					m_displayArrayBucket = new RAS_DisplayArrayBucket(m_bucket, NULL, m_mesh, m_meshMaterial);
+					m_displayArrayBucket = new RAS_DisplayArrayBucket(m_bucket, nullptr, m_mesh, m_meshMaterial);
 				}
 			}
 		}
@@ -154,7 +156,7 @@ void RAS_MeshSlot::SetDeformer(RAS_Deformer *deformer)
 			m_displayArray = m_displayArrayBucket->GetDisplayArray();
 		}
 		else {
-			m_displayArray = NULL;
+			m_displayArray = nullptr;
 		}
 	}
 	m_pDeformer = deformer;
@@ -165,6 +167,16 @@ void RAS_MeshSlot::SetMeshUser(RAS_MeshUser *user)
 	m_meshUser = user;
 }
 
+void RAS_MeshSlot::SetDisplayArrayBucket(RAS_DisplayArrayBucket *arrayBucket)
+{
+	if (m_displayArrayBucket) {
+		m_displayArrayBucket->Release();
+	}
+
+	m_displayArrayBucket = arrayBucket;
+	m_displayArray = m_displayArrayBucket->GetDisplayArray();
+}
+
 void RAS_MeshSlot::GenerateTree(RAS_DisplayArrayUpwardNode *root, RAS_UpwardTreeLeafs *leafs)
 {
 	m_node.SetParent(root);
@@ -173,23 +185,19 @@ void RAS_MeshSlot::GenerateTree(RAS_DisplayArrayUpwardNode *root, RAS_UpwardTree
 
 void RAS_MeshSlot::RunNode(const RAS_RenderNodeArguments& args)
 {
-	RAS_IRasterizer *rasty = args.m_rasty;
+	RAS_Rasterizer *rasty = args.m_rasty;
 	rasty->SetClientObject(m_meshUser->GetClientObject());
 	rasty->SetFrontFace(m_meshUser->GetFrontFace());
 
 	RAS_IPolyMaterial *material = m_bucket->GetPolyMaterial();
 
-	if (args.m_shaderOverride) {
-		// Set cull face without activating the material.
-		rasty->SetCullFace(material->IsCullFace());
-	}
-	else {
+	if (!args.m_shaderOverride) {
 		bool uselights = material->UsesLighting(rasty);
 		rasty->ProcessLighting(uselights, args.m_trans);
 		material->ActivateMeshSlot(this, rasty);
 	}
 
-	if (material->IsZSort() && rasty->GetDrawingMode() >= RAS_IRasterizer::RAS_SOLID) {
+	if (material->IsZSort() && rasty->GetDrawingMode() >= RAS_Rasterizer::RAS_SOLID) {
 		m_mesh->SortPolygons(this, args.m_trans * MT_Transform(m_meshUser->GetMatrix()));
 		m_displayArrayBucket->SetPolygonsModified(rasty);
 	}

@@ -31,8 +31,9 @@
 #include "glew-mx.h"
 
 #include "RAS_IStorageInfo.h"
+#include "RAS_Rasterizer.h"
 
-#include "RAS_OpenGLRasterizer.h"
+class RAS_IDisplayArray;
 
 class VBO : public RAS_IStorageInfo
 {
@@ -40,12 +41,13 @@ public:
 	VBO(RAS_DisplayArrayBucket *arrayBucket);
 	virtual ~VBO();
 
-	virtual void SetDataModified(RAS_IRasterizer::DrawType drawmode, DataType dataType);
+	virtual void SetDataModified(RAS_Rasterizer::DrawType drawmode, DataType dataType);
 
-	void Bind(RAS_OpenGLRasterizer::StorageAttribs *storageAttribs, RAS_IRasterizer::DrawType drawingmode);
-	void Unbind(RAS_OpenGLRasterizer::StorageAttribs *storageAttribs, RAS_IRasterizer::DrawType drawingmode);
+	void Bind(RAS_Rasterizer::StorageAttribs *storageAttribs, RAS_Rasterizer::DrawType drawingmode);
+	void Unbind(RAS_Rasterizer::StorageAttribs *storageAttribs, RAS_Rasterizer::DrawType drawingmode);
 	void Draw();
 	void DrawInstancing(unsigned int numinstance);
+	void DrawBatching(const std::vector<void *>& indices, const std::vector<int>& counts);
 
 	/// Updating the VBO using the display array vertices.
 	void UpdateData();
@@ -61,11 +63,11 @@ private:
 	GLuint m_ibo;
 	GLuint m_vbo_id;
 	/// The VAOs id allocated by OpenGL.
-	GLuint m_vaos[RAS_IRasterizer::RAS_DRAW_MAX];
+	GLuint m_vaos[RAS_Rasterizer::RAS_DRAW_MAX];
 	/// Set to true when the VBO can use VAO (the GPU support VAO and there's no geometry instancing).
 	bool m_useVao;
 	/// Set to true when the VAO was already filled in a VBO::Bind() call.
-	bool m_vaoInitialized[RAS_IRasterizer::RAS_DRAW_MAX];
+	bool m_vaoInitialized[RAS_Rasterizer::RAS_DRAW_MAX];
 
 	/// Set to true when the VBO/VAO is bound.
 	bool m_bound;
@@ -83,37 +85,26 @@ private:
 class RAS_StorageVBO
 {
 public:
-	RAS_StorageVBO(RAS_OpenGLRasterizer::StorageAttribs *storageAttribs);
+	RAS_StorageVBO(RAS_Rasterizer::StorageAttribs *storageAttribs);
 	~RAS_StorageVBO();
 
 	void BindPrimitives(RAS_DisplayArrayBucket *arrayBucket);
 	void UnbindPrimitives(RAS_DisplayArrayBucket *arrayBucket);
 	void IndexPrimitives(RAS_MeshSlot *ms);
 	void IndexPrimitivesInstancing(RAS_DisplayArrayBucket *arrayBucket);
+	void IndexPrimitivesBatching(RAS_DisplayArrayBucket *arrayBucket, const std::vector<void *>& indices, const std::vector<int>& counts);
 
-	void SetDrawingMode(RAS_IRasterizer::DrawType drawingmode)
+	void SetDrawingMode(RAS_Rasterizer::DrawType drawingmode)
 	{
 		m_drawingmode = drawingmode;
 	};
 
 protected:
-	RAS_IRasterizer::DrawType m_drawingmode;
+	RAS_Rasterizer::DrawType m_drawingmode;
 
-	RAS_OpenGLRasterizer::StorageAttribs *m_storageAttribs;
+	RAS_Rasterizer::StorageAttribs *m_storageAttribs;
 
 	VBO *GetVBO(RAS_DisplayArrayBucket *arrayBucket);
-
-#ifdef WITH_CXX_GUARDEDALLOC
-public:
-	void *operator new(size_t num_bytes)
-	{
-		return MEM_mallocN(num_bytes, "GE:RAS_StorageVA");
-	}
-	void operator delete(void *mem)
-	{
-		MEM_freeN(mem);
-	}
-#endif
 };
 
 #endif  // __RAS_STORAGE_VBO_H__

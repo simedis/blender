@@ -63,12 +63,12 @@ public:
 						Object *bmeshobj_old,
 						Object *bmeshobj_new,
 						RAS_MeshObject *mesh,
-						BL_ArmatureObject *arma = NULL,
-	                    BL_LatticeObject *lattice = NULL);
+						BL_ArmatureObject *arma = nullptr,
+						BL_LatticeObject *lattice = nullptr);
 
 	void SetLattice(BL_LatticeObject *latticeObj);
 
-	virtual void Relink(std::map<void *, void *>& map);
+	virtual void Relink(std::map<SCA_IObject *, SCA_IObject *>& map);
 	virtual void ProcessReplica();
 	virtual RAS_Deformer *GetReplica();
 	virtual bool UnlinkObject(SCA_IObject* clientobj);
@@ -124,11 +124,6 @@ protected:
 	DerivedMesh *m_dm;
 	BL_LatticeObject *m_latticeObj;
 	double m_lastLatticeUpdate;
-
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:BL_ModifierDeformer")
-#endif
 };
 
 #endif  /* __BL_MODIFIERDEFORMER_H__ */

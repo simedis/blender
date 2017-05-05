@@ -28,7 +28,7 @@
 #ifdef WITH_PYTHON
 
 PyTypeObject CValue::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"CValue",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -40,8 +40,8 @@ PyTypeObject CValue::Type = {
 	py_base_repr,
 	0,
 	0, 0, 0, 0, 0,
-	NULL,
-	NULL,
+	nullptr,
+	nullptr,
 	0,
 	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
 	0, 0, 0, 0, 0, 0, 0,
@@ -54,14 +54,13 @@ PyTypeObject CValue::Type = {
 };
 
 PyMethodDef CValue::Methods[] = {
-	{NULL, NULL} // Sentinel
+	{nullptr, nullptr} // Sentinel
 };
 #endif  // WITH_PYTHON
 
 CValue::CValue()
-	:m_pNamedPropertyArray(NULL),
-	m_error(false),
-	m_refcount(1)
+	:m_pNamedPropertyArray(nullptr),
+	m_error(false)
 {
 }
 
@@ -151,7 +150,7 @@ std::string CValue::op2str(VALUE_OPERATOR op)
 void CValue::SetProperty(const std::string & name, CValue *ioProperty)
 {
 	// Check if somebody is setting an empty property.
-	if (ioProperty == NULL) {
+	if (ioProperty == nullptr) {
 		trace("Warning:trying to set empty property!");
 		return;
 	}
@@ -172,7 +171,7 @@ void CValue::SetProperty(const std::string & name, CValue *ioProperty)
 	(*m_pNamedPropertyArray)[name] = ioProperty->AddRef();
 }
 
-/// Get pointer to a property with name <inName>, returns NULL if there is no property named <inName>.
+/// Get pointer to a property with name <inName>, returns nullptr if there is no property named <inName>.
 CValue *CValue::GetProperty(const std::string & inName)
 {
 	if (m_pNamedPropertyArray) {
@@ -181,7 +180,7 @@ CValue *CValue::GetProperty(const std::string & inName)
 			return (*it).second;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 /// Get text description of property with name <inName>, returns an empty string if there is no property named <inName>.
@@ -244,7 +243,7 @@ std::vector<std::string> CValue::GetPropertyNames()
 void CValue::ClearProperties()
 {
 	// Check if we have any properties.
-	if (m_pNamedPropertyArray == NULL) {
+	if (m_pNamedPropertyArray == nullptr) {
 		return;
 	}
 
@@ -258,14 +257,14 @@ void CValue::ClearProperties()
 
 	// Delete property array.
 	delete m_pNamedPropertyArray;
-	m_pNamedPropertyArray = NULL;
+	m_pNamedPropertyArray = nullptr;
 }
 
 /// Get property number <inIndex>.
 CValue *CValue::GetProperty(int inIndex)
 {
 	int count = 0;
-	CValue *result = NULL;
+	CValue *result = nullptr;
 
 	if (m_pNamedPropertyArray) {
 		std::map<std::string, CValue *>::iterator it;
@@ -294,21 +293,19 @@ void CValue::DestructFromPython()
 {
 #ifdef WITH_PYTHON
 	// Avoid decrefing freed proxy in destructor.
-	m_proxy = NULL;
+	m_proxy = nullptr;
 	Release();
 #endif  // WITH_PYTHON
 }
 
 void CValue::ProcessReplica()
 {
-	m_refcount = 1;
-
 	PyObjectPlus::ProcessReplica();
 
 	// Copy all props.
 	if (m_pNamedPropertyArray) {
 		std::map<std::string, CValue *> *pOldArray = m_pNamedPropertyArray;
-		m_pNamedPropertyArray = NULL;
+		m_pNamedPropertyArray = nullptr;
 		std::map<std::string, CValue *>::iterator it;
 		for (it = pOldArray->begin(); (it != pOldArray->end()); it++)
 		{
@@ -326,7 +323,7 @@ int CValue::GetValueType()
 
 CValue *CValue::FindIdentifier(const std::string& identifiername)
 {
-	CValue *result = NULL;
+	CValue *result = nullptr;
 
 	int pos = 0;
 	// if a dot exists, explode the name into pieces to get the subcontext
@@ -357,14 +354,14 @@ PyAttributeDef CValue::Attributes[] = {
 	KX_PYATTRIBUTE_NULL // Sentinel
 };
 
-PyObject *CValue::pyattr_get_name(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *CValue::pyattr_get_name(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	CValue *self = static_cast<CValue *> (self_v);
 	return PyUnicode_FromStdString(self->GetName());
 }
 
 /**
- * There are 2 reasons this could return NULL
+ * There are 2 reasons this could return nullptr
  * - unsupported type.
  * - error converting (overflow).
  *
@@ -382,7 +379,7 @@ CValue *CValue::ConvertPythonToValue(PyObject *pyobj, const bool do_type_excepti
 		const double tval = PyFloat_AsDouble(pyobj);
 		if (tval > (double)FLT_MAX || tval < (double)-FLT_MAX) {
 			PyErr_Format(PyExc_OverflowError, "%soverflow converting from float, out of internal range", error_prefix);
-			vallie = NULL;
+			vallie = nullptr;
 		}
 		else {
 			vallie = new CFloatValue((float)tval);
@@ -403,7 +400,7 @@ CValue *CValue::ConvertPythonToValue(PyObject *pyobj, const bool do_type_excepti
 			// Return an error value from the caller.
 			PyErr_Format(PyExc_TypeError, "%scould convert python value to a game engine property", error_prefix);
 		}
-		vallie = NULL;
+		vallie = nullptr;
 	}
 	return vallie;
 
@@ -431,43 +428,12 @@ PyObject *CValue::ConvertKeysToPython(void)
 
 CValue *CValue::Calc(VALUE_OPERATOR op, CValue *val)
 {
-	return NULL;
+	return nullptr;
 }
 
 CValue *CValue::CalcFinal(VALUE_DATA_TYPE dtype, VALUE_OPERATOR op, CValue *val)
 {
-	return NULL;
-}
-
-int CValue::GetRefCount()
-{
-	return m_refcount;
-}
-
-CValue *CValue::AddRef()
-{
-	/* Increase global reference count, used to see at the end of the program
-	 * if all CValue-derived classes have been dereferenced to 0.
-	 */
-	m_refcount++;
-	return this;
-}
-
-int CValue::Release()
-{
-	/* Decrease global reference count, used to see at the end of the program
-	 * if all CValue-derived classes have been dereferenced to 0
-	 * Decrease local reference count, if it reaches 0 the object should be freed.
-	 */
-	if (--m_refcount > 0) {
-		// Reference count normal, return new reference count.
-		return m_refcount;
-	}
-	else {
-		// Reference count reached 0, delete ourselves and return 0.
-		delete this;
-		return 0;
-	}
+	return nullptr;
 }
 
 void CValue::SetValue(CValue *newval)
@@ -492,5 +458,5 @@ void CValue::SetName(const std::string& name)
 
 CValue *CValue::GetReplica()
 {
-	return NULL;
+	return nullptr;
 }

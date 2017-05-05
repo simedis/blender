@@ -56,7 +56,7 @@ class BL_MeshDeformer : public RAS_Deformer
 public:
 	void VerifyStorage();
 	void RecalcNormals();
-	virtual void Relink(std::map<void *, void *>& map);
+	virtual void Relink(std::map<SCA_IObject *, SCA_IObject *>& map);
 	virtual SCA_IObject* GetParent()
 	{
 		return (SCA_IObject*)m_gameobj;
@@ -78,7 +78,7 @@ public:
 	}
 	virtual RAS_Deformer *GetReplica()
 	{
-		return NULL;
+		return nullptr;
 	}
 	virtual void ProcessReplica();
 	Mesh *GetMesh()
@@ -108,10 +108,6 @@ protected:
 	int m_tvtot;
 	BL_DeformableGameObject *m_gameobj;
 	double m_lastDeformUpdate;
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:BL_MeshDeformer")
-#endif
 };
 
 #endif

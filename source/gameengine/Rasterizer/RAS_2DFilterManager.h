@@ -31,7 +31,8 @@
 #include <map>
 
 class RAS_ICanvas;
-class RAS_IRasterizer;
+class RAS_Rasterizer;
+class RAS_OffScreen;
 class RAS_2DFilter;
 
 typedef std::map<unsigned int, RAS_2DFilter *> RAS_PassTo2DFilter;
@@ -64,9 +65,12 @@ public:
 	/** Applies the filters to the scene.
 	 * \param rasty The rasterizer used for draw commands.
 	 * \param canvas The canvas containing the screen viewport.
-	 * \param target The off screen used as output of the last filters.
+	 * \param inputofs The off screen used as input of the first filter.
+	 * \param targetofs The off screen used as output of the last filter.
+	 * \return The last used off screen, if none filters were rendered it's the
+	 * same off screen than inputofs.
 	 */
-	void RenderFilters(RAS_IRasterizer *rasty, RAS_ICanvas *canvas, unsigned short target);
+	RAS_OffScreen *RenderFilters(RAS_Rasterizer *rasty, RAS_ICanvas *canvas, RAS_OffScreen *inputofs, RAS_OffScreen *targetofs);
 
 	/// Add a filter to the stack of filters managed by this object.
 	RAS_2DFilter *AddFilter(RAS_2DFilterData& filterData);
@@ -77,17 +81,15 @@ public:
 	/// Get the existing filter for the given pass index.
 	RAS_2DFilter *GetFilterPass(unsigned int passIndex);
 
-	RAS_ICanvas *GetCanvas();
-
 private:
 	RAS_PassTo2DFilter m_filters;
 
-	/** Creates a filter matching the given filter data. Returns NULL if no
+	/** Creates a filter matching the given filter data. Returns nullptr if no
 	 * filter can be created with such information.
 	 */
 	RAS_2DFilter *CreateFilter(RAS_2DFilterData& filterData);
 	/// Only return a new instanced filter.
-	virtual RAS_2DFilter *NewFilter(RAS_2DFilterData& filterData);
+	virtual RAS_2DFilter *NewFilter(RAS_2DFilterData& filterData) = 0;
 };
 
 #endif // __RAS_2DFILTERMANAGER_H__

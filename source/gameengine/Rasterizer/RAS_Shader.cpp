@@ -23,7 +23,7 @@
  */
 
 #include "RAS_Shader.h"
-#include "RAS_IRasterizer.h"
+#include "RAS_Rasterizer.h"
 
 #include "BLI_utildefines.h"
 #include "MEM_guardedalloc.h"
@@ -34,8 +34,6 @@
 
 #include "CM_Message.h"
 
-#define UNIFORM_MAX_LEN (int)sizeof(float) * 16
-
 RAS_Shader::RAS_Uniform::RAS_Uniform(int data_size)
 	:m_loc(-1),
 	m_count(1),
@@ -45,7 +43,6 @@ RAS_Shader::RAS_Uniform::RAS_Uniform(int data_size)
 	m_dataLen(data_size)
 {
 #ifdef SORT_UNIFORMS
-	BLI_assert((int)m_dataLen <= UNIFORM_MAX_LEN);
 	m_data = (void *)MEM_mallocN(m_dataLen, "shader-uniform-alloc");
 #endif
 }
@@ -55,7 +52,7 @@ RAS_Shader::RAS_Uniform::~RAS_Uniform()
 #ifdef SORT_UNIFORMS
 	if (m_data) {
 		MEM_freeN(m_data);
-		m_data = NULL;
+		m_data = nullptr;
 	}
 #endif
 }
@@ -162,7 +159,7 @@ bool RAS_Shader::Ok() const
 }
 
 RAS_Shader::RAS_Shader()
-	:m_shader(NULL),
+	:m_shader(nullptr),
 	m_use(0),
 	m_attr(0),
 	m_error(0),
@@ -208,7 +205,7 @@ RAS_Shader::RAS_Uniform *RAS_Shader::FindUniform(const int location)
 		it++;
 	}
 #endif
-	return NULL;
+	return nullptr;
 }
 
 void RAS_Shader::SetUniformfv(int location, int type, float *param, int size, unsigned int count, bool transpose)
@@ -275,7 +272,7 @@ void RAS_Shader::DeleteShader()
 {
 	if (m_shader) {
 		GPU_shader_free(m_shader);
-		m_shader = NULL;
+		m_shader = nullptr;
 	}
 }
 
@@ -296,8 +293,8 @@ bool RAS_Shader::LinkProgram()
 
 	vert = m_progs[VERTEX_PROGRAM].c_str();
 	frag = m_progs[FRAGMENT_PROGRAM].c_str();
-	geom = (m_progs[GEOMETRY_PROGRAM].empty()) ? NULL : m_progs[GEOMETRY_PROGRAM].c_str();
-	m_shader = GPU_shader_create_ex(vert, frag, geom, NULL, NULL, 0, 0, 0, GPU_SHADER_FLAGS_SPECIAL_RESET_LINE);
+	geom = (m_progs[GEOMETRY_PROGRAM].empty()) ? nullptr : m_progs[GEOMETRY_PROGRAM].c_str();
+	m_shader = GPU_shader_create_ex(vert, frag, geom, nullptr, nullptr, 0, 0, 0, GPU_SHADER_FLAGS_SPECIAL_RESET_LINE);
 	if (!m_shader) {
 		goto program_error;
 	}
@@ -362,7 +359,7 @@ bool RAS_Shader::GetEnabled() const
 	return m_use;
 }
 
-void RAS_Shader::Update(RAS_IRasterizer *rasty, const MT_Matrix4x4 model)
+void RAS_Shader::Update(RAS_Rasterizer *rasty, const MT_Matrix4x4 model)
 {
 	if (!Ok() || !m_preDef.size()) {
 		return;
@@ -455,7 +452,7 @@ void RAS_Shader::Update(RAS_IRasterizer *rasty, const MT_Matrix4x4 model)
 			}
 			case EYE:
 			{
-				SetUniform(uni->m_loc, (rasty->GetEye() == RAS_IRasterizer::RAS_STEREO_LEFTEYE) ? 0.0f : 0.5f);
+				SetUniform(uni->m_loc, (rasty->GetEye() == RAS_Rasterizer::RAS_STEREO_LEFTEYE) ? 0.0f : 0.5f);
 			}
 			default:
 				break;
@@ -480,7 +477,7 @@ void RAS_Shader::BindAttribute(const std::string& attr, int loc)
 
 int RAS_Shader::GetUniformLocation(const std::string& name, bool debug)
 {
-	BLI_assert(m_shader != NULL);
+	BLI_assert(m_shader != nullptr);
 	int location = GPU_shader_get_uniform(m_shader, name.c_str());
 
 	if (location == -1 && debug) {

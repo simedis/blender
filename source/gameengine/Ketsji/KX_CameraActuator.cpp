@@ -94,20 +94,20 @@ bool KX_CameraActuator::UnlinkObject(SCA_IObject* clientobj)
 	if (clientobj == m_ob)
 	{
 		// this object is being deleted, we cannot continue to track it.
-		m_ob = NULL;
+		m_ob = nullptr;
 		return true;
 	}
 	return false;
 }
 
 
-void KX_CameraActuator::Relink(std::map<void *, void *>& obj_map)
+void KX_CameraActuator::Relink(std::map<SCA_IObject *, SCA_IObject *>& obj_map)
 {
-	void *h_obj = obj_map[m_ob];
-	if (h_obj) {
+	SCA_IObject *obj = obj_map[m_ob];
+	if (obj) {
 		if (m_ob)
 			m_ob->UnregisterActuator(this);
-		m_ob = (SCA_IObject *)h_obj;
+		m_ob = obj;
 		m_ob->RegisterActuator(this);
 	}
 }
@@ -277,7 +277,7 @@ bool KX_CameraActuator::Update(double curtime, bool frame)
 			fp2[2] = frommat[2][1];
 			break;
 		default:
-			assert(0);
+			BLI_assert(0);
 			break;
 	}
 
@@ -356,7 +356,7 @@ bool KX_CameraActuator::Update(double curtime, bool frame)
 
 /* Integration hooks ------------------------------------------------------- */
 PyTypeObject KX_CameraActuator::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"KX_CameraActuator",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -378,7 +378,7 @@ PyTypeObject KX_CameraActuator::Type = {
 };
 
 PyMethodDef KX_CameraActuator::Methods[] = {
-	{NULL, NULL} //Sentinel
+	{nullptr, nullptr} //Sentinel
 };
 
 PyAttributeDef KX_CameraActuator::Attributes[] = {
@@ -391,16 +391,16 @@ PyAttributeDef KX_CameraActuator::Attributes[] = {
 	KX_PYATTRIBUTE_NULL
 };
 
-PyObject *KX_CameraActuator::pyattr_get_object(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_CameraActuator::pyattr_get_object(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_CameraActuator* self = static_cast<KX_CameraActuator*>(self_v);
-	if (self->m_ob==NULL)
+	if (self->m_ob==nullptr)
 		Py_RETURN_NONE;
 	else
 		return self->m_ob->GetProxy();
 }
 
-int KX_CameraActuator::pyattr_set_object(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int KX_CameraActuator::pyattr_set_object(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	KX_CameraActuator* self = static_cast<KX_CameraActuator*>(self_v);
 	KX_GameObject *gameobj;

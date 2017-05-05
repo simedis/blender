@@ -97,15 +97,6 @@ CValue* SCA_KeyboardSensor::GetReplica()
 	return replica;
 }
 
-
-
-short int SCA_KeyboardSensor::GetHotkey()
-{
-	return m_hotkey;
-}
-
-
-
 bool SCA_KeyboardSensor::IsPositiveTrigger()
 { 
 	bool result = (m_val != 0);
@@ -115,15 +106,6 @@ bool SCA_KeyboardSensor::IsPositiveTrigger()
 		
 	return result;
 }
-
-
-
-bool SCA_KeyboardSensor::TriggerOnAllKeys()
-{ 
-	return m_bAllKeys;
-}
-
-
 
 bool SCA_KeyboardSensor::Evaluate()
 {
@@ -227,17 +209,6 @@ bool SCA_KeyboardSensor::Evaluate()
 
 }
 
-/**
- * Tests whether shift is pressed
- */
-bool SCA_KeyboardSensor::IsShifted(void)
-{
-	SCA_IInputDevice* inputdev = ((SCA_KeyboardManager *)m_eventmgr)->GetInputDevice();
-	
-	return (inputdev->GetInput(SCA_IInputDevice::RIGHTSHIFTKEY).Find(SCA_InputEvent::ACTIVE) ||
-			inputdev->GetInput(SCA_IInputDevice::LEFTSHIFTKEY).Find(SCA_InputEvent::ACTIVE));
-}
-
 void SCA_KeyboardSensor::LogKeystrokes()
 {
 	CValue *tprop = GetParent()->GetProperty(m_targetprop);
@@ -259,7 +230,7 @@ void SCA_KeyboardSensor::LogKeystrokes()
 			}
 		}
 		else if (item == '\r') {
-			// Do nothing
+			proptext.push_back('\n');
 		}
 		else {
 			proptext.push_back(item);
@@ -285,7 +256,7 @@ KX_PYMETHODDEF_DOC_O(SCA_KeyboardSensor, getKeyStatus,
 
 	if (!PyLong_Check(value)) {
 		PyErr_SetString(PyExc_ValueError, "sensor.getKeyStatus(int): Keyboard Sensor, expected an int");
-		return NULL;
+		return nullptr;
 	}
 	
 	SCA_IInputDevice::SCA_EnumInputs keycode = (SCA_IInputDevice::SCA_EnumInputs)PyLong_AsLong(value);
@@ -294,7 +265,7 @@ KX_PYMETHODDEF_DOC_O(SCA_KeyboardSensor, getKeyStatus,
 	    (keycode > SCA_IInputDevice::ENDKEY))
 	{
 		PyErr_SetString(PyExc_AttributeError, "sensor.getKeyStatus(int): Keyboard Sensor, invalid keycode specified!");
-		return NULL;
+		return nullptr;
 	}
 	
 	SCA_IInputDevice* inputdev = ((SCA_KeyboardManager *)m_eventmgr)->GetInputDevice();
@@ -308,7 +279,7 @@ KX_PYMETHODDEF_DOC_O(SCA_KeyboardSensor, getKeyStatus,
 /* ------------------------------------------------------------------------- */
 
 PyTypeObject SCA_KeyboardSensor::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"SCA_KeyboardSensor",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -331,7 +302,7 @@ PyTypeObject SCA_KeyboardSensor::Type = {
 
 PyMethodDef SCA_KeyboardSensor::Methods[] = {
 	KX_PYMETHODTABLE_O(SCA_KeyboardSensor, getKeyStatus),
-	{NULL,NULL} //Sentinel
+	{nullptr,nullptr} //Sentinel
 };
 
 PyAttributeDef SCA_KeyboardSensor::Attributes[] = {
@@ -347,7 +318,7 @@ PyAttributeDef SCA_KeyboardSensor::Attributes[] = {
 };
 
 
-PyObject *SCA_KeyboardSensor::pyattr_get_inputs(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_KeyboardSensor::pyattr_get_inputs(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	SCA_KeyboardSensor* self = static_cast<SCA_KeyboardSensor*>(self_v);
 
@@ -370,7 +341,7 @@ PyObject *SCA_KeyboardSensor::pyattr_get_inputs(void *self_v, const KX_PYATTRIBU
 	return resultlist;
 }
 
-PyObject *SCA_KeyboardSensor::pyattr_get_events(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_KeyboardSensor::pyattr_get_events(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	SCA_KeyboardSensor* self = static_cast<SCA_KeyboardSensor*>(self_v);
 

@@ -113,7 +113,7 @@ public:
 	virtual bool	UnlinkObject(SCA_IObject* clientobj);
 
 	/** Methods inherited from SCA_ILogicBrick */
-	virtual void	Relink(std::map<void *, void *>& obj_map);
+	virtual void	Relink(std::map<SCA_IObject *, SCA_IObject *>& obj_map);
 
 #ifdef WITH_PYTHON
 
@@ -122,8 +122,8 @@ public:
 	/* --------------------------------------------------------------------- */
 
 	/* set object to look at */
-	static PyObject*	pyattr_get_object(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int			pyattr_set_object(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject*	pyattr_get_object(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int			pyattr_set_object(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
 
 #endif  /* WITH_PYTHON */
 

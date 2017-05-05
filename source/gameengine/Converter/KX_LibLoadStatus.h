@@ -33,7 +33,7 @@ class KX_LibLoadStatus : public PyObjectPlus
 {
 	Py_Header
 private:
-	class KX_BlenderSceneConverter*	m_converter;
+	class KX_BlenderConverter*	m_converter;
 	class KX_KetsjiEngine*			m_engine;
 	class KX_Scene*					m_mergescene;
 	void*							m_data;
@@ -52,7 +52,7 @@ private:
 #endif
 
 public:
-	KX_LibLoadStatus(class KX_BlenderSceneConverter* kx_converter,
+	KX_LibLoadStatus(class KX_BlenderConverter* kx_converter,
 						class KX_KetsjiEngine* kx_engine,
 						class KX_Scene* merge_scene,
 						const std::string& path);
@@ -61,12 +61,9 @@ public:
 	void RunFinishCallback();
 	void RunProgressCallback();
 
-	class KX_BlenderSceneConverter *GetConverter();
+	class KX_BlenderConverter *GetConverter();
 	class KX_KetsjiEngine *GetEngine();
 	class KX_Scene *GetMergeScene();
-
-	void SetLibName(const std::string& name);
-	const std::string& GetLibName();
 
 	void SetData(void *data);
 	void *GetData();
@@ -81,12 +78,12 @@ public:
 	void AddProgress(float progress);
 
 #ifdef WITH_PYTHON
-	static PyObject*	pyattr_get_onfinish(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int			pyattr_set_onfinish(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
-	static PyObject*	pyattr_get_onprogress(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int			pyattr_set_onprogress(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject*	pyattr_get_onfinish(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int			pyattr_set_onfinish(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject*	pyattr_get_onprogress(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int			pyattr_set_onprogress(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
 
-	static PyObject*	pyattr_get_timetaken(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject*	pyattr_get_timetaken(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
 #endif
 };
 

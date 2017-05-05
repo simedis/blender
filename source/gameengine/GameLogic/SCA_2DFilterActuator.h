@@ -31,7 +31,7 @@
 #ifndef __SCA_2DFILTERACTUATOR_H__
 #define __SCA_2DFILTERACTUATOR_H__
 
-#include "RAS_IRasterizer.h"
+#include "RAS_Rasterizer.h"
 #include "SCA_IActuator.h"
 #include "SCA_IScene.h"
 
@@ -47,8 +47,9 @@ private:
 	short m_disableMotionBlur;
 	float m_float_arg;
 	int   m_int_arg;
+	bool  m_mipmap;
 	std::string m_shaderText;
-	RAS_IRasterizer* m_rasterizer;
+	RAS_Rasterizer* m_rasterizer;
 	RAS_2DFilterManager *m_filterManager;
 	SCA_IScene* m_scene;
 
@@ -59,7 +60,8 @@ public:
 	        short flag,
 	        float float_arg,
 	        int int_arg,
-	        RAS_IRasterizer* rasterizer,
+	        bool mipmap,
+	        RAS_Rasterizer* rasterizer,
 			RAS_2DFilterManager *filterManager,
 	        SCA_IScene* scene);
 

@@ -66,7 +66,7 @@ PyObject *KX_ConstraintWrapper::PyGetParam(PyObject *args, PyObject *kwds)
 	float value;
 	
 	if (!PyArg_ParseTuple(args,"i:getParam",&dof))
-		return NULL;
+		return nullptr;
 	
 	value = m_physenv->GetConstraintParam(m_constraintId,dof);
 	return PyFloat_FromDouble(value);
@@ -79,7 +79,7 @@ PyObject *KX_ConstraintWrapper::PySetParam(PyObject *args, PyObject *kwds)
 	float minLimit,maxLimit;
 	
 	if (!PyArg_ParseTuple(args,"iff:setParam",&dof,&minLimit,&maxLimit))
-		return NULL;
+		return nullptr;
 	
 	m_physenv->SetConstraintParam(m_constraintId,dof,minLimit,maxLimit);
 	Py_RETURN_NONE;
@@ -88,7 +88,7 @@ PyObject *KX_ConstraintWrapper::PySetParam(PyObject *args, PyObject *kwds)
 
 //python specific stuff
 PyTypeObject KX_ConstraintWrapper::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"KX_ConstraintWrapper",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -113,7 +113,7 @@ PyMethodDef KX_ConstraintWrapper::Methods[] = {
 	{"getConstraintId",(PyCFunction) KX_ConstraintWrapper::sPyGetConstraintId, METH_NOARGS},
 	{"setParam",(PyCFunction) KX_ConstraintWrapper::sPySetParam, METH_VARARGS},
 	{"getParam",(PyCFunction) KX_ConstraintWrapper::sPyGetParam, METH_VARARGS},
-	{NULL,NULL} //Sentinel
+	{nullptr,nullptr} //Sentinel
 };
 
 PyAttributeDef KX_ConstraintWrapper::Attributes[] = {
@@ -122,13 +122,13 @@ PyAttributeDef KX_ConstraintWrapper::Attributes[] = {
 	KX_PYATTRIBUTE_NULL	//Sentinel
 };
 
-PyObject *KX_ConstraintWrapper::pyattr_get_constraintId(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_ConstraintWrapper::pyattr_get_constraintId(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_ConstraintWrapper* self = static_cast<KX_ConstraintWrapper*>(self_v);
 	return self->PyGetConstraintId();
 }
 
-PyObject *KX_ConstraintWrapper::pyattr_get_constraintType(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_ConstraintWrapper::pyattr_get_constraintType(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_ConstraintWrapper* self = static_cast<KX_ConstraintWrapper*>(self_v);
 	return PyLong_FromLong(self->m_constraintType);

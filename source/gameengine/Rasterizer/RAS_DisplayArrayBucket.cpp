@@ -30,12 +30,12 @@
  */
 
 #include "RAS_DisplayArrayBucket.h"
-#include "RAS_DisplayArray.h"
+#include "RAS_BatchDisplayArray.h"
 #include "RAS_MaterialBucket.h"
 #include "RAS_IPolygonMaterial.h"
 #include "RAS_MeshObject.h"
 #include "RAS_Deformer.h"
-#include "RAS_IRasterizer.h"
+#include "RAS_Rasterizer.h"
 #include "RAS_IStorageInfo.h"
 #include "RAS_InstancingBuffer.h"
 #include "RAS_BucketManager.h"
@@ -51,18 +51,17 @@
 #endif // WIN32
 
 RAS_DisplayArrayBucket::RAS_DisplayArrayBucket(RAS_MaterialBucket *bucket, RAS_IDisplayArray *array, RAS_MeshObject *mesh, RAS_MeshMaterial *meshmat)
-	:m_refcount(1),
-	m_bucket(bucket),
+	:m_bucket(bucket),
 	m_displayArray(array),
 	m_mesh(mesh),
 	m_meshMaterial(meshmat),
-	m_useDisplayList(false),
-	m_useVao(/*false*/true),
-	m_storageInfo(NULL),
-	m_instancingBuffer(NULL),
-	m_downwardNode(this, &RAS_DisplayArrayBucket::RunDownwardNode, NULL),
-	m_upwardNode(this, &RAS_DisplayArrayBucket::BindUpwardNode, &RAS_DisplayArrayBucket::UnbindUpwardNode),
-	m_instancingNode(this, &RAS_DisplayArrayBucket::RunInstancingNode, NULL)
+	m_useVao(true),
+	m_storageInfo(nullptr),
+	m_instancingBuffer(nullptr),
+	m_downwardNode(this, std::mem_fn(&RAS_DisplayArrayBucket::RunDownwardNode), nullptr),
+	m_upwardNode(this, std::mem_fn(&RAS_DisplayArrayBucket::BindUpwardNode), std::mem_fn(&RAS_DisplayArrayBucket::UnbindUpwardNode)),
+	m_instancingNode(this, std::mem_fn(&RAS_DisplayArrayBucket::RunInstancingNode), nullptr),
+	m_batchingNode(this, std::mem_fn(&RAS_DisplayArrayBucket::RunBatchingNode), nullptr)
 {
 	m_bucket->AddDisplayArrayBucket(this);
 }
@@ -81,27 +80,6 @@ RAS_DisplayArrayBucket::~RAS_DisplayArrayBucket()
 	}
 }
 
-RAS_DisplayArrayBucket *RAS_DisplayArrayBucket::AddRef()
-{
-	++m_refcount;
-	return this;
-}
-
-RAS_DisplayArrayBucket *RAS_DisplayArrayBucket::Release()
-{
-	--m_refcount;
-	if (m_refcount == 0) {
-		delete this;
-		return NULL;
-	}
-	return this;
-}
-
-unsigned int RAS_DisplayArrayBucket::GetRefCount() const
-{
-	return m_refcount;
-}
-
 RAS_DisplayArrayBucket *RAS_DisplayArrayBucket::GetReplica()
 {
 	RAS_DisplayArrayBucket *replica = new RAS_DisplayArrayBucket(*this);
@@ -111,15 +89,15 @@ RAS_DisplayArrayBucket *RAS_DisplayArrayBucket::GetReplica()
 
 void RAS_DisplayArrayBucket::ProcessReplica()
 {
-	m_refcount = 1;
 	m_activeMeshSlots.clear();
 	if (m_displayArray) {
 		m_displayArray = m_displayArray->GetReplica();
 	}
 
-	m_downwardNode = RAS_DisplayArrayDownwardNode(this, &RAS_DisplayArrayBucket::RunDownwardNode, NULL);
-	m_upwardNode = RAS_DisplayArrayUpwardNode(this, &RAS_DisplayArrayBucket::BindUpwardNode, &RAS_DisplayArrayBucket::UnbindUpwardNode);
-	m_instancingNode = RAS_DisplayArrayDownwardNode(this, &RAS_DisplayArrayBucket::RunInstancingNode, NULL);
+	m_downwardNode = RAS_DisplayArrayDownwardNode(this, std::mem_fn(&RAS_DisplayArrayBucket::RunDownwardNode), nullptr);
+	m_upwardNode = RAS_DisplayArrayUpwardNode(this, std::mem_fn(&RAS_DisplayArrayBucket::BindUpwardNode), std::mem_fn(&RAS_DisplayArrayBucket::UnbindUpwardNode));
+	m_instancingNode = RAS_DisplayArrayDownwardNode(this, std::mem_fn(&RAS_DisplayArrayBucket::RunInstancingNode), nullptr);
+	m_batchingNode = RAS_DisplayArrayDownwardNode(this, std::mem_fn(&RAS_DisplayArrayBucket::RunBatchingNode), nullptr);
 
 	m_bucket->AddDisplayArrayBucket(this);
 }
@@ -127,11 +105,6 @@ void RAS_DisplayArrayBucket::ProcessReplica()
 RAS_IDisplayArray *RAS_DisplayArrayBucket::GetDisplayArray() const
 {
 	return m_displayArray;
-}
-
-RAS_MaterialBucket *RAS_DisplayArrayBucket::GetMaterialBucket() const
-{
-	return m_bucket;
 }
 
 RAS_MeshObject *RAS_DisplayArrayBucket::GetMesh() const
@@ -177,31 +150,25 @@ void RAS_DisplayArrayBucket::RemoveDeformer(RAS_Deformer *deformer)
 	}
 }
 
-bool RAS_DisplayArrayBucket::UseDisplayList() const
-{
-	return m_useDisplayList;
-}
-
 bool RAS_DisplayArrayBucket::UseVao() const
 {
 	return m_useVao;
 }
 
-void RAS_DisplayArrayBucket::UpdateActiveMeshSlots(RAS_IRasterizer *rasty)
+bool RAS_DisplayArrayBucket::UseBatching() const
+{
+	return (m_displayArray && m_displayArray->GetType() == RAS_IDisplayArray::BATCHING);
+}
+
+void RAS_DisplayArrayBucket::UpdateActiveMeshSlots(RAS_Rasterizer *rasty)
 {
 	// Reset values to default.
-	m_useDisplayList = true;
 	m_useVao = true;
 	bool arrayModified = false;
 
 	RAS_IPolyMaterial *material = m_bucket->GetPolyMaterial();
 
-	if (!material->UseDisplayLists()) {
-		m_useDisplayList = false;
-	}
-
 	if (material->IsZSort() || m_bucket->UseInstancing() || !m_displayArray || material->UsesObjectColor()) {
-		m_useDisplayList = false;
 		m_useVao = false;
 	}
 
@@ -210,7 +177,6 @@ void RAS_DisplayArrayBucket::UpdateActiveMeshSlots(RAS_IRasterizer *rasty)
 
 		// Test if one of deformers is dynamic.
 		if (deformer->IsDynamic()) {
-			m_useDisplayList = false;
 			arrayModified = true;
 		}
 	}
@@ -232,7 +198,7 @@ void RAS_DisplayArrayBucket::SetDisplayArrayUnmodified()
 	}
 }
 
-void RAS_DisplayArrayBucket::SetPolygonsModified(RAS_IRasterizer *rasty)
+void RAS_DisplayArrayBucket::SetPolygonsModified(RAS_Rasterizer *rasty)
 {
 	if (m_storageInfo) {
 		m_storageInfo->SetDataModified(rasty->GetDrawingMode(), RAS_IStorageInfo::INDEX_DATA);
@@ -253,7 +219,7 @@ void RAS_DisplayArrayBucket::DestructStorageInfo()
 {
 	if (m_storageInfo) {
 		delete m_storageInfo;
-		m_storageInfo = NULL;
+		m_storageInfo = nullptr;
 	}
 }
 
@@ -268,13 +234,13 @@ void RAS_DisplayArrayBucket::GenerateAttribLayers()
 	m_attribLayers = polymat->GetAttribLayers(layersInfo);
 }
 
-void RAS_DisplayArrayBucket::SetAttribLayers(RAS_IRasterizer *rasty) const
+void RAS_DisplayArrayBucket::SetAttribLayers(RAS_Rasterizer *rasty) const
 {
 	rasty->SetAttribLayers(m_attribLayers);
 }
 
 void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialDownwardNode *downwardRoot, RAS_MaterialUpwardNode *upwardRoot,
-										  RAS_UpwardTreeLeafs *upwardLeafs, RAS_IRasterizer *rasty, bool sort, bool instancing)
+										  RAS_UpwardTreeLeafs *upwardLeafs, RAS_Rasterizer *rasty, bool sort, bool instancing)
 {
 	if (m_activeMeshSlots.size() == 0) {
 		return;
@@ -285,6 +251,9 @@ void RAS_DisplayArrayBucket::GenerateTree(RAS_MaterialDownwardNode *downwardRoot
 
 	if (instancing) {
 		downwardRoot->AddChild(&m_instancingNode);
+	}
+	else if (UseBatching()) {
+		downwardRoot->AddChild(&m_batchingNode);
 	}
 	else if (sort) {
 		for (RAS_MeshSlot *slot : m_activeMeshSlots) {
@@ -310,7 +279,7 @@ void RAS_DisplayArrayBucket::UnbindUpwardNode(const RAS_RenderNodeArguments& arg
 
 void RAS_DisplayArrayBucket::RunDownwardNode(const RAS_RenderNodeArguments& args)
 {
-	RAS_IRasterizer *rasty = args.m_rasty;
+	RAS_Rasterizer *rasty = args.m_rasty;
 	rasty->BindPrimitives(this);
 
 	for (RAS_MeshSlot *ms : m_activeMeshSlots) {
@@ -330,7 +299,7 @@ void RAS_DisplayArrayBucket::RunInstancingNode(const RAS_RenderNodeArguments& ar
 		m_instancingBuffer = new RAS_InstancingBuffer();
 	}
 
-	RAS_IRasterizer *rasty = args.m_rasty;
+	RAS_Rasterizer *rasty = args.m_rasty;
 	RAS_IPolyMaterial *material = m_bucket->GetPolyMaterial();
 
 	// Bind the instancing buffer to work on it.
@@ -347,7 +316,7 @@ void RAS_DisplayArrayBucket::RunInstancingNode(const RAS_RenderNodeArguments& ar
 			[&pnorm](RAS_MeshSlot *slot) { return RAS_BucketManager::SortedMeshSlot(slot, pnorm); });
 
 		std::sort(sortedMeshSlots.begin(), sortedMeshSlots.end(), RAS_BucketManager::backtofront());
-		std::vector<RAS_MeshSlot *> meshSlots(nummeshslots);
+		RAS_MeshSlotList meshSlots(nummeshslots);
 		for (unsigned int i = 0; i < nummeshslots; ++i) {
 			meshSlots[i] = sortedMeshSlots[i].m_ms;
 		}
@@ -368,9 +337,6 @@ void RAS_DisplayArrayBucket::RunInstancingNode(const RAS_RenderNodeArguments& ar
 			m_instancingBuffer->GetMatrixOffset(),
 			m_instancingBuffer->GetPositionOffset(),
 			m_instancingBuffer->GetStride());
-
-		// Set cull face without activating the material.
-		rasty->SetCullFace(material->IsCullFace());
 	}
 	else {
 		material->ActivateInstancing(
@@ -381,8 +347,13 @@ void RAS_DisplayArrayBucket::RunInstancingNode(const RAS_RenderNodeArguments& ar
 			m_instancingBuffer->GetStride());
 	}
 
+	/* Because the geometry instancing use setting for all instances we use the original alpha blend.
+	 * This requierd that the user use "alpha blend" mode if he will mutate object color alpha.
+	 */
+	rasty->SetAlphaBlend(material->GetAlphaBlend());
+
 	/* It's a major issue of the geometry instancing : we can't manage face wise.
-	 * To be sure we don't use the old face wise we focre it to true. */
+	 * To be sure we don't use the old face wise we force it to true. */
 	rasty->SetFrontFace(true);
 
 	// Unbind the buffer to avoid conflict with the render after.
@@ -398,6 +369,60 @@ void RAS_DisplayArrayBucket::RunInstancingNode(const RAS_RenderNodeArguments& ar
 	else {
 		material->DesactivateInstancing();
 	}
+
+	rasty->UnbindPrimitives(this);
+}
+
+void RAS_DisplayArrayBucket::RunBatchingNode(const RAS_RenderNodeArguments& args)
+{
+	unsigned int nummeshslots = m_activeMeshSlots.size();
+
+	// We must use a int instead of unsigned size to match GLsizei type.
+	std::vector<int> counts(nummeshslots);
+	std::vector<void *> indices(nummeshslots);
+
+	RAS_IBatchDisplayArray *batchArray = dynamic_cast<RAS_IBatchDisplayArray *>(m_displayArray);
+
+	/* If the material use the transparency we must sort all mesh slots depending on the distance.
+	 * This code share the code used in RAS_BucketManager to do the sort.
+	 */
+	if (args.m_sort) {
+		std::vector<RAS_BucketManager::SortedMeshSlot> sortedMeshSlots(nummeshslots);
+
+		const MT_Vector3 pnorm(args.m_trans.getBasis()[2]);
+		std::transform(m_activeMeshSlots.begin(), m_activeMeshSlots.end(), sortedMeshSlots.begin(),
+					   [&pnorm](RAS_MeshSlot *slot) { return RAS_BucketManager::SortedMeshSlot(slot, pnorm); });
+
+		std::sort(sortedMeshSlots.begin(), sortedMeshSlots.end(), RAS_BucketManager::backtofront());
+		for (unsigned int i = 0; i < nummeshslots; ++i) {
+			const short index = sortedMeshSlots[i].m_ms->m_batchPartIndex;
+			indices[i] = batchArray->GetPartIndexOffset(index);
+			counts[i] = batchArray->GetPartIndexCount(index);
+		}
+	}
+	else {
+		for (unsigned int i = 0; i < nummeshslots; ++i) {
+			const short index = m_activeMeshSlots[i]->m_batchPartIndex;
+			indices[i] = batchArray->GetPartIndexOffset(index);
+			counts[i] = batchArray->GetPartIndexCount(index);
+		}
+	}
+
+	RAS_Rasterizer *rasty = args.m_rasty;
+	RAS_IPolyMaterial *material = m_bucket->GetPolyMaterial();
+
+	/* Because the batching use setting for all instances we use the original alpha blend.
+	 * This requierd that the user use "alpha blend" mode if he will mutate object color alpha.
+	 */
+	rasty->SetAlphaBlend(material->GetAlphaBlend());
+
+	/* It's a major issue of the batching : we can't manage face wise per object.
+	 * To be sure we don't use the old face wise we force it to true. */
+	rasty->SetFrontFace(true);
+
+	rasty->BindPrimitives(this);
+
+	rasty->IndexPrimitivesBatching(this, indices, counts);
 
 	rasty->UnbindPrimitives(this);
 }

@@ -32,8 +32,9 @@
 #include "DNA_actuator_types.h"
 #include "DNA_scene_types.h" /* for MAXFRAME */
 
-#include "BLI_utildefines.h"
 #include "BLI_math.h"
+#include "BLI_string_utils.h"
+#include "BLI_utildefines.h"
 
 #include "BLT_translation.h"
 
@@ -1857,6 +1858,11 @@ static void rna_def_twodfilter_actuator(BlenderRNA *brna)
 	RNA_def_property_int_sdna(prop, NULL, "int_arg");
 	RNA_def_property_ui_text(prop, "Pass Number", "Set filter order");
 	RNA_def_property_range(prop, 0, 99); /*MAX_RENDER_PASS-1 */
+	RNA_def_property_update(prop, NC_LOGIC, NULL);
+
+	prop = RNA_def_property(srna, "use_mipmap", PROP_BOOLEAN, PROP_NONE);
+	RNA_def_property_boolean_sdna(prop, NULL, "mipmap", 1);
+	RNA_def_property_ui_text(prop, "Use MipMap", "Enable MipMap for rendered texture");
 	RNA_def_property_update(prop, NC_LOGIC, NULL);
 
 	prop = RNA_def_property(srna, "motion_blur_factor", PROP_FLOAT, PROP_NONE);

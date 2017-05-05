@@ -1135,18 +1135,8 @@ static void draw_transp_spot_volume(Lamp *la, float x, float z)
 }
 
 #ifdef WITH_GAMEENGINE
-static void draw_transp_sun_volume(Lamp *la)
+static void draw_shadow_volume(const float box[8][3])
 {
-	float box[8][3];
-
-	/* construct box */
-	box[0][0] = box[1][0] = box[2][0] = box[3][0] = -la->shadow_frustum_size;
-	box[4][0] = box[5][0] = box[6][0] = box[7][0] = +la->shadow_frustum_size;
-	box[0][1] = box[1][1] = box[4][1] = box[5][1] = -la->shadow_frustum_size;
-	box[2][1] = box[3][1] = box[6][1] = box[7][1] = +la->shadow_frustum_size;
-	box[0][2] = box[3][2] = box[4][2] = box[7][2] = -la->clipend;
-	box[1][2] = box[2][2] = box[5][2] = box[6][2] = -la->clipsta;
-
 	/* draw edges */
 	draw_box(box, false);
 
@@ -1178,6 +1168,44 @@ static void draw_transp_sun_volume(Lamp *la)
 	glDisable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 }
+
+static void draw_transp_sun_shadow_volume(Lamp *la)
+{
+	float box[8][3];
+
+	/* construct box */
+	box[0][0] = box[1][0] = box[2][0] = box[3][0] = -la->shadow_frustum_size;
+	box[4][0] = box[5][0] = box[6][0] = box[7][0] = +la->shadow_frustum_size;
+	box[0][1] = box[1][1] = box[4][1] = box[5][1] = -la->shadow_frustum_size;
+	box[2][1] = box[3][1] = box[6][1] = box[7][1] = +la->shadow_frustum_size;
+	box[0][2] = box[3][2] = box[4][2] = box[7][2] = -la->clipend;
+	box[1][2] = box[2][2] = box[5][2] = box[6][2] = -la->clipsta;
+
+	draw_shadow_volume(box);
+}
+
+static void draw_transp_spot_shadow_volume(Lamp *la)
+{
+	float box[8][3];
+
+	const float x = tanf(la->spotsize * 0.5f);
+	const float xtop = x * la->clipsta;
+	const float xbottom = x * la->clipend;
+
+	/* construct box */
+	box[0][0] = box[3][0] = -xbottom;
+	box[2][0] = box[1][0] = -xtop;
+	box[4][0] = box[7][0] = xbottom;
+	box[6][0] = box[5][0] = xtop;
+	box[0][1] = box[4][1] = -xbottom;
+	box[1][1] = box[5][1] = -xtop;
+	box[3][1] = box[7][1] = xbottom;
+	box[2][1] = box[6][1] = xtop;
+	box[0][2] = box[3][2] = box[4][2] = box[7][2] = -la->clipend;
+	box[1][2] = box[2][2] = box[5][2] = box[6][2] = -la->clipsta;
+
+	draw_shadow_volume(box);
+}
 #endif
 
 static void drawlamp(View3D *v3d, RegionView3D *rv3d, Base *base,
@@ -1207,7 +1235,8 @@ static void drawlamp(View3D *v3d, RegionView3D *rv3d, Base *base,
 	        (rv3d->rflag & RV3D_IS_GAME_ENGINE) &&
 	        (dt > OB_WIRE) &&
 	        !(G.f & G_PICKSEL) &&
-	        (la->type == LA_SUN) &&
+	        ((la->type == LA_SUN) ||
+	        (la->type == LA_SPOT)) &&
 	        ((la->mode & LA_SHAD_BUF) || 
 	        (la->mode & LA_SHAD_RAY)) &&
 	        (la->mode & LA_SHOW_SHADOW_BOX) &&
@@ -1442,6 +1471,12 @@ static void drawlamp(View3D *v3d, RegionView3D *rv3d, Base *base,
 			glVertex3f(0.0, 0.0, -la->dist);
 		}
 		glEnd();
+
+#ifdef WITH_GAMEENGINE
+		if (drawshadowbox) {
+			draw_transp_spot_shadow_volume(la);
+		}
+#endif
 	}
 	else if (ELEM(la->type, LA_HEMI, LA_SUN)) {
 		
@@ -1494,7 +1529,7 @@ static void drawlamp(View3D *v3d, RegionView3D *rv3d, Base *base,
 
 #ifdef WITH_GAMEENGINE
 		if (drawshadowbox) {
-			draw_transp_sun_volume(la);
+			draw_transp_sun_shadow_volume(la);
 		}
 #endif
 
@@ -1824,16 +1859,16 @@ static void drawcamera_volume(float near_plane[4][3], float far_plane[4][3], con
 
 	glBegin(mode);
 	glVertex3fv(near_plane[2]);
-	glVertex3fv(near_plane[1]);
-	glVertex3fv(far_plane[1]);
 	glVertex3fv(far_plane[2]);
+	glVertex3fv(far_plane[3]);
+	glVertex3fv(near_plane[3]);
 	glEnd();
 
 	glBegin(mode);
-	glVertex3fv(far_plane[0]);
-	glVertex3fv(near_plane[0]);
-	glVertex3fv(near_plane[3]);
 	glVertex3fv(far_plane[3]);
+	glVertex3fv(near_plane[3]);
+	glVertex3fv(near_plane[0]);
+	glVertex3fv(far_plane[0]);
 	glEnd();
 }
 
@@ -4208,7 +4243,6 @@ static void draw_mesh_fancy(Scene *scene, ARegion *ar, View3D *v3d, RegionView3D
 	
 	if (is_obact && BKE_paint_select_vert_test(ob)) {
 		const bool use_depth = (v3d->flag & V3D_ZBUF_SELECT) != 0;
-		glColor3f(0.0f, 0.0f, 0.0f);
 		glPointSize(UI_GetThemeValuef(TH_VERTEX_SIZE));
 
 		if (!use_depth) glDisable(GL_DEPTH_TEST);
@@ -6416,18 +6450,15 @@ static void draw_editnurb(
 				vec_a[0] = fac;
 				vec_a[1] = 0.0f;
 				vec_a[2] = 0.0f;
-
-				vec_b[0] = -fac;
-				vec_b[1] = 0.0f;
-				vec_b[2] = 0.0f;
 				
 				mul_qt_v3(bevp->quat, vec_a);
-				mul_qt_v3(bevp->quat, vec_b);
+				madd_v3_v3fl(vec_a, bevp->dir, -fac);
+
+				reflect_v3_v3v3(vec_b, vec_a, bevp->dir);
+				negate_v3(vec_b);
+
 				add_v3_v3(vec_a, bevp->vec);
 				add_v3_v3(vec_b, bevp->vec);
-
-				madd_v3_v3fl(vec_a, bevp->dir, -fac);
-				madd_v3_v3fl(vec_b, bevp->dir, -fac);
 
 				glBegin(GL_LINE_STRIP);
 				glVertex3fv(vec_a);
@@ -6472,7 +6503,6 @@ static void draw_editfont(Scene *scene, View3D *v3d, RegionView3D *rv3d, Base *b
 	Curve *cu = ob->data;
 	EditFont *ef = cu->editfont;
 	float vec1[3], vec2[3];
-	int selstart, selend;
 
 	draw_editfont_textcurs(rv3d, ef->textcurs);
 
@@ -6525,17 +6555,16 @@ static void draw_editfont(Scene *scene, View3D *v3d, RegionView3D *rv3d, Base *b
 	setlinestyle(0);
 
 
-	if (BKE_vfont_select_get(ob, &selstart, &selend) && ef->selboxes) {
-		const int seltot = selend - selstart;
+	if (ef->selboxes && ef->selboxes_len) {
 		float selboxw;
 
 		cpack(0xffffff);
 		set_inverted_drawing(1);
-		for (int i = 0; i <= seltot; i++) {
+		for (int i = 0; i < ef->selboxes_len; i++) {
 			EditFontSelBox *sb = &ef->selboxes[i];
 			float tvec[3];
 
-			if (i != seltot) {
+			if (i + 1 != ef->selboxes_len) {
 				if (ef->selboxes[i + 1].y == sb->y)
 					selboxw = ef->selboxes[i + 1].x - sb->x;
 				else
@@ -7167,8 +7196,9 @@ static void drawtexspace(Object *ob)
 }
 
 /* draws wire outline */
-static void drawObjectSelect(Scene *scene, View3D *v3d, ARegion *ar, Base *base,
-                             const unsigned char ob_wire_col[4])
+static void draw_object_selected_outline(
+        Scene *scene, View3D *v3d, ARegion *ar, Base *base,
+        const unsigned char ob_wire_col[4])
 {
 	RegionView3D *rv3d = ar->regiondata;
 	Object *ob = base->object;
@@ -7641,7 +7671,7 @@ void draw_object(Scene *scene, ARegion *ar, View3D *v3d, Base *base, const short
 		if ((v3d->flag & V3D_SELECT_OUTLINE) && !render_override && ob->type != OB_MESH) {
 			if (dt > OB_WIRE && (ob->mode & OB_MODE_EDIT) == 0 && (dflag & DRAW_SCENESET) == 0) {
 				if (!(ob->dtx & OB_DRAWWIRE) && (ob->flag & SELECT) && !(dflag & (DRAW_PICKING | DRAW_CONSTCOLOR))) {
-					drawObjectSelect(scene, v3d, ar, base, ob_wire_col);
+					draw_object_selected_outline(scene, v3d, ar, base, ob_wire_col);
 				}
 			}
 		}
@@ -8168,6 +8198,50 @@ void draw_object(Scene *scene, ARegion *ar, View3D *v3d, Base *base, const short
 	}
 
 	ED_view3d_clear_mats_rv3d(rv3d);
+}
+
+
+/**
+ * Drawing for selection picking,
+ * caller must have called 'GPU_select_load_id(base->selcode)' first.
+ */
+void draw_object_select(Scene *scene, ARegion *ar, View3D *v3d, Base *base, const short dflag)
+{
+	BLI_assert(dflag & DRAW_PICKING && dflag & DRAW_CONSTCOLOR);
+	draw_object(scene, ar, v3d, base, dflag);
+
+	/* we draw duplicators for selection too */
+	if ((base->object->transflag & OB_DUPLI)) {
+		ListBase *lb;
+		DupliObject *dob;
+		Base tbase;
+
+		tbase.flag = OB_FROMDUPLI;
+		lb = object_duplilist(G.main->eval_ctx, scene, base->object);
+
+		for (dob = lb->first; dob; dob = dob->next) {
+			float omat[4][4];
+			char dt;
+			short dtx;
+
+			tbase.object = dob->ob;
+			copy_m4_m4(omat, dob->ob->obmat);
+			copy_m4_m4(dob->ob->obmat, dob->mat);
+
+			/* extra service: draw the duplicator in drawtype of parent */
+			/* MIN2 for the drawtype to allow bounding box objects in groups for lods */
+			dt = tbase.object->dt;   tbase.object->dt = MIN2(tbase.object->dt, base->object->dt);
+			dtx = tbase.object->dtx; tbase.object->dtx = base->object->dtx;
+
+			draw_object(scene, ar, v3d, &tbase, dflag);
+
+			tbase.object->dt = dt;
+			tbase.object->dtx = dtx;
+
+			copy_m4_m4(dob->ob->obmat, omat);
+		}
+		free_object_duplilist(lb);
+	}
 }
 
 /* ***************** BACKBUF SEL (BBS) ********* */

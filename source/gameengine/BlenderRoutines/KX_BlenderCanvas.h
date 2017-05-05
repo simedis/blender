@@ -39,10 +39,6 @@
 #include "RAS_ICanvas.h"
 #include "RAS_Rect.h"
 
-#ifdef WITH_CXX_GUARDEDALLOC
-#include "MEM_guardedalloc.h"
-#endif
-
 struct ARegion;
 struct wmWindow;
 struct wmWindowManager;
@@ -55,10 +51,6 @@ struct wmWindowManager;
 class KX_BlenderCanvas : public RAS_ICanvas
 {
 private:
-	/** Rect that defines the area used for rendering,
-	 * relative to the context
-	 */
-	RAS_Rect m_displayarea;
 	int m_viewport[4];
 
 	wmWindowManager *m_wm;
@@ -71,7 +63,7 @@ public:
 	 *
 	 * \param area The Blender ARegion to run the game within.
 	 */
-	KX_BlenderCanvas(RAS_IRasterizer *rasty, wmWindowManager *wm, wmWindow *win, RAS_Rect &rect, ARegion *ar);
+	KX_BlenderCanvas(RAS_Rasterizer *rasty, wmWindowManager *wm, wmWindow *win, RAS_Rect &rect, ARegion *ar);
 	virtual ~KX_BlenderCanvas();
 
 	virtual void Init();
@@ -98,9 +90,6 @@ public:
 	virtual float GetMouseNormalizedX(int x);
 	virtual float GetMouseNormalizedY(int y);
 
-	virtual const RAS_Rect &GetDisplayArea() const;
-	virtual void SetDisplayArea(RAS_Rect *rect);
-
 	virtual RAS_Rect &GetWindowArea();
 
 	virtual void SetViewPort(int x1, int y1, int x2, int y2);
@@ -114,10 +103,6 @@ public:
 
 	virtual void BeginDraw();
 	virtual void EndDraw();
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:KX_BlenderCanvas")
-#endif
 };
 
 #endif  // __KX_BLENDERCANVAS_H__

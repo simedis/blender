@@ -97,8 +97,8 @@ BL_ModifierDeformer::BL_ModifierDeformer(BL_DeformableGameObject *gameobj,
 	:BL_ShapeDeformer(gameobj, bmeshobj, mesh),
 	m_lastModifierUpdate(-1.0),
 	m_scene(scene),
-	m_dm(NULL),
-	m_latticeObj(NULL),
+	m_dm(nullptr),
+	m_latticeObj(nullptr),
 	m_lastLatticeUpdate(-1.0)
 {
 	m_recalcNormal = false;
@@ -117,7 +117,7 @@ BL_ModifierDeformer::BL_ModifierDeformer(BL_DeformableGameObject *gameobj,
 	:BL_ShapeDeformer(gameobj, bmeshobj_old, bmeshobj_new, mesh, false, arma),
 	m_lastModifierUpdate(-1),
 	m_scene(scene),
-	m_dm(NULL),
+	m_dm(nullptr),
 	m_latticeObj(lattice),
 	m_lastLatticeUpdate(-1.0)
 {
@@ -162,7 +162,7 @@ void BL_ModifierDeformer::ProcessReplica()
 		m_latticeObj->RegisterDeformer(this);
 }
 
-void BL_ModifierDeformer::Relink(std::map<void *, void *>& map)
+void BL_ModifierDeformer::Relink(std::map<SCA_IObject *, SCA_IObject *>& map)
 {
 	void *latobj = map[m_latticeObj];
 	if (latobj) {
@@ -273,9 +273,9 @@ bool BL_ModifierDeformer::UpdateInternal(bool shape_applied)
 
 	if (bShapeUpdate || LatticeUpdated()) {
 		// static derived mesh are not updated
-		if (m_dm == NULL || m_bDynamic) {
+		if (m_dm == nullptr || m_bDynamic) {
 			// Set to true if it's the first time Update() function is called.
-			const bool initialize = (m_dm == NULL);
+			const bool initialize = (m_dm == nullptr);
 			/* execute the modifiers */
 			Object *blendobj = m_gameobj->GetBlendObject();
 			/* hack: the modifiers require that the mesh is attached to the object
@@ -300,8 +300,8 @@ bool BL_ModifierDeformer::UpdateInternal(bool shape_applied)
 			}
 			/* restore object data */
 			blendobj->data = oldmesh;
-			/* free the current derived mesh and replace, (dm should never be NULL) */
-			if (m_dm != NULL) {
+			/* free the current derived mesh and replace, (dm should never be nullptr) */
+			if (m_dm != nullptr) {
 				// HACK! use deformedOnly as a user counter
 				if (--m_dm->deformedOnly == 0) {
 					m_dm->needsFree = 1;

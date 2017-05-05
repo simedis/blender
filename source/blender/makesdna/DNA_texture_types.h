@@ -76,7 +76,7 @@ typedef struct MTex {
 	
 	/* material */
 	float norfac, dispfac, warpfac;
-	float parallaxuv, parallaxsteps, parallaxbumpsc, padpfac;
+	float parallaxsteps, parallaxbumpsc;
 	float colspecfac, mirrfac, alphafac;
 	float difffac, specfac, emitfac, hardfac;
 	float raymirrfac, translfac, ambfac;
@@ -142,6 +142,8 @@ typedef struct EnvMap {
 	int ok, lastframe;
 	short recalc, lastsize;
 	int flag, filtering;
+	int mode;
+	float lodfactor;
 } EnvMap;
 
 typedef struct PointDensity {
@@ -479,6 +481,10 @@ typedef struct ColorMapping {
 
 /* flag */
 #define ENVMAP_AUTO_UPDATE	(1 << 0)
+
+/* mode */
+#define ENVMAP_REFLECTION 0
+#define ENVMAP_REFRACTION 1
 
 /* filtering */
 #define ENVMAP_MIPMAP_NONE		0

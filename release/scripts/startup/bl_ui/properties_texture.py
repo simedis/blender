@@ -21,15 +21,15 @@ import bpy
 from bpy.types import Menu, Panel, UIList
 
 from bpy.types import (
-        Brush,
-        FreestyleLineStyle,
-        Lamp,
-        Material,
-        Object,
-        ParticleSettings,
-        Texture,
-        World,
-        )
+    Brush,
+    FreestyleLineStyle,
+    Lamp,
+    Material,
+    Object,
+    ParticleSettings,
+    Texture,
+    World,
+)
 
 from rna_prop_ui import PropertyPanel
 
@@ -60,6 +60,7 @@ class TEXTURE_MT_envmap_specials(Menu):
 
 
 class TEXTURE_UL_texslots(UIList):
+
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         # assert(isinstance(item, bpy.types.MaterialTextureSlot)
         ma = data
@@ -198,7 +199,8 @@ class TEXTURE_PT_context_texture(TextureButtonsPanel, Panel):
         if tex_collection:
             row = layout.row()
 
-            row.template_list("TEXTURE_UL_texslots", "", idblock, "texture_slots", idblock, "active_texture_index", rows=2)
+            row.template_list("TEXTURE_UL_texslots", "", idblock, "texture_slots",
+                              idblock, "active_texture_index", rows=2)
 
             col = row.column(align=True)
             col.operator("texture.slot_move", text="", icon='TRIA_UP').type = 'UP'
@@ -617,9 +619,13 @@ class TEXTURE_PT_envmap(TextureTypePanel, Panel):
         else:
             if env.source == 'REALTIME':
                 layout.template_ID(tex, "image", new="image.new", open="image.open")
-                layout.template_image(tex, "image", tex.image_user, compact=True)
+                layout.template_image(tex, "image", tex.image_user, compact=True, cubemap=(env.mapping == 'CUBE'))
+                layout.prop(env, "filtering")
+                if env.mapping == 'PLANE':
+                    layout.prop(env, "mode")
             layout.prop(env, "mapping")
-            if env.mapping == 'PLANE':
+
+            if env.source != 'REALTIME' and env.mapping == 'PLANE':
                 layout.prop(env, "zoom")
 
             layout.prop(env, "viewpoint_object")
@@ -628,9 +634,7 @@ class TEXTURE_PT_envmap(TextureTypePanel, Panel):
 
             col = split.column()
             col.prop(env, "layers_ignore")
-            if env.source == 'REALTIME':
-                col.prop(env, "auto_update")
-            else:
+            if env.source != 'REALTIME':
                 col.prop(env, "resolution")
                 col.prop(env, "depth")
 
@@ -642,7 +646,8 @@ class TEXTURE_PT_envmap(TextureTypePanel, Panel):
 
             if env.source == 'REALTIME':
                 row = layout.row()
-                row.prop(env, "filtering", expand=False)
+                row.prop(env, "lod_factor", text="LoD Distance Factor")
+                row.prop(env, "auto_update")
 
 
 class TEXTURE_PT_envmap_sampling(TextureTypePanel, Panel):
@@ -1132,7 +1137,6 @@ class TEXTURE_PT_game_parallax(TextureSlotPanel, Panel):
 
         col = split.column()
         col.active = tex.use_map_parallax
-        col.prop(tex, "parallax_uv_shift", text="Height Scale")
         col.prop(tex, "parallax_steps", text="Steps")
         col.prop(tex, "parallax_bump_scale", text="Bump Scale")
 
@@ -1200,7 +1204,11 @@ class TEXTURE_PT_game_influence(TextureSlotPanel, Panel):
             # END XXX
 
             sub = col.column()
-            sub.active = (tex.texture_coords == "REFLECTION")
+            if hasattr(context.texture, "environment_map"):
+                sub.active = (tex.texture_coords == "REFLECTION" and context.texture.environment_map.mapping == 'CUBE')
+            else:
+                sub.active = False
+
             sub.label(text="Refraction:")
             sub.prop(tex, "ior", text="IOR")
             sub.prop(tex, "refraction_ratio", text="Ratio")
@@ -1336,7 +1344,11 @@ class TEXTURE_PT_influence(TextureSlotPanel, Panel):
                 col.prop(tex, "lod_bias")
 
                 sub = col.column()
-                sub.active = (tex.texture_coords == "REFLECTION")
+                if hasattr(context.texture, "environment_map"):
+                    sub.active = (tex.texture_coords == "REFLECTION" and context.texture.environment_map.mapping == 'CUBE')
+                else:
+                    sub.active = False
+
                 sub.label(text="Refraction:")
                 sub.prop(tex, "ior", text="IOR")
                 sub.prop(tex, "refraction_ratio", text="Ratio")
@@ -1472,12 +1484,22 @@ class TEXTURE_PT_influence(TextureSlotPanel, Panel):
             row = layout.row()
 
             sub = row.row()
-            sub.active = (tex.use_map_normal or tex.use_map_warp) and not (tex.texture.type == 'IMAGE' and (tex.texture.use_normal_map or tex.texture.use_derivative_map))
+            sub.active = (
+                (tex.use_map_normal or tex.use_map_warp) and
+                not (tex.texture.type == 'IMAGE' and
+                     (tex.texture.use_normal_map or tex.texture.use_derivative_map))
+            )
             sub.prop(tex, "bump_method", text="Method")
 
-            # the space setting is supported for: derivative-maps + bump-maps (DEFAULT,BEST_QUALITY), not for normal-maps
+            # the space setting is supported for: derivative-maps + bump-maps
+            # (DEFAULT,BEST_QUALITY), not for normal-maps
             sub = row.row()
-            sub.active = (tex.use_map_normal or tex.use_map_warp) and not (tex.texture.type == 'IMAGE' and tex.texture.use_normal_map) and ((tex.bump_method in {'BUMP_LOW_QUALITY', 'BUMP_MEDIUM_QUALITY', 'BUMP_BEST_QUALITY'}) or (tex.texture.type == 'IMAGE' and tex.texture.use_derivative_map))
+            sub.active = (
+                (tex.use_map_normal or tex.use_map_warp) and
+                not (tex.texture.type == 'IMAGE' and tex.texture.use_normal_map) and
+                ((tex.bump_method in {'BUMP_LOW_QUALITY', 'BUMP_MEDIUM_QUALITY', 'BUMP_BEST_QUALITY'}) or
+                 (tex.texture.type == 'IMAGE' and tex.texture.use_derivative_map))
+            )
             sub.prop(tex, "bump_objectspace", text="Space")
 
 
@@ -1486,5 +1508,41 @@ class TEXTURE_PT_custom_props(TextureButtonsPanel, PropertyPanel, Panel):
     _context_path = "texture"
     _property_type = Texture
 
+
+classes = (
+    TEXTURE_MT_specials,
+    TEXTURE_MT_envmap_specials,
+    TEXTURE_UL_texslots,
+    TEXTURE_PT_context_texture,
+    TEXTURE_PT_preview,
+    TEXTURE_PT_colors,
+    TEXTURE_PT_clouds,
+    TEXTURE_PT_wood,
+    TEXTURE_PT_marble,
+    TEXTURE_PT_magic,
+    TEXTURE_PT_blend,
+    TEXTURE_PT_stucci,
+    TEXTURE_PT_image,
+    TEXTURE_PT_image_sampling,
+    TEXTURE_PT_image_mapping,
+    TEXTURE_PT_envmap,
+    TEXTURE_PT_envmap_sampling,
+    TEXTURE_PT_musgrave,
+    TEXTURE_PT_voronoi,
+    TEXTURE_PT_distortednoise,
+    TEXTURE_PT_voxeldata,
+    TEXTURE_PT_pointdensity,
+    TEXTURE_PT_pointdensity_turbulence,
+    TEXTURE_PT_ocean,
+    TEXTURE_PT_game_mapping,
+    TEXTURE_PT_mapping,
+    TEXTURE_PT_game_parallax,
+    TEXTURE_PT_game_influence,
+    TEXTURE_PT_influence,
+    TEXTURE_PT_custom_props,
+)
+
 if __name__ == "__main__":  # only for live edit.
-    bpy.utils.register_module(__name__)
+    from bpy.utils import register_class
+    for cls in classes:
+        register_class(cls)

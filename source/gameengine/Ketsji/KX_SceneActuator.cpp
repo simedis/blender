@@ -91,19 +91,19 @@ bool KX_SceneActuator::UnlinkObject(SCA_IObject* clientobj)
 	if (clientobj == (SCA_IObject*)m_camera)
 	{
 		// this object is being deleted, we cannot continue to track it.
-		m_camera = NULL;
+		m_camera = nullptr;
 		return true;
 	}
 	return false;
 }
 
-void KX_SceneActuator::Relink(std::map<void *, void*>& obj_map)
+void KX_SceneActuator::Relink(std::map<SCA_IObject *, SCA_IObject *>& obj_map)
 {
-	void *h_obj = obj_map[m_camera];
-	if (h_obj) {
+	KX_Camera *obj = static_cast<KX_Camera *>(obj_map[m_camera]);
+	if (obj) {
 		if (m_camera)
 			m_camera->UnregisterActuator(this);
-		m_camera = (KX_Camera *)h_obj;
+		m_camera = obj;
 		m_camera->RegisterActuator(this);
 	}
 }
@@ -197,7 +197,7 @@ bool KX_SceneActuator::Update()
 
 /* Integration hooks ------------------------------------------------------- */
 PyTypeObject KX_SceneActuator::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"KX_SceneActuator",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -220,7 +220,7 @@ PyTypeObject KX_SceneActuator::Type = {
 
 PyMethodDef KX_SceneActuator::Methods[] =
 {
-	{NULL,NULL} //Sentinel
+	{nullptr,nullptr} //Sentinel
 };
 
 PyAttributeDef KX_SceneActuator::Attributes[] = {
@@ -231,7 +231,7 @@ PyAttributeDef KX_SceneActuator::Attributes[] = {
 	KX_PYATTRIBUTE_NULL	//Sentinel
 };
 
-PyObject *KX_SceneActuator::pyattr_get_camera(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_SceneActuator::pyattr_get_camera(PyObjectPlus *self, const struct KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_SceneActuator* actuator = static_cast<KX_SceneActuator*>(self);
 	if (!actuator->m_camera)
@@ -240,7 +240,7 @@ PyObject *KX_SceneActuator::pyattr_get_camera(void *self, const struct KX_PYATTR
 	return actuator->m_camera->GetProxy();
 }
 
-int KX_SceneActuator::pyattr_set_camera(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int KX_SceneActuator::pyattr_set_camera(PyObjectPlus *self, const struct KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	KX_SceneActuator* actuator = static_cast<KX_SceneActuator*>(self);
 	KX_Camera *camOb;
@@ -251,8 +251,8 @@ int KX_SceneActuator::pyattr_set_camera(void *self, const struct KX_PYATTRIBUTE_
 	if (actuator->m_camera)
 		actuator->m_camera->UnregisterActuator(actuator);
 	
-	if (camOb==NULL) {
-		actuator->m_camera= NULL;
+	if (camOb==nullptr) {
+		actuator->m_camera= nullptr;
 	}
 	else {
 		actuator->m_camera = camOb;

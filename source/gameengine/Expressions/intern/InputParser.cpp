@@ -53,7 +53,7 @@
 
 #define NUM_PRIORITY 6
 
-CParser::CParser() : m_identifierContext(NULL)
+CParser::CParser() : m_identifierContext(nullptr)
 {
 }
 
@@ -170,7 +170,7 @@ void CParser::NextSym()
 	 * sets the global variable cellcoord to the kind of operator
 	 */
 
-	errmsg = NULL;
+	errmsg = nullptr;
 	while (ch == ' ' || ch == 0x9) {
 		NextCh();
 	}
@@ -458,7 +458,7 @@ CExpression *CParser::Ex(int i)
 	/* Parses an expression in the imput, starting at priority i, and
 	 * returns an CExpression, containing the parsed input.
 	 */
-	CExpression *e1 = NULL, *e2 = NULL;
+	CExpression *e1 = nullptr, *e2 = nullptr;
 
 	if (i < NUM_PRIORITY) {
 		e1 = Ex(i + 1);
@@ -548,7 +548,7 @@ CExpression *CParser::Ex(int i)
 						case inttype:
 						{
 							cInt temp;
-							temp = std::stol(const_as_string, NULL, 10); /* atoi is for int only */
+							temp = std::stol(const_as_string, nullptr, 10); /* atoi is for int only */
 							e1 = new CConstExpr(new CIntValue(temp));
 							break;
 						}
@@ -618,7 +618,7 @@ CExpression *CParser::Ex(int i)
 						//e1 = Error(errmsg->Calculate()->GetText());//new CConstExpr(errmsg->Calculate());
 
 						if (!(errmsg->Release()) ) {
-							errmsg = NULL;
+							errmsg = nullptr;
 						}
 						else {
 							// does this happen ?
@@ -659,7 +659,7 @@ CExpression *CParser::ProcessText(const std::string& intext)
 
 	chcount = 0;
 	if (text.size() == 0) {
-		return NULL;
+		return nullptr;
 	}
 
 	ch = text[0];
@@ -682,52 +682,6 @@ CExpression *CParser::ProcessText(const std::string& intext)
 	}
 
 	return expr;
-}
-
-
-
-float CParser::GetFloat(std::string& txt)
-{
-	// Returns parsed text into a float empty string returns -1.
-	float result = -1;
-
-	CExpression *expr = ProcessText(txt);
-	if (expr) {
-		CValue *val = expr->Calculate();
-		result = (float)val->GetNumber();
-
-		val->Release();
-		expr->Release();
-	}
-	return result;
-}
-
-CValue *CParser::GetValue(std::string& txt, bool bFallbackToText)
-{
-	/* Returns parsed text into a value,
-	 * empty string returns NULL value !
-	 * if bFallbackToText then unparsed stuff is put into text
-	 */
-
-	CValue *result = NULL;
-	CExpression *expr = ProcessText(txt);
-	if (expr) {
-		result = expr->Calculate();
-		expr->Release();
-	}
-	if (result) {
-		// If the parsed stuff lead to an errorvalue, don't return errors, just NULL.
-		if (result->IsError()) {
-			result->Release();
-			result = NULL;
-			if (bFallbackToText) {
-				if (txt.size() > 0) {
-					result = new CStringValue(txt, "");
-				}
-			}
-		}
-	}
-	return result;
 }
 
 void CParser::SetContext(CValue *context)

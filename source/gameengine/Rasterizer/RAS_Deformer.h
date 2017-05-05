@@ -40,10 +40,6 @@
 #include <map>
 #include "MT_Vector3.h"
 
-#ifdef WITH_CXX_GUARDEDALLOC
-#include "MEM_guardedalloc.h"
-#endif
-
 #include "RAS_BoundingBox.h"
 
 struct DerivedMesh;
@@ -58,7 +54,7 @@ public:
 	RAS_Deformer(RAS_MeshObject *mesh)
 		:m_mesh(mesh),
 		m_bDynamic(false),
-		m_boundingBox(NULL)
+		m_boundingBox(nullptr)
 	{
 	}
 
@@ -66,7 +62,7 @@ public:
 	{
 	}
 
-	virtual void Relink(std::map<void *, void *>& map) = 0;
+	virtual void Relink(std::map<SCA_IObject *, SCA_IObject *>& map) = 0;
 	virtual bool Apply(RAS_IPolyMaterial *polymat, RAS_MeshMaterial *meshmat) = 0;
 	virtual bool Update(void)=0;
 	virtual bool UpdateBuckets(void)=0;
@@ -112,15 +108,15 @@ public:
 	}
 	virtual struct DerivedMesh* GetFinalMesh()
 	{
-		return NULL;
+		return nullptr;
 	}
 	virtual struct DerivedMesh* GetPhysicsMesh()
 	{
-		return NULL;
+		return nullptr;
 	}
 	virtual class RAS_MeshObject* GetRasMesh()
 	{
-		return NULL;
+		return nullptr;
 	}
 	virtual class SCA_IObject* GetParent()
 	{
@@ -136,7 +132,7 @@ public:
 	{
 		return false;
 	}
-	virtual float (* GetTransVerts(int *tot))[3]	{	*tot= 0; return NULL; }
+	virtual float (* GetTransVerts(int *tot))[3]	{	*tot= 0; return nullptr; }
 
 	RAS_BoundingBox *GetBoundingBox() const
 	{
@@ -149,10 +145,6 @@ protected:
 
 	/// Deformer bounding box.
 	RAS_BoundingBox *m_boundingBox;
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:RAS_Deformer")
-#endif
 };
 
 #endif

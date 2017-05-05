@@ -80,7 +80,7 @@ static unsigned char *GPU_texture_convert_pixels(int length, const float *fpixel
 	return pixels;
 }
 
-static void GPU_glTexSubImageEmpty(GLenum target, GLenum format, int x, int y, int w, int h)
+static void gpu_glTexSubImageEmpty(GLenum target, GLenum format, int x, int y, int w, int h)
 {
 	void *pixels = MEM_callocN(sizeof(char) * 4 * w * h, "GPUTextureEmptyPixels");
 
@@ -194,7 +194,7 @@ static GPUTexture *GPU_texture_create_nD(
 				pixels ? pixels : fpixels);
 
 			if (tex->w > w) {
-				GPU_glTexSubImageEmpty(tex->target, format, w, 0, tex->w - w, 1);
+				gpu_glTexSubImageEmpty(tex->target, format, w, 0, tex->w - w, 1);
 			}
 		}
 	}
@@ -211,10 +211,12 @@ static GPUTexture *GPU_texture_create_nD(
 			glTexSubImage2D(tex->target, 0, 0, 0, w, h,
 				format, type, pixels ? pixels : fpixels);
 
-			if (tex->w > w)
-				GPU_glTexSubImageEmpty(tex->target, format, w, 0, tex->w - w, tex->h);
-			if (tex->h > h)
-				GPU_glTexSubImageEmpty(tex->target, format, 0, h, w, tex->h - h);
+			if (tex->w > w) {
+				gpu_glTexSubImageEmpty(tex->target, format, w, 0, tex->w - w, tex->h);
+			}
+			if (tex->h > h) {
+				gpu_glTexSubImageEmpty(tex->target, format, 0, h, w, tex->h - h);
+			}
 		}
 	}
 
@@ -690,7 +692,7 @@ int GPU_texture_bound_number(GPUTexture *tex)
 	return tex->number;
 }
 
-void GPU_texture_filter_mode(GPUTexture *tex, bool compare, bool use_filter)
+void GPU_texture_filter_mode(GPUTexture *tex, bool compare, bool use_filter, bool mipmap)
 {
 	if (tex->number >= GPU_max_textures()) {
 		fprintf(stderr, "Not enough texture slots.\n");
@@ -715,7 +717,12 @@ void GPU_texture_filter_mode(GPUTexture *tex, bool compare, bool use_filter)
 
 	if (use_filter) {
 		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		if (mipmap) {
+			glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		}
+		else {
+			glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		}
 	}
 	else {
 		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);

@@ -97,11 +97,6 @@ public:
 		const MT_Vector3& frompoint, 
 		const MT_Vector3& topoint, 
 		KX_RayCast& callback);
-	
-	
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:KX_RayCast")
-#endif
 };
 
 template<class T, class dataT>
@@ -115,7 +110,7 @@ class KX_RayCast::Callback : public KX_RayCast
 	 */
 	dataT *data;
 public:
-	Callback(T *_self, PHY_IPhysicsController *controller = NULL, dataT *_data = NULL, bool faceNormal = false, bool faceUV = false)
+	Callback(T *_self, PHY_IPhysicsController *controller = nullptr, dataT *_data = nullptr, bool faceNormal = false, bool faceUV = false)
 		: KX_RayCast(controller, faceNormal, faceUV),
 		self(_self),
 		data(_data)
@@ -140,11 +135,6 @@ public:
 		}
 		return self->NeedRayCast(info, data);
 	}
-	
-	
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:KX_RayCast::Callback")
-#endif
 };
 	
 

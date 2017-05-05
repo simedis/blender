@@ -55,7 +55,7 @@ public:
 	KX_SoftBodyDeformer(RAS_MeshObject *pMeshObject, BL_DeformableGameObject *gameobj);
 	virtual ~KX_SoftBodyDeformer();
 
-	virtual void Relink(std::map<void *, void *>& map);
+	virtual void Relink(std::map<SCA_IObject *, SCA_IObject *>& map);
 	virtual bool Apply(RAS_IPolyMaterial *polymat, RAS_MeshMaterial *meshmat);
 	virtual bool Update()
 	{
@@ -91,10 +91,6 @@ public:
 	{
 		return false;
 	}
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:BL_ShapeDeformer")
-#endif
 };
 
 #endif

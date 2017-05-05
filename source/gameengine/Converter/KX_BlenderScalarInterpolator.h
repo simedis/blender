@@ -36,6 +36,8 @@
 
 #include "KX_IScalarInterpolator.h"
 
+struct bAction;
+
 typedef unsigned short BL_IpoChannel;
 
 class BL_ScalarInterpolator : public KX_IScalarInterpolator {
@@ -52,25 +54,22 @@ public:
 
 private:
 	struct FCurve *m_fcu;
-
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:BL_ScalarInterpolator")
-#endif
 };
 
 
-class BL_InterpolatorList : public std::vector<KX_IScalarInterpolator *> {
+class BL_InterpolatorList
+{
+private:
+	bAction *m_action;
+	std::vector<BL_ScalarInterpolator *> m_interpolators;
+
 public:
 	BL_InterpolatorList(struct bAction *action);
 	~BL_InterpolatorList();
 
-	KX_IScalarInterpolator *GetScalarInterpolator(const char *rna_path, int array_index);
+	bAction *GetAction() const;
 
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:BL_InterpolatorList")
-#endif
+	BL_ScalarInterpolator *GetScalarInterpolator(const char *rna_path, int array_index);
 };
 
 #endif  /* __KX_BLENDERSCALARINTERPOLATOR_H__ */

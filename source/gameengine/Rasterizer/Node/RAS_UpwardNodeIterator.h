@@ -30,10 +30,10 @@ private:
 
 public:
 	RAS_UpwardNodeIterator()
-		:m_node(NULL)
+		:m_node(nullptr)
 	{
 		if (std::is_same<NodeType *, RAS_DummyNode *>()) {
-			m_parent.reset(NULL);
+			m_parent.reset(nullptr);
 		}
 		else {
 			m_parent.reset(new ParentType());
@@ -51,11 +51,17 @@ public:
 			return;
 		}
 
-		m_parent->NextNode(node->GetParent(), args);
-
 		if (m_node) {
 			m_node->Unbind(args);
 		}
+
+		/* Nodes request to be unbind or bind that their parent are keep bound.
+		 * The nodes are then unbind before their parent and bind after their parent.
+		 * This is proceed by doing the recursive call between unbind and bind, unbind
+		 * at recursion construction (upward), unbind at recursion destruction (downward).
+		 */
+		m_parent->NextNode(node->GetParent(), args);
+
 		m_node = node;
 		m_node->Bind(args);
 	}

@@ -201,7 +201,7 @@ void SCA_IController::ApplyState(unsigned int state)
 /* Python api */
 
 PyTypeObject SCA_IController::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"SCA_IController",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -223,7 +223,7 @@ PyTypeObject SCA_IController::Type = {
 };
 
 PyMethodDef SCA_IController::Methods[] = {
-	{NULL,NULL} //Sentinel
+	{nullptr,nullptr} //Sentinel
 };
 
 PyAttributeDef SCA_IController::Attributes[] = {
@@ -234,7 +234,7 @@ PyAttributeDef SCA_IController::Attributes[] = {
 	KX_PYATTRIBUTE_NULL	//Sentinel
 };
 
-PyObject *SCA_IController::pyattr_get_state(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_IController::pyattr_get_state(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	SCA_IController* self = static_cast<SCA_IController*>(self_v);
 	return PyLong_FromLong(self->m_statemask);
@@ -255,15 +255,15 @@ static const std::string sca_icontroller_get_sensors_item_name_cb(void *self_v, 
 	return ((SCA_IController *)self_v)->GetLinkedSensors()[index]->GetName();
 }
 
-PyObject *SCA_IController::pyattr_get_sensors(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_IController::pyattr_get_sensors(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	return (new CListWrapper(self_v,
 							 ((SCA_IController *)self_v)->GetProxy(),
-							 NULL,
+							 nullptr,
 							 sca_icontroller_get_sensors_size_cb,
 							 sca_icontroller_get_sensors_item_cb,
 							 sca_icontroller_get_sensors_item_name_cb,
-							 NULL))->NewProxy(true);
+							 nullptr))->NewProxy(true);
 }
 
 static int sca_icontroller_get_actuators_size_cb(void *self_v)
@@ -281,14 +281,14 @@ static const std::string sca_icontroller_get_actuators_item_name_cb(void *self_v
 	return ((SCA_IController *)self_v)->GetLinkedActuators()[index]->GetName();
 }
 
-PyObject *SCA_IController::pyattr_get_actuators(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_IController::pyattr_get_actuators(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	return (new CListWrapper(self_v,
 							 ((SCA_IController *)self_v)->GetProxy(),
-							 NULL,
+							 nullptr,
 							 sca_icontroller_get_actuators_size_cb,
 							 sca_icontroller_get_actuators_item_cb,
 							 sca_icontroller_get_actuators_item_name_cb,
-							 NULL))->NewProxy(true);
+							 nullptr))->NewProxy(true);
 }
 #endif // WITH_PYTHON

@@ -354,29 +354,21 @@ bool KX_ObjectActuator::UnlinkObject(SCA_IObject* clientobj)
 	if (clientobj == (SCA_IObject*)m_reference)
 	{
 		// this object is being deleted, we cannot continue to use it as reference.
-		m_reference = NULL;
+		m_reference = nullptr;
 		return true;
 	}
 	return false;
 }
 
-void KX_ObjectActuator::Relink(std::map<void *, void *>& obj_map)
+void KX_ObjectActuator::Relink(std::map<SCA_IObject *, SCA_IObject *>& obj_map)
 {
-	void *h_obj = obj_map[m_reference];
-	if (h_obj) {
+	KX_GameObject *obj = static_cast<KX_GameObject *>(obj_map[m_reference]);
+	if (obj) {
 		if (m_reference)
 			m_reference->UnregisterActuator(this);
-		m_reference = (KX_GameObject *)h_obj;
+		m_reference = obj;
 		m_reference->RegisterActuator(this);
 	}
-}
-
-/* some 'standard' utilities... */
-bool KX_ObjectActuator::isValid(KX_ObjectActuator::KX_OBJECT_ACT_VEC_TYPE type)
-{
-	bool res = false;
-	res = (type > KX_OBJECT_ACT_NODEF) && (type < KX_OBJECT_ACT_MAX);
-	return res;
 }
 
 #ifdef WITH_PYTHON
@@ -387,7 +379,7 @@ bool KX_ObjectActuator::isValid(KX_ObjectActuator::KX_OBJECT_ACT_VEC_TYPE type)
 
 /* Integration hooks ------------------------------------------------------- */
 PyTypeObject KX_ObjectActuator::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"KX_ObjectActuator",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -409,7 +401,7 @@ PyTypeObject KX_ObjectActuator::Type = {
 };
 
 PyMethodDef KX_ObjectActuator::Methods[] = {
-	{NULL,NULL} //Sentinel
+	{nullptr,nullptr} //Sentinel
 };
 
 PyAttributeDef KX_ObjectActuator::Attributes[] = {
@@ -452,7 +444,7 @@ static unsigned char mathutils_kxobactu_vector_cb_index = -1; /* index for our c
 static int mathutils_obactu_generic_check(BaseMathObject *bmo)
 {
 	KX_ObjectActuator* self = static_cast<KX_ObjectActuator*>BGE_PROXY_REF(bmo->cb_user);
-	if (self == NULL)
+	if (self == nullptr)
 		return -1;
 
 	return 0;
@@ -461,7 +453,7 @@ static int mathutils_obactu_generic_check(BaseMathObject *bmo)
 static int mathutils_obactu_vector_get(BaseMathObject *bmo, int subtype)
 {
 	KX_ObjectActuator* self = static_cast<KX_ObjectActuator*>BGE_PROXY_REF(bmo->cb_user);
-	if (self == NULL)
+	if (self == nullptr)
 		return -1;
 
 	switch (subtype) {
@@ -479,7 +471,7 @@ static int mathutils_obactu_vector_get(BaseMathObject *bmo, int subtype)
 static int mathutils_obactu_vector_set(BaseMathObject *bmo, int subtype)
 {
 	KX_ObjectActuator* self = static_cast<KX_ObjectActuator*>BGE_PROXY_REF(bmo->cb_user);
-	if (self == NULL)
+	if (self == nullptr)
 		return -1;
 
 	switch (subtype) {
@@ -522,14 +514,14 @@ static Mathutils_Callback mathutils_obactu_vector_cb = {
 	mathutils_obactu_vector_set_index
 };
 
-PyObject *KX_ObjectActuator::pyattr_get_linV(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_ObjectActuator::pyattr_get_linV(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	return Vector_CreatePyObject_cb(
 	        BGE_PROXY_FROM_REF_BORROW(self_v), 3,
 	        mathutils_kxobactu_vector_cb_index, MATHUTILS_VEC_CB_LINV);
 }
 
-int KX_ObjectActuator::pyattr_set_linV(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int KX_ObjectActuator::pyattr_set_linV(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	KX_ObjectActuator* self = static_cast<KX_ObjectActuator*>(self_v);
 	if (!PyVecTo(value, self->m_linear_velocity))
@@ -540,14 +532,14 @@ int KX_ObjectActuator::pyattr_set_linV(void *self_v, const KX_PYATTRIBUTE_DEF *a
 	return PY_SET_ATTR_SUCCESS;
 }
 
-PyObject *KX_ObjectActuator::pyattr_get_angV(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_ObjectActuator::pyattr_get_angV(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	return Vector_CreatePyObject_cb(
 	        BGE_PROXY_FROM_REF_BORROW(self_v), 3,
 	        mathutils_kxobactu_vector_cb_index, MATHUTILS_VEC_CB_ANGV);
 }
 
-int KX_ObjectActuator::pyattr_set_angV(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int KX_ObjectActuator::pyattr_set_angV(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	KX_ObjectActuator* self = static_cast<KX_ObjectActuator*>(self_v);
 	if (!PyVecTo(value, self->m_angular_velocity))
@@ -567,7 +559,7 @@ void KX_ObjectActuator_Mathutils_Callback_Init(void)
 
 #endif // USE_MATHUTILS
 
-PyObject *KX_ObjectActuator::pyattr_get_forceLimitX(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_ObjectActuator::pyattr_get_forceLimitX(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_ObjectActuator* self = reinterpret_cast<KX_ObjectActuator*>(self_v);
 	PyObject *retVal = PyList_New(3);
@@ -579,7 +571,7 @@ PyObject *KX_ObjectActuator::pyattr_get_forceLimitX(void *self_v, const KX_PYATT
 	return retVal;
 }
 
-int KX_ObjectActuator::pyattr_set_forceLimitX(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int KX_ObjectActuator::pyattr_set_forceLimitX(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	KX_ObjectActuator* self = reinterpret_cast<KX_ObjectActuator*>(self_v);
 
@@ -603,7 +595,7 @@ int KX_ObjectActuator::pyattr_set_forceLimitX(void *self_v, const KX_PYATTRIBUTE
 	return PY_SET_ATTR_FAIL;
 }
 
-PyObject *KX_ObjectActuator::pyattr_get_forceLimitY(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_ObjectActuator::pyattr_get_forceLimitY(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_ObjectActuator* self = reinterpret_cast<KX_ObjectActuator*>(self_v);
 	PyObject *retVal = PyList_New(3);
@@ -615,7 +607,7 @@ PyObject *KX_ObjectActuator::pyattr_get_forceLimitY(void *self_v, const KX_PYATT
 	return retVal;
 }
 
-int	KX_ObjectActuator::pyattr_set_forceLimitY(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int	KX_ObjectActuator::pyattr_set_forceLimitY(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	KX_ObjectActuator* self = reinterpret_cast<KX_ObjectActuator*>(self_v);
 
@@ -639,7 +631,7 @@ int	KX_ObjectActuator::pyattr_set_forceLimitY(void *self_v, const KX_PYATTRIBUTE
 	return PY_SET_ATTR_FAIL;
 }
 
-PyObject *KX_ObjectActuator::pyattr_get_forceLimitZ(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_ObjectActuator::pyattr_get_forceLimitZ(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_ObjectActuator* self = reinterpret_cast<KX_ObjectActuator*>(self_v);
 	PyObject *retVal = PyList_New(3);
@@ -651,7 +643,7 @@ PyObject *KX_ObjectActuator::pyattr_get_forceLimitZ(void *self_v, const KX_PYATT
 	return retVal;
 }
 
-int	KX_ObjectActuator::pyattr_set_forceLimitZ(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int	KX_ObjectActuator::pyattr_set_forceLimitZ(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	KX_ObjectActuator* self = reinterpret_cast<KX_ObjectActuator*>(self_v);
 
@@ -675,7 +667,7 @@ int	KX_ObjectActuator::pyattr_set_forceLimitZ(void *self_v, const KX_PYATTRIBUTE
 	return PY_SET_ATTR_FAIL;
 }
 
-PyObject *KX_ObjectActuator::pyattr_get_reference(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_ObjectActuator::pyattr_get_reference(PyObjectPlus *self, const struct KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_ObjectActuator* actuator = static_cast<KX_ObjectActuator*>(self);
 	if (!actuator->m_reference)
@@ -684,7 +676,7 @@ PyObject *KX_ObjectActuator::pyattr_get_reference(void *self, const struct KX_PY
 	return actuator->m_reference->GetProxy();
 }
 
-int KX_ObjectActuator::pyattr_set_reference(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int KX_ObjectActuator::pyattr_set_reference(PyObjectPlus *self, const struct KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	KX_ObjectActuator* actuator = static_cast<KX_ObjectActuator*>(self);
 	KX_GameObject *refOb;
@@ -695,8 +687,8 @@ int KX_ObjectActuator::pyattr_set_reference(void *self, const struct KX_PYATTRIB
 	if (actuator->m_reference)
 		actuator->m_reference->UnregisterActuator(actuator);
 	
-	if (refOb==NULL) {
-		actuator->m_reference= NULL;
+	if (refOb==nullptr) {
+		actuator->m_reference= nullptr;
 	}
 	else {
 		actuator->m_reference = refOb;

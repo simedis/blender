@@ -55,7 +55,7 @@ struct GPUFrameBuffer {
 	GPURenderBuffer *depthrb;
 };
 
-static void GPU_print_framebuffer_error(GLenum status, char err_out[256])
+static void gpu_print_framebuffer_error(GLenum status, char err_out[256])
 {
 	const char *err = "unknown";
 
@@ -172,7 +172,7 @@ int GPU_framebuffer_texture_attach_target(GPUFrameBuffer *fb, GPUTexture *tex, i
 
 	if (error == GL_INVALID_OPERATION) {
 		GPU_framebuffer_restore();
-		GPU_print_framebuffer_error(error, err_out);
+		gpu_print_framebuffer_error(error, err_out);
 		return 0;
 	}
 
@@ -335,6 +335,25 @@ void GPU_framebuffer_bind_simple(GPUFrameBuffer *fb)
 	GG.currentfb = fb->object;
 }
 
+void GPU_framebuffer_bind_all_attachments(GPUFrameBuffer *fb)
+{
+	int slots = 0, i;
+	GLenum attachments[GPU_FB_MAX_SLOTS];
+
+	for(i = 0; i < GPU_FB_MAX_SLOTS; i++) {
+		if (fb->colortex[i]) {
+			attachments[slots] = GL_COLOR_ATTACHMENT0_EXT + i;
+			slots++;
+		}
+	}
+
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fb->object);
+	glDrawBuffers(slots, attachments);
+	glReadBuffer(GL_COLOR_ATTACHMENT0_EXT);
+
+	GG.currentfb = fb->object;
+}
+
 bool GPU_framebuffer_bound(GPUFrameBuffer *fb)
 {
 	return fb->object == GG.currentfb;
@@ -354,7 +373,7 @@ bool GPU_framebuffer_check_valid(GPUFrameBuffer *fb, char err_out[256])
 	
 	if (status != GL_FRAMEBUFFER_COMPLETE_EXT) {
 		GPU_framebuffer_restore();
-		GPU_print_framebuffer_error(status, err_out);
+		gpu_print_framebuffer_error(status, err_out);
 		return false;
 	}
 	
@@ -392,7 +411,7 @@ int GPU_framebuffer_renderbuffer_attach(GPUFrameBuffer *fb, GPURenderBuffer *rb,
 
 	if (error == GL_INVALID_OPERATION) {
 		GPU_framebuffer_restore();
-		GPU_print_framebuffer_error(error, err_out);
+		gpu_print_framebuffer_error(error, err_out);
 		return 0;
 	}
 

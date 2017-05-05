@@ -97,7 +97,7 @@ bool SCA_VibrationActuator::Update()
 
 /* Integration hooks ------------------------------------------------------- */
 PyTypeObject SCA_VibrationActuator::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"SCA_VibrationActuator",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -121,7 +121,7 @@ PyTypeObject SCA_VibrationActuator::Type = {
 PyMethodDef SCA_VibrationActuator::Methods[] = {
 	KX_PYMETHODTABLE_NOARGS(SCA_VibrationActuator, startVibration),
 	KX_PYMETHODTABLE_NOARGS(SCA_VibrationActuator, stopVibration),
-	{ NULL, NULL } //Sentinel
+	{ nullptr, nullptr } //Sentinel
 };
 
 PyAttributeDef SCA_VibrationActuator::Attributes[] = {
@@ -166,7 +166,7 @@ KX_PYMETHODDEF_DOC_NOARGS(SCA_VibrationActuator, stopVibration,
 	Py_RETURN_NONE;
 }
 
-PyObject *SCA_VibrationActuator::pyattr_get_isVibrating(void *self_v, const struct KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_VibrationActuator::pyattr_get_isVibrating(PyObjectPlus *self_v, const struct KX_PYATTRIBUTE_DEF *attrdef)
 {
 	SCA_VibrationActuator *self = static_cast<SCA_VibrationActuator *>(self_v);
 	SCA_JoystickManager *mgr = (SCA_JoystickManager *)self->GetLogicManager();
@@ -181,7 +181,7 @@ PyObject *SCA_VibrationActuator::pyattr_get_isVibrating(void *self_v, const stru
 	return PyBool_FromLong(instance->GetRumbleStatus());
 }
 
-PyObject *SCA_VibrationActuator::pyattr_get_hasVibration(void *self_v, const struct KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_VibrationActuator::pyattr_get_hasVibration(PyObjectPlus *self_v, const struct KX_PYATTRIBUTE_DEF *attrdef)
 {
 	SCA_VibrationActuator *self = static_cast<SCA_VibrationActuator *>(self_v);
 	SCA_JoystickManager *mgr = (SCA_JoystickManager *)self->GetLogicManager();

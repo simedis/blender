@@ -76,7 +76,7 @@ static PyObject *gPySetClipboard(PyObject *args, PyObject *value)
 
 /* Integration hooks ------------------------------------------------------- */
 PyTypeObject SCA_PythonKeyboard::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"SCA_PythonKeyboard",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -100,7 +100,7 @@ PyTypeObject SCA_PythonKeyboard::Type = {
 PyMethodDef SCA_PythonKeyboard::Methods[] = {
 	{"getClipboard", (PyCFunction) gPyGetClipboard, METH_VARARGS, "getCliboard doc"},
 	{"setClipboard", (PyCFunction) gPySetClipboard, METH_VARARGS, "setCliboard doc"},
-	{NULL,NULL} //Sentinel
+	{nullptr,nullptr} //Sentinel
 };
 
 PyAttributeDef SCA_PythonKeyboard::Attributes[] = {
@@ -112,7 +112,7 @@ PyAttributeDef SCA_PythonKeyboard::Attributes[] = {
 	KX_PYATTRIBUTE_NULL	//Sentinel
 };
 
-PyObject *SCA_PythonKeyboard::pyattr_get_events(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_PythonKeyboard::pyattr_get_events(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	SCA_PythonKeyboard* self = static_cast<SCA_PythonKeyboard*>(self_v);
 
@@ -141,7 +141,7 @@ PyObject *SCA_PythonKeyboard::pyattr_get_events(void *self_v, const KX_PYATTRIBU
 	return self->m_event_dict;
 }
 
-PyObject *SCA_PythonKeyboard::pyattr_get_inputs(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_PythonKeyboard::pyattr_get_inputs(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	SCA_PythonKeyboard* self = static_cast<SCA_PythonKeyboard*>(self_v);
 
@@ -159,11 +159,10 @@ PyObject *SCA_PythonKeyboard::pyattr_get_inputs(void *self_v, const KX_PYATTRIBU
 	return self->m_event_dict;
 }
 
-PyObject *SCA_PythonKeyboard::pyattr_get_active_inputs(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_PythonKeyboard::pyattr_get_active_inputs(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	SCA_PythonKeyboard* self = static_cast<SCA_PythonKeyboard*>(self_v);
 
-	ShowDeprecationWarning("keyboard.active_events", "keyboard.activeInputs");
 
 	PyDict_Clear(self->m_event_dict);
 
@@ -183,9 +182,11 @@ PyObject *SCA_PythonKeyboard::pyattr_get_active_inputs(void *self_v, const KX_PY
 	return self->m_event_dict;
 }
 
-PyObject *SCA_PythonKeyboard::pyattr_get_active_events(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_PythonKeyboard::pyattr_get_active_events(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	SCA_PythonKeyboard* self = static_cast<SCA_PythonKeyboard*>(self_v);
+
+	ShowDeprecationWarning("keyboard.active_events", "keyboard.activeInputs");
 
 	PyDict_Clear(self->m_event_dict);
 
@@ -215,7 +216,7 @@ PyObject *SCA_PythonKeyboard::pyattr_get_active_events(void *self_v, const KX_PY
 	return self->m_event_dict;
 }
 
-PyObject *SCA_PythonKeyboard::pyattr_get_text(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_PythonKeyboard::pyattr_get_text(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	SCA_PythonKeyboard *self = (SCA_PythonKeyboard *)self_v;
 

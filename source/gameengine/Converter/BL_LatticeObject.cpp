@@ -177,7 +177,7 @@ void BL_LatticeObject::RestoreLatticeCache()
 }
 
 
-int BL_LatticeObject::GetGameObjectType()
+int BL_LatticeObject::GetGameObjectType() const
 {
 	return OBJ_LATTICE;
 }

@@ -47,8 +47,8 @@
 #include "MEM_guardedalloc.h"
 
 #include "BLI_blenlib.h"
+#include "BLI_string_utils.h"
 #include "BLI_utildefines.h"
-#include "BLI_path_util.h"
 
 #include "BKE_action.h"
 #include "BKE_context.h"
@@ -1081,6 +1081,9 @@ static void draw_sensor_mouse(uiLayout *layout, PointerRNA *ptr, bContext *C)
 			uiItemPointerR(split2, ptr, "material", &main_ptr, "materials", "", ICON_MATERIAL_DATA);
 		}
 		uiItemR(split2, ptr, "use_x_ray", UI_ITEM_R_TOGGLE, NULL, ICON_NONE);
+
+		split = uiLayoutSplit(layout, 0.3, false);
+		uiItemR(split, ptr, "mask", 0, NULL, ICON_NONE);
 	}
 }
 
@@ -1687,6 +1690,7 @@ static void draw_actuator_filter_2d(uiLayout *layout, PointerRNA *ptr)
 		case ACT_2DFILTER_CUSTOMFILTER:
 			uiItemR(layout, ptr, "filter_pass", 0, NULL, ICON_NONE);
 			uiItemR(layout, ptr, "glsl_shader", 0, NULL, ICON_NONE);
+			uiItemR(layout, ptr, "use_mipmap", 0, NULL, ICON_NONE);
 			break;
 		case ACT_2DFILTER_MOTIONBLUR:
 			split=uiLayoutSplit(layout, 0.75f, true);

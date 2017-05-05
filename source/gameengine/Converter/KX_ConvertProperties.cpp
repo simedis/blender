@@ -75,7 +75,7 @@ void BL_ConvertProperties(Object* object,KX_GameObject* gameobj,SCA_TimeEventMan
 	bool show_debug_info;
 
 	while (prop) {
-		propval = NULL;
+		propval = nullptr;
 		show_debug_info = bool (prop->flag & PROP_DEBUG);
 
 		switch (prop->type) {
@@ -186,10 +186,9 @@ void BL_ConvertTextProperty(Object* object, KX_FontObject* fontobj,SCA_TimeEvent
 	if (!prop) return;
 
 	Curve *curve = static_cast<Curve *>(object->data);
-	std::string str = curve->str;
-	std::stringstream stream;
-	stream << str;
-	CValue* propval = NULL;
+	const std::string str = curve->str;
+	std::stringstream stream(str);
+	CValue* propval = nullptr;
 
 	switch (prop->type) {
 		case GPROP_BOOL:

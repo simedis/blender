@@ -67,16 +67,16 @@ base class --- :class:`PyObjectPlus`
 
    .. attribute:: horizonColor
 
-      The horizon color. Black = [0.0, 0.0, 0.0], White = [1.0, 1.0, 1.0].
+      The horizon color. Black = [0.0, 0.0, 0.0, 1.0], White = [1.0, 1.0, 1.0, 1.0].
       Mist and horizon color should always be set to the same color.
 
-      :type: :class:`mathutils.Color`
+      :type: :class:`mathutils.Vector`
 
    .. attribute:: zenithColor
 
-      The zenith color. Black = [0.0, 0.0, 0.0], White = [1.0, 1.0, 1.0].
+      The zenith color. Black = [0.0, 0.0, 0.0, 1.0], White = [1.0, 1.0, 1.0, 1.0].
 
-      :type: :class:`mathutils.Color`
+      :type: :class:`mathutils.Vector`
 
    .. attribute:: ambientColor
 
@@ -95,3 +95,10 @@ base class --- :class:`PyObjectPlus`
       The color range that will be mapped to 0 - 1.
 
       :type: float between 0.2 and 5.0 inclusive
+
+   .. attribute:: envLightEnergy
+
+      The environment light energy.
+
+      :type: float from 0.0 to infinite
+

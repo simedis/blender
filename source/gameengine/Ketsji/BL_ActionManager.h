@@ -27,10 +27,6 @@
 #ifndef __BL_ACTIONMANAGER_H__
 #define __BL_ACTIONMANAGER_H__
 
-#ifdef WITH_CXX_GUARDEDALLOC
-	#include "MEM_guardedalloc.h"
-#endif
-
 #include <map>
 
 // Currently, we use the max value of a short.
@@ -97,11 +93,6 @@ public:
 	void SetPlayMode(short layer, short mode);
 
 	/**
-	 * Sets the start and end times of the action on the given layer
-	 */
-	void SetTimes(short layer, float start, float end);
-
-	/**
 	 * Stop playing the action on the given layer
 	 */
 	void StopAction(short layer);
@@ -127,10 +118,6 @@ public:
 	 * Update object IPOs (note: not thread-safe!)
 	 */
 	void UpdateIPOs();
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:BL_ActionManager")
-#endif
 };
 
 #endif  /* BL_ACTIONMANAGER */

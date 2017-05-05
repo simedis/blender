@@ -107,7 +107,7 @@ public:
 	UnlinkObject(SCA_IObject* clientobj);
 
 	virtual void 
-	Relink(std::map<void *, void *>& obj_map);
+	Relink(std::map<SCA_IObject *, SCA_IObject *>& obj_map);
 
 	virtual bool 
 	Update();
@@ -122,9 +122,9 @@ public:
 
 	KX_PYMETHOD_DOC_NOARGS(KX_SCA_AddObjectActuator,InstantAddObject);
 
-	static PyObject *pyattr_get_object(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef);
-	static int pyattr_set_object(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
-	static PyObject *pyattr_get_objectLastCreated(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef);
+	static PyObject *pyattr_get_object(PyObjectPlus *self, const struct KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_set_object(PyObjectPlus *self, const struct KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject *pyattr_get_objectLastCreated(PyObjectPlus *self, const struct KX_PYATTRIBUTE_DEF *attrdef);
 	
 #endif  /* WITH_PYTHON */
 

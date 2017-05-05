@@ -70,7 +70,7 @@ KX_SCA_AddObjectActuator::KX_SCA_AddObjectActuator(SCA_IObject *gameobj,
 	if (m_OriginalObject)
 		m_OriginalObject->RegisterActuator(this);
 
-	m_lastCreatedObject = NULL;
+	m_lastCreatedObject = nullptr;
 	m_timeProp = time;
 } 
 
@@ -114,8 +114,8 @@ CValue* KX_SCA_AddObjectActuator::GetReplica()
 {
 	KX_SCA_AddObjectActuator* replica = new KX_SCA_AddObjectActuator(*this);
 
-	if (replica == NULL)
-		return NULL;
+	if (replica == nullptr)
+		return nullptr;
 
 	// this will copy properties and so on...
 	replica->ProcessReplica();
@@ -127,7 +127,7 @@ void KX_SCA_AddObjectActuator::ProcessReplica()
 {
 	if (m_OriginalObject)
 		m_OriginalObject->RegisterActuator(this);
-	m_lastCreatedObject=NULL;
+	m_lastCreatedObject=nullptr;
 	SCA_IActuator::ProcessReplica();
 }
 
@@ -136,25 +136,25 @@ bool KX_SCA_AddObjectActuator::UnlinkObject(SCA_IObject* clientobj)
 	if (clientobj == m_OriginalObject)
 	{
 		// this object is being deleted, we cannot continue to track it.
-		m_OriginalObject = NULL;
+		m_OriginalObject = nullptr;
 		return true;
 	}
 	if (clientobj == m_lastCreatedObject)
 	{
 		// this object is being deleted, we cannot continue to track it.
-		m_lastCreatedObject = NULL;
+		m_lastCreatedObject = nullptr;
 		return true;
 	}
 	return false;
 }
 
-void KX_SCA_AddObjectActuator::Relink(std::map<void *, void *>& obj_map)
+void KX_SCA_AddObjectActuator::Relink(std::map<SCA_IObject *, SCA_IObject *>& obj_map)
 {
-	void *h_obj = obj_map[m_OriginalObject];
-	if (h_obj) {
+	SCA_IObject *obj = obj_map[m_OriginalObject];
+	if (obj) {
 		if (m_OriginalObject)
 			m_OriginalObject->UnregisterActuator(this);
-		m_OriginalObject = (SCA_IObject *)h_obj;
+		m_OriginalObject = obj;
 		m_OriginalObject->RegisterActuator(this);
 	}
 }
@@ -167,7 +167,7 @@ void KX_SCA_AddObjectActuator::Relink(std::map<void *, void *>& obj_map)
 
 /* Integration hooks ------------------------------------------------------- */
 PyTypeObject KX_SCA_AddObjectActuator::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"KX_SCA_AddObjectActuator",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -189,8 +189,8 @@ PyTypeObject KX_SCA_AddObjectActuator::Type = {
 };
 
 PyMethodDef KX_SCA_AddObjectActuator::Methods[] = {
-	{"instantAddObject", (PyCFunction) KX_SCA_AddObjectActuator::sPyInstantAddObject, METH_NOARGS, NULL},
-	{NULL,NULL} //Sentinel
+	{"instantAddObject", (PyCFunction) KX_SCA_AddObjectActuator::sPyInstantAddObject, METH_NOARGS, nullptr},
+	{nullptr,nullptr} //Sentinel
 };
 
 PyAttributeDef KX_SCA_AddObjectActuator::Attributes[] = {
@@ -202,7 +202,7 @@ PyAttributeDef KX_SCA_AddObjectActuator::Attributes[] = {
 	KX_PYATTRIBUTE_NULL	//Sentinel
 };
 
-PyObject *KX_SCA_AddObjectActuator::pyattr_get_object(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_SCA_AddObjectActuator::pyattr_get_object(PyObjectPlus *self, const struct KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_SCA_AddObjectActuator* actuator = static_cast<KX_SCA_AddObjectActuator*>(self);
 	if (!actuator->m_OriginalObject)
@@ -211,7 +211,7 @@ PyObject *KX_SCA_AddObjectActuator::pyattr_get_object(void *self, const struct K
 		return actuator->m_OriginalObject->GetProxy();
 }
 
-int KX_SCA_AddObjectActuator::pyattr_set_object(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int KX_SCA_AddObjectActuator::pyattr_set_object(PyObjectPlus *self, const struct KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	KX_SCA_AddObjectActuator* actuator = static_cast<KX_SCA_AddObjectActuator*>(self);
 	KX_GameObject *gameobj;
@@ -219,7 +219,7 @@ int KX_SCA_AddObjectActuator::pyattr_set_object(void *self, const struct KX_PYAT
 	if (!ConvertPythonToGameObject(actuator->GetLogicManager(), value, &gameobj, true, "actuator.object = value: KX_SCA_AddObjectActuator"))
 		return PY_SET_ATTR_FAIL; // ConvertPythonToGameObject sets the error
 		
-	if (actuator->m_OriginalObject != NULL)
+	if (actuator->m_OriginalObject != nullptr)
 		actuator->m_OriginalObject->UnregisterActuator(actuator);
 
 	actuator->m_OriginalObject = (SCA_IObject*)gameobj;
@@ -230,7 +230,7 @@ int KX_SCA_AddObjectActuator::pyattr_set_object(void *self, const struct KX_PYAT
 	return PY_SET_ATTR_SUCCESS;
 }
 
-PyObject *KX_SCA_AddObjectActuator::pyattr_get_objectLastCreated(void *self, const struct KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_SCA_AddObjectActuator::pyattr_get_objectLastCreated(PyObjectPlus *self, const struct KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_SCA_AddObjectActuator* actuator = static_cast<KX_SCA_AddObjectActuator*>(self);
 	if (!actuator->m_lastCreatedObject)
@@ -270,7 +270,7 @@ void	KX_SCA_AddObjectActuator::InstantAddObject()
 
 			//Instead we use the registration mechanism
 			m_lastCreatedObject->UnregisterActuator(this);
-			m_lastCreatedObject = NULL;
+			m_lastCreatedObject = nullptr;
 		}
 		
 		m_lastCreatedObject = replica;

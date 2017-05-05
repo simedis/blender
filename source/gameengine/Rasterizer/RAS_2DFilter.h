@@ -26,9 +26,13 @@
 #include "RAS_2DFilterData.h"
 #include "RAS_Shader.h"
 
+#include <memory>
+
 class RAS_2DFilterManager;
-class RAS_IRasterizer;
+class RAS_Rasterizer;
 class RAS_ICanvas;
+class RAS_OffScreen;
+class RAS_2DFilterOffScreen;
 class CValue;
 
 class RAS_2DFilter : public virtual RAS_Shader
@@ -52,6 +56,8 @@ protected:
 
 	/// True if the uniform locations are updated with the current shader program/script.
 	bool m_uniformInitialized;
+	/// True if generate mipmap of input color texture.
+	bool m_mipmap;
 
 	/** A set of vec2 coordinates that the shaders use to sample nearby pixels from incoming textures.
 	The computation should be left to the glsl shader, I keep it for backward compatibility. */
@@ -60,16 +66,25 @@ protected:
 
 	unsigned int m_textures[8];
 
+	/// Custom off screen for special datas.
+	std::unique_ptr<RAS_2DFilterOffScreen> m_offScreen;
+
 	virtual bool LinkProgram();
 	void ParseShaderProgram();
 	void BindUniforms(RAS_ICanvas *canvas);
-	void BindTextures(RAS_IRasterizer *rasty, unsigned short depthfbo, unsigned short colorfbo);
-	void UnbindTextures(RAS_IRasterizer *rasty, unsigned short depthfbo, unsigned short colorfbo);
+	void BindTextures(RAS_OffScreen *detphofs, RAS_OffScreen *colorofs);
+	void UnbindTextures(RAS_OffScreen *detphofs, RAS_OffScreen *colorofs);
 	void ComputeTextureOffsets(RAS_ICanvas *canvas);
 
 public:
 	RAS_2DFilter(RAS_2DFilterData& data);
 	virtual ~RAS_2DFilter();
+
+	bool GetMipmap() const;
+	void SetMipmap(bool mipmap);
+
+	RAS_2DFilterOffScreen *GetOffScreen() const;
+	void SetOffScreen(RAS_2DFilterOffScreen *offScreen);
 
 	/// Called by the filter manager when it has informations like the display size, a gl context...
 	void Initialize(RAS_ICanvas *canvas);
@@ -77,13 +92,14 @@ public:
 	/** Starts executing the filter.
 	 * \param rasty The used rasterizer to call draw commands.
 	 * \param canvas The canvas containing screen viewport.
-	 * \param depthfbo The off screen used only for the depth texture input, 
+	 * \param detphofs The off screen used only for the depth texture input,
 	 * the same for all filters of a scene.
-	 * \param colorfbo The off screen used only for the color texture input, unique per filters.
-	 * \param outputfbo The off screen used to draw the filter to.
+	 * \param colorofs The off screen used only for the color texture input, unique per filters.
+	 * \param targetofs The off screen used to draw the filter to.
+	 * \return The off screen to use as input for the next filter.
 	 */
-	void Start(RAS_IRasterizer *rasty, RAS_ICanvas *canvas, unsigned short depthfbo,
-			   unsigned short colorfbo, unsigned short outputfbo);
+	RAS_OffScreen *Start(RAS_Rasterizer *rasty, RAS_ICanvas *canvas, RAS_OffScreen *detphofs,
+			   RAS_OffScreen *colorofs, RAS_OffScreen *targetofs);
 
 	/// Finalizes the execution stage of the filter.
 	void End();

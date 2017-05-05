@@ -42,7 +42,7 @@ public:
 	 * The python callbacks are executed in this function and at the end
 	 * RAS_Shader::Update(rasty, mat) is called.
 	 */
-	void Update(RAS_IRasterizer *rasty, RAS_MeshSlot *ms);
+	void Update(RAS_Rasterizer *rasty, RAS_MeshSlot *ms);
 
 	// Python interface
 #ifdef WITH_PYTHON
@@ -51,10 +51,10 @@ public:
 		return PyUnicode_FromFormat("BL_Shader\n\tvertex shader:%s\n\n\tfragment shader%s\n\n", m_progs[VERTEX_PROGRAM].c_str(), m_progs[FRAGMENT_PROGRAM].c_str());
 	}
 
-	static PyObject *pyattr_get_enabled(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int pyattr_set_enabled(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
-	static PyObject *pyattr_get_callbacks(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
-	static int pyattr_set_callbacks(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject *pyattr_get_enabled(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_set_enabled(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
+	static PyObject *pyattr_get_callbacks(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef);
+	static int pyattr_set_callbacks(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value);
 
 	// -----------------------------------
 	KX_PYMETHOD_DOC(BL_Shader, setSource);

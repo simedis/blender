@@ -248,6 +248,7 @@ static int text_open_exec(bContext *C, wmOperator *op)
 	pprop = op->customdata;
 
 	if (pprop->prop) {
+		id_us_ensure_real(&text->id);
 		RNA_id_pointer_create(&text->id, &idptr);
 		RNA_property_pointer_set(&pprop->ptr, pprop->prop, idptr);
 		RNA_property_update(C, &pprop->ptr, pprop->prop);
@@ -982,6 +983,9 @@ static int text_comment_exec(bContext *C, wmOperator *UNUSED(op))
 	Text *text = CTX_data_edit_text(C);
 
 	if (txt_has_sel(text)) {
+		TextFormatType *tft = ED_text_format_get(text);
+		text->cmmt_pfx = tft->comment_prefix;
+
 		text_drawcache_tag_update(CTX_wm_space_text(C), 0);
 
 		txt_order_cursors(text, false);
@@ -1015,6 +1019,9 @@ static int text_uncomment_exec(bContext *C, wmOperator *UNUSED(op))
 	Text *text = CTX_data_edit_text(C);
 
 	if (txt_has_sel(text)) {
+		TextFormatType *tft = ED_text_format_get(text);
+		text->cmmt_pfx = tft->comment_prefix;
+
 		text_drawcache_tag_update(CTX_wm_space_text(C), 0);
 
 		txt_order_cursors(text, false);

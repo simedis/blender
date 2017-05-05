@@ -144,7 +144,6 @@ ccl_device float4 svm_image_texture(KernelGlobals *kg, int id, float x, float y,
 		case 86: r = kernel_tex_image_interp(__tex_image_byte4_086, x, y); break;
 		case 87: r = kernel_tex_image_interp(__tex_image_byte4_087, x, y); break;
 		case 88: r = kernel_tex_image_interp(__tex_image_byte4_088, x, y); break;
-		case 89: r = kernel_tex_image_interp(__tex_image_byte4_089, x, y); break;
 		default:
 			kernel_assert(0);
 			return make_float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -152,8 +151,10 @@ ccl_device float4 svm_image_texture(KernelGlobals *kg, int id, float x, float y,
 #  else
 	CUtexObject tex = kernel_tex_fetch(__bindless_mapping, id);
 	/* float4, byte4 and half4 */
-	if(id < TEX_START_FLOAT_CUDA_KEPLER)
+	const int texture_type = kernel_tex_type(id);
+	if(texture_type == IMAGE_DATA_TYPE_FLOAT4 || texture_type == IMAGE_DATA_TYPE_BYTE4 || texture_type == IMAGE_DATA_TYPE_HALF4) {
 		r = kernel_tex_image_interp_float4(tex, x, y);
+	}
 	/* float, byte and half */
 	else {
 		float f = kernel_tex_image_interp_float(tex, x, y);
@@ -167,8 +168,10 @@ ccl_device float4 svm_image_texture(KernelGlobals *kg, int id, float x, float y,
 
 	if(use_alpha && alpha != 1.0f && alpha != 0.0f) {
 		r_ssef = r_ssef / ssef(alpha);
-		if(id >= TEX_NUM_FLOAT4_IMAGES)
+		const int texture_type = kernel_tex_type(id);
+		if(texture_type == IMAGE_DATA_TYPE_BYTE4 || texture_type == IMAGE_DATA_TYPE_BYTE) {
 			r_ssef = min(r_ssef, ssef(1.0f));
+		}
 		r.w = alpha;
 	}
 
@@ -182,8 +185,9 @@ ccl_device float4 svm_image_texture(KernelGlobals *kg, int id, float x, float y,
 		r.x *= invw;
 		r.y *= invw;
 		r.z *= invw;
-
-		if(id >= TEX_NUM_FLOAT4_IMAGES) {
+		
+		const int texture_type = kernel_tex_type(id);
+		if(texture_type == IMAGE_DATA_TYPE_BYTE4 || texture_type == IMAGE_DATA_TYPE_BYTE) {
 			r.x = min(r.x, 1.0f);
 			r.y = min(r.y, 1.0f);
 			r.z = min(r.z, 1.0f);
@@ -238,9 +242,9 @@ ccl_device void svm_node_tex_image(KernelGlobals *kg, ShaderData *sd, float *sta
 ccl_device void svm_node_tex_image_box(KernelGlobals *kg, ShaderData *sd, float *stack, uint4 node)
 {
 	/* get object space normal */
-	float3 N = ccl_fetch(sd, N);
+	float3 N = sd->N;
 
-	N = ccl_fetch(sd, N);
+	N = sd->N;
 	object_inverse_normal_transform(kg, sd, &N);
 
 	/* project from direction vector to barycentric coordinates in triangles */

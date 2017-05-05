@@ -23,6 +23,7 @@
 
 #include "PHY_IPhysicsEnvironment.h"
 #include "KX_KetsjiEngine.h"
+#include "KX_Globals.h"
 
 #include <vector>
 #include <set>
@@ -96,7 +97,7 @@ protected:
 	void ProcessFhSprings(double curTime, float timeStep);
 
 public:
-	CcdPhysicsEnvironment(bool useDbvtCulling, btDispatcher *dispatcher = NULL, btOverlappingPairCache *pairCache = NULL);
+	CcdPhysicsEnvironment(bool useDbvtCulling, btDispatcher *dispatcher = nullptr, btOverlappingPairCache *pairCache = nullptr);
 
 	virtual ~CcdPhysicsEnvironment();
 
@@ -150,7 +151,7 @@ public:
 
 	virtual void SetFixedTimeStep(bool useFixedTimeStep, float fixedTimeStep)
 	{
-		SetNumTimeSubSteps((int)(fixedTimeStep / KX_KetsjiEngine::GetTicRate()));
+		SetNumTimeSubSteps((int)(fixedTimeStep / KX_GetActiveEngine()->GetTicRate()));
 	}
 	/// returns 0.f if no fixed timestep is used
 	virtual float GetFixedTimeStep()
@@ -197,7 +198,7 @@ public:
 #else
 	virtual class PHY_IVehicle *GetVehicleConstraint(int constraintId)
 	{
-		return NULL;
+		return nullptr;
 	}
 #endif  /* NEW_BULLET_VEHICLE_SUPPORT */
 	    // Character physics wrapper
@@ -282,7 +283,8 @@ public:
 
 	static CcdPhysicsEnvironment *Create(struct Scene *blenderscene, bool visualizePhysics);
 
-	virtual void ConvertObject(KX_GameObject *gameobj,
+	virtual void ConvertObject(KX_BlenderSceneConverter& converter,
+							   KX_GameObject *gameobj,
 	                           RAS_MeshObject *meshobj,
 	                           DerivedMesh *dm,
 	                           KX_Scene *kxscene,
@@ -324,10 +326,6 @@ protected:
 	class btDispatcher *m_ownDispatcher;
 
 	virtual void ExportFile(const std::string& filename);
-
-#ifdef WITH_CXX_GUARDEDALLOC
-	MEM_CXX_CLASS_ALLOC_FUNCS("GE:CcdPhysicsEnvironment")
-#endif
 };
 
 class CcdCollData : public PHY_CollData

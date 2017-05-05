@@ -53,8 +53,8 @@ KX_NetworkMessageSensor::KX_NetworkMessageSensor(
 	m_NetworkScene(NetworkScene),
 	m_subject(subject),
 	m_frame_message_count(0),
-	m_BodyList(NULL),
-	m_SubjectList(NULL)
+	m_BodyList(nullptr),
+	m_SubjectList(nullptr)
 {
 	Init();
 }
@@ -74,8 +74,8 @@ CValue *KX_NetworkMessageSensor::GetReplica()
 	// There may be more network message sensor specific stuff to do here.
 	CValue *replica = new KX_NetworkMessageSensor(*this);
 
-	if (replica == NULL) {
-		return NULL;
+	if (replica == nullptr) {
+		return nullptr;
 	}
 	replica->ProcessReplica();
 
@@ -92,12 +92,12 @@ bool KX_NetworkMessageSensor::Evaluate()
 
 	if (m_BodyList) {
 		m_BodyList->Release();
-		m_BodyList = NULL;
+		m_BodyList = nullptr;
 	}
 
 	if (m_SubjectList) {
 		m_SubjectList->Release();
-		m_SubjectList = NULL;
+		m_SubjectList = nullptr;
 	}
 
 	std::string toname = GetParent()->GetName();
@@ -160,7 +160,7 @@ bool KX_NetworkMessageSensor::IsPositiveTrigger()
 
 /* Integration hooks --------------------------------------------------- */
 PyTypeObject KX_NetworkMessageSensor::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"KX_NetworkMessageSensor",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -182,7 +182,7 @@ PyTypeObject KX_NetworkMessageSensor::Type = {
 };
 
 PyMethodDef KX_NetworkMessageSensor::Methods[] = {
-	{NULL, NULL} //Sentinel
+	{nullptr, nullptr} //Sentinel
 };
 
 PyAttributeDef KX_NetworkMessageSensor::Attributes[] = {
@@ -193,7 +193,7 @@ PyAttributeDef KX_NetworkMessageSensor::Attributes[] = {
 	KX_PYATTRIBUTE_NULL //Sentinel
 };
 
-PyObject *KX_NetworkMessageSensor::pyattr_get_bodies(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_NetworkMessageSensor::pyattr_get_bodies(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_NetworkMessageSensor *self = static_cast<KX_NetworkMessageSensor *>(self_v);
 	if (self->m_BodyList) {
@@ -204,7 +204,7 @@ PyObject *KX_NetworkMessageSensor::pyattr_get_bodies(void *self_v, const KX_PYAT
 	}
 }
 
-PyObject *KX_NetworkMessageSensor::pyattr_get_subjects(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *KX_NetworkMessageSensor::pyattr_get_subjects(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	KX_NetworkMessageSensor *self = static_cast<KX_NetworkMessageSensor *>(self_v);
 	if (self->m_SubjectList) {

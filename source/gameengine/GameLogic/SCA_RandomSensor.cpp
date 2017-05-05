@@ -133,7 +133,7 @@ bool SCA_RandomSensor::Evaluate()
 
 /* Integration hooks ------------------------------------------------------- */
 PyTypeObject SCA_RandomSensor::Type = {
-	PyVarObject_HEAD_INIT(NULL, 0)
+	PyVarObject_HEAD_INIT(nullptr, 0)
 	"SCA_RandomSensor",
 	sizeof(PyObjectPlus_Proxy),
 	0,
@@ -155,7 +155,7 @@ PyTypeObject SCA_RandomSensor::Type = {
 };
 
 PyMethodDef SCA_RandomSensor::Methods[] = {
-	{NULL,NULL} //Sentinel
+	{nullptr,nullptr} //Sentinel
 };
 
 PyAttributeDef SCA_RandomSensor::Attributes[] = {
@@ -164,13 +164,13 @@ PyAttributeDef SCA_RandomSensor::Attributes[] = {
 	KX_PYATTRIBUTE_NULL //Sentinel
 };
 
-PyObject *SCA_RandomSensor::pyattr_get_seed(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
+PyObject *SCA_RandomSensor::pyattr_get_seed(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef)
 {
 	SCA_RandomSensor* self = static_cast<SCA_RandomSensor*>(self_v);
 	return PyLong_FromLong(self->m_basegenerator->GetSeed());
 }
 
-int SCA_RandomSensor::pyattr_set_seed(void *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
+int SCA_RandomSensor::pyattr_set_seed(PyObjectPlus *self_v, const KX_PYATTRIBUTE_DEF *attrdef, PyObject *value)
 {
 	SCA_RandomSensor* self = static_cast<SCA_RandomSensor*>(self_v);
 	if (!PyLong_Check(value)) {

@@ -75,7 +75,10 @@ void DEV_Joystick::Init()
 {
 #ifdef WITH_SDL
 
-	if (!(SDL_CHECK(SDL_InitSubSystem)) || !(SDL_CHECK(SDL_GameControllerAddMapping))) {
+	if (!(SDL_CHECK(SDL_InitSubSystem)) ||
+	    !(SDL_CHECK(SDL_GameControllerAddMapping)) ||
+	    !(SDL_CHECK(SDL_GameControllerAddMappingsFromRW)))
+	{
 		return;
 	}
 
@@ -83,17 +86,21 @@ void DEV_Joystick::Init()
 	bool success = (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC) != -1 );
 
 	if (success) {
+		// First we try loading mapping file from blenderplayer directory
+		int fileMapping = SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt");
 
-		/* Loading Game Controller mapping data base from a string */
-		unsigned short i = 0;
-		const char *mapping_string = NULL;
-		mapping_string = controller_mappings[i];
-
-		while (mapping_string) {
-			SDL_GameControllerAddMapping(mapping_string);
-			i++;
+		// If it doesnt exist we load our internal data base
+		if (fileMapping == -1) {
+			unsigned short i = 0;
+			const char *mapping_string = nullptr;
 			mapping_string = controller_mappings[i];
-	    }
+
+			while (mapping_string) {
+				SDL_GameControllerAddMapping(mapping_string);
+				i++;
+				mapping_string = controller_mappings[i];
+			}
+		}
 	}
 	else {
 		CM_Error("initializing SDL Game Controller: " << SDL_GetError());
@@ -119,12 +126,12 @@ void DEV_Joystick::Close()
 DEV_Joystick *DEV_Joystick::GetInstance(short joyindex)
 {
 #ifndef WITH_SDL
-	return NULL;
+	return nullptr;
 #else  /* WITH_SDL */
 
 	if (joyindex < 0 || joyindex >= JOYINDEX_MAX) {
 		CM_Error("invalid joystick index: " << joyindex);
-		return NULL;
+		return nullptr;
 	}
 
 	return m_instance[joyindex];
@@ -139,7 +146,7 @@ void DEV_Joystick::ReleaseInstance(short joyindex)
 		delete m_private;
 		delete m_instance[joyindex];
 	}
-	m_instance[joyindex] = NULL;
+	m_instance[joyindex] = nullptr;
 #endif /* WITH_SDL */
 }
 
@@ -240,8 +247,9 @@ bool DEV_Joystick::CreateJoystickDevice(void)
 		if (!joy_error && !SDL_IsGameController(m_joyindex)) {
 			/* mapping instruccions if joystick is not a game controller */
 			CM_Error("Game Controller index " << m_joyindex << ": Could not be initialized\n"
-			<< "Please, generate Xbox360 compatible mapping using antimicro or Steam big mode application\n"
-			<< "and after set, the SDL controller variable before you launch the executable, i.e:\n"
+			<< "Please, generate Xbox360 compatible mapping using Antimicro (https://github.com/AntiMicro/antimicro)\n"
+			<< "or SDL2 Gamepad Tool (http://www.generalarcade.com/gamepadtool) or Steam big mode applications\n"
+			<< "and after, set the SDL controller variable before you launch the executable, i.e:\n"
 			<< "export SDL_GAMECONTROLLERCONFIG=\"[the string you received from controllermap]\"");
 			/* Need this so python args can return empty lists */
 			joy_error = true;
@@ -319,13 +327,13 @@ void DEV_Joystick::DestroyJoystickDevice(void)
 
 			if (m_private->m_haptic && SDL_CHECK(SDL_HapticClose)) {
 				SDL_HapticClose(m_private->m_haptic);
-				m_private->m_haptic = NULL;
+				m_private->m_haptic = nullptr;
 			}
 
 			if (m_private->m_gamecontroller && SDL_CHECK(SDL_GameControllerClose)) {
 				CM_Debug("Game Controller (" << GetName() << ") with index " << m_joyindex << " closed");
 				SDL_GameControllerClose(m_private->m_gamecontroller);
-				m_private->m_gamecontroller = NULL;
+				m_private->m_gamecontroller = nullptr;
 			}
 
 		m_isinit = false;

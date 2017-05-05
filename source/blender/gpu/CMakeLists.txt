@@ -57,6 +57,8 @@ set(SRC
 	intern/gpu_init_exit.c
 	intern/gpu_material.c
 	intern/gpu_select.c
+	intern/gpu_select_pick.c
+	intern/gpu_select_sample_query.c
 	intern/gpu_shader.c
 	intern/gpu_texture.c
 
@@ -72,8 +74,8 @@ set(SRC
 	shaders/gpu_shader_sep_gaussian_blur_frag.glsl
 	shaders/gpu_shader_sep_gaussian_blur_vert.glsl
 	shaders/gpu_shader_basic_frag.glsl
-	shaders/gpu_shader_basic_instancing_frag.glsl
-	shaders/gpu_shader_basic_instancing_vert.glsl
+	shaders/gpu_shader_black_frag.glsl
+	shaders/gpu_shader_black_vert.glsl
 	shaders/gpu_shader_basic_vert.glsl
 	shaders/gpu_shader_basic_geom.glsl
 	shaders/gpu_shader_vertex.glsl
@@ -99,6 +101,7 @@ set(SRC
 	GPU_texture.h
 	intern/gpu_codegen.h
 	intern/gpu_private.h
+	intern/gpu_select_private.h
 )
 
 data_to_c_simple(shaders/gpu_shader_geometry.glsl SRC)
@@ -109,8 +112,8 @@ data_to_c_simple(shaders/gpu_shader_material.glsl SRC)
 data_to_c_simple(shaders/gpu_shader_sep_gaussian_blur_frag.glsl SRC)
 data_to_c_simple(shaders/gpu_shader_sep_gaussian_blur_vert.glsl SRC)
 data_to_c_simple(shaders/gpu_shader_basic_frag.glsl SRC)
-data_to_c_simple(shaders/gpu_shader_basic_instancing_frag.glsl SRC)
-data_to_c_simple(shaders/gpu_shader_basic_instancing_vert.glsl SRC)
+data_to_c_simple(shaders/gpu_shader_black_frag.glsl SRC)
+data_to_c_simple(shaders/gpu_shader_black_vert.glsl SRC)
 data_to_c_simple(shaders/gpu_shader_basic_vert.glsl SRC)
 data_to_c_simple(shaders/gpu_shader_basic_geom.glsl SRC)
 data_to_c_simple(shaders/gpu_shader_frame_buffer_frag.glsl SRC)
