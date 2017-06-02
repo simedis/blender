@@ -501,7 +501,7 @@ void			btSoftBody::addAeroForceToNode(const btVector3& windVelocity,int nodeInde
 					fDrag = 0.5f * kDG * medium.m_density * rel_v2 * tri_area * n_dot_v * (-rel_v_nrm);
 							
 					// Check angle of attack
-					// cos(10º) = 0.98480
+					// cos(10) = 0.98480
 					if ( 0 < n_dot_v && n_dot_v < 0.98480f)
 						fLift = 0.5f * kLF * medium.m_density * rel_v_len * tri_area * btSqrt(1.0f-n_dot_v*n_dot_v) * (nrm.cross(rel_v_nrm).cross(rel_v_nrm));
 
@@ -587,7 +587,7 @@ void			btSoftBody::addAeroForceToFace(const btVector3& windVelocity,int faceInde
 				fDrag = 0.5f * kDG * medium.m_density * rel_v2 * tri_area * n_dot_v * (-rel_v_nrm);
 
 				// Check angle of attack
-				// cos(10º) = 0.98480
+				// cos(10) = 0.98480
 				if ( 0 < n_dot_v && n_dot_v < 0.98480f)
 					fLift = 0.5f * kLF * medium.m_density * rel_v_len * tri_area * btSqrt(1.0f-n_dot_v*n_dot_v) * (nrm.cross(rel_v_nrm).cross(rel_v_nrm));
 
@@ -1382,32 +1382,33 @@ int				btSoftBody::generateClusters(int k,int maxiterations)
 }
 
 //
-void			btSoftBody::refine(ImplicitFn* ifn,btScalar accurary,bool cut)
+bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* sfn, NewNodeCallbackFn* nfn)
 {
 	const Node*			nbase = &m_nodes[0];
 	int					ncount = m_nodes.size();
 	btSymMatrix<int>	edges(ncount,-2);
-	int					newnodes=0;
+	int                 ocount = ncount;
 	int i,j,k,ni;
+	tNodeArray			snodes;		// saved Nodes
+	tLinkArray			slinks;		// saved Links
+	tFaceArray			sfaces;		// saved Faces
+	btAlignedObjectArray<int> sidx;
 
-	/* Filter out		*/ 
-	for(i=0;i<m_links.size();++i)
+
+	if (cut)
 	{
-		Link&	l=m_links[i];
-		if(l.m_bbending)
-		{
-			if(!SameSign(ifn->Eval(l.m_n[0]->m_x),ifn->Eval(l.m_n[1]->m_x)))
-			{
-				btSwap(m_links[i],m_links[m_links.size()-1]);
-				m_links.pop_back();--i;
-			}
-		}	
+		// we won't cut unless there is a real separation, make a backup of the body first
+		pointersToIndices(sidx);
+		snodes.copyFromArray(m_nodes);
+		slinks.copyFromArray(m_links);
+		sfaces.copyFromArray(m_faces);
 	}
 	/* Fill edges		*/ 
 	for(i=0;i<m_links.size();++i)
 	{
 		Link&	l=m_links[i];
-		edges(int(l.m_n[0]-nbase),int(l.m_n[1]-nbase))=-1;
+		if (!l.m_bbending)
+			edges(int(l.m_n[0]-nbase),int(l.m_n[1]-nbase))=-1;
 	}
 	for(i=0;i<m_faces.size();++i)
 	{	
@@ -1425,10 +1426,16 @@ void			btSoftBody::refine(ImplicitFn* ifn,btScalar accurary,bool cut)
 			{
 				Node&			a=m_nodes[i];
 				Node&			b=m_nodes[j];
-				const btScalar	t=ImplicitSolve(ifn,a.m_x,b.m_x,accurary);
-				if(t>0)
+				const btScalar	t= ImplicitSolve(ifn,a.m_x,b.m_x,accuracy);
+				if(t>0.f && t<1.f)
 				{
 					const btVector3	x=Lerp(a.m_x,b.m_x,t);
+					if (sfn && !sfn->Eval(x))
+					{
+						// remember that this end should have been cut but was not by the selection function
+						edges(i,j)=-3;
+						continue;
+					}
 					const btVector3	v=Lerp(a.m_v,b.m_v,t);
 					btScalar		m=0;
 					if(a.m_im>0)
@@ -1454,9 +1461,27 @@ void			btSoftBody::refine(ImplicitFn* ifn,btScalar accurary,bool cut)
 							m=0;
 					}
 					appendNode(x,m);
-					edges(i,j)=m_nodes.size()-1;
+					ni = m_nodes.size()-1;
+					if (nfn)
+						nfn->Signal(ni, i, j, t);
+					edges(i,j)=ni;
 					m_nodes[edges(i,j)].m_v=v;
-					++newnodes;
+				}
+				else if (sfn)
+				{
+					// link not cut but it could be touching, still a valid case for the selection function
+					// t is strictly equal to 0 if node a is touching the cut function, 1 if node b is touching
+					if (t == 0.f)
+					{
+						if (sfn && !sfn->Eval(a.m_x))
+							edges(i,j)=-3;
+					}
+					else if (t == 1.f)
+					{
+						if (sfn && !sfn->Eval(b.m_x))
+							edges(i,j)=-3;
+					}
+					// TODO: if an edge is entirely on the cut function ?
 				}
 			}
 		}
@@ -1466,6 +1491,8 @@ void			btSoftBody::refine(ImplicitFn* ifn,btScalar accurary,bool cut)
 	for(i=0,ni=m_links.size();i<ni;++i)
 	{
 		Link&		feat=m_links[i];
+		if (feat.m_bbending)
+			continue;
 		const int	idx[]={	int(feat.m_n[0]-nbase),
 			int(feat.m_n[1]-nbase)};
 		if((idx[0]<ncount)&&(idx[1]<ncount))
@@ -1484,6 +1511,8 @@ void			btSoftBody::refine(ImplicitFn* ifn,btScalar accurary,bool cut)
 		}
 	}
 	/* Refine faces		*/ 
+	btAlignedObjectArray<int>	cnodes;
+	cnodes.resize(m_nodes.size(),0);
 	for(i=0;i<m_faces.size();++i)
 	{
 		const Face&	feat=m_faces[i];
@@ -1510,56 +1539,82 @@ void			btSoftBody::refine(ImplicitFn* ifn,btScalar accurary,bool cut)
 					appendLink(ni,idx[l],pft[0]->m_material);
 					--i;break;
 				}
+				else if (ni == -3)
+				{
+					// one edge of this face should have been cut but was not
+					// by the select function => the 3rd node is potentially
+					// the end of a cut line, remember this
+					cnodes[idx[(k+1)%3]] = 1;
+				}
 			}
 		}
 	}
 	/* Cut				*/ 
 	if(cut)
 	{	
-		btAlignedObjectArray<int>	cnodes;
-		const int					pcount=ncount;
-		int							i;
+		int newlinks = 0;
+		const int pcount=ncount;
 		ncount=m_nodes.size();
-		cnodes.resize(ncount,0);
 		/* Nodes		*/ 
 		for(i=0;i<ncount;++i)
 		{
 			const btVector3	x=m_nodes[i].m_x;
-			if((i>=pcount)||(btFabs(ifn->Eval(x))<accurary))
+			if((i>=pcount)||(btFabs(ifn->Eval(x))<accuracy && (!sfn || sfn->Eval(x))))
 			{
-				const btVector3	v=m_nodes[i].m_v;
-				btScalar		m=getMass(i);
-				if(m>0) { m*=0.5f;m_nodes[i].m_im/=0.5f; }
-				appendNode(x,m);
-				cnodes[i]=m_nodes.size()-1;
-				m_nodes[cnodes[i]].m_v=v;
+				if (cnodes[i] == 1)
+				{
+					// end cut node should not be duplicated: the face attached to them
+					// have not been cut, remember that this node belongs to a cut line
+					// but is not duplicated.
+					cnodes[i] = -1;
+				}
+				else
+				{
+					const btVector3	v=m_nodes[i].m_v;
+					btScalar		m=getMass(i);
+					if(m>0) { m*=0.5f;m_nodes[i].m_im/=0.5f; }
+					appendNode(x,m);
+					cnodes[i]=m_nodes.size()-1;
+					m_nodes[cnodes[i]].m_v=v;
+					if (nfn)
+						nfn->Signal(cnodes[i], i);
+
+				}
 			}
+			else
+				cnodes[i] = 0;
 		}
 		nbase=&m_nodes[0];
 		/* Links		*/ 
 		for(i=0,ni=m_links.size();i<ni;++i)
 		{
-			const int		id[]={	int(m_links[i].m_n[0]-nbase),
-				int(m_links[i].m_n[1]-nbase)};
-			int				todetach=0;
+			Link&		feat=m_links[i];
+			int	todetach=-1;
+			const int id[]={int(feat.m_n[0]-nbase), int(feat.m_n[1]-nbase)};
 			if(cnodes[id[0]]&&cnodes[id[1]])
 			{
+				if (cnodes[id[0]] < 0 && cnodes[id[1]] < 0)
+					// special case: this segment joints 2 end node of a cut line,
+					// => the cut is only 2 nodes long, not enough to open it
+					// => don't duplicate the link.
+					continue;
 				appendLink(i);
 				todetach=m_links.size()-1;
+				++newlinks;
 			}
 			else
 			{
-				if((	(ifn->Eval(m_nodes[id[0]].m_x)<accurary)&&
-					(ifn->Eval(m_nodes[id[1]].m_x)<accurary)))
+				if(((ifn->Eval(m_nodes[id[0]].m_x)<accuracy)&&
+					(ifn->Eval(m_nodes[id[1]].m_x)<accuracy)))
 					todetach=i;
 			}
-			if(todetach)
+			if(todetach>=0)
 			{
 				Link&	l=m_links[todetach];
 				for(int j=0;j<2;++j)
 				{
 					int cn=cnodes[int(l.m_n[j]-nbase)];
-					if(cn) l.m_n[j]=&m_nodes[cn];
+					if(cn>0) l.m_n[j]=&m_nodes[cn];
 				}			
 			}
 		}
@@ -1567,21 +1622,25 @@ void			btSoftBody::refine(ImplicitFn* ifn,btScalar accurary,bool cut)
 		for(i=0,ni=m_faces.size();i<ni;++i)
 		{
 			Node**			n=	m_faces[i].m_n;
-			if(	(ifn->Eval(n[0]->m_x)<accurary)&&
-				(ifn->Eval(n[1]->m_x)<accurary)&&
-				(ifn->Eval(n[2]->m_x)<accurary))
+			if(	(ifn->Eval(n[0]->m_x)<accuracy)&&
+				(ifn->Eval(n[1]->m_x)<accuracy)&&
+				(ifn->Eval(n[2]->m_x)<accuracy))
 			{
 				for(int j=0;j<3;++j)
 				{
 					int cn=cnodes[int(n[j]-nbase)];
-					if(cn) n[j]=&m_nodes[cn];
+					if(cn>0) n[j]=&m_nodes[cn];
 				}
 			}
 		}
 		/* Clean orphans	*/ 
 		int							nnodes=m_nodes.size();
+		if (ocount == nnodes)
+		{
+			// no nodes where created, the refine function did nothing, just return
+			return false;
+		}
 		btAlignedObjectArray<int>	ranks;
-		btAlignedObjectArray<int>	todelete;
 		ranks.resize(nnodes,0);
 		for(i=0,ni=m_links.size();i<ni;++i)
 		{
@@ -1599,13 +1658,31 @@ void			btSoftBody::refine(ImplicitFn* ifn,btScalar accurary,bool cut)
 				ranks[id[1]]==1};
 			if(sg[0]||sg[1])
 			{
+				--newlinks;
 				--ranks[id[0]];
 				--ranks[id[1]];
 				btSwap(m_links[i],m_links[m_links.size()-1]);
 				m_links.pop_back();--i;
 			}
 		}
+		if (newlinks <= 0)
+		{
+			// in absence of new cut links, cancel the entire cut
+			// 1. remove extra nodes
+			for (i=ocount; i<nnodes; ++i)
+			{
+				m_ndbvt.remove(m_nodes[i].m_leaf);
+			}
+			// 2. overwrite node, link and faces with original data
+			m_nodes.copyFromArray(snodes);
+			m_links.copyFromArray(slinks);
+			m_faces.copyFromArray(sfaces);
+			indicesToPointers(sidx);
+			m_bUpdateRtCst = false;
+			return false;
+		}
 #if 0	
+		btAlignedObjectArray<int>	todelete;
 		for(i=nnodes-1;i>=0;--i)
 		{
 			if(!ranks[i]) todelete.push_back(i);
@@ -1629,7 +1706,38 @@ void			btSoftBody::refine(ImplicitFn* ifn,btScalar accurary,bool cut)
 		}
 #endif
 	}
+
+	/* handle bending links	at the very last */
+	for(i=0;i<m_links.size();++i)
+	{
+		Link&	l=m_links[i];
+		if(l.m_bbending)
+		{
+			Node*	a=l.m_n[0];
+			Node*	b=l.m_n[1];
+			if (sfn)
+			{
+				const btScalar	t= ImplicitSolve(ifn,a->m_x,b->m_x,accuracy);
+				if (t >= 0.f)
+				{
+					const btVector3	x=Lerp(a->m_x,b->m_x,t);
+					if (sfn->Eval(x))
+					{
+						btSwap(m_links[i],m_links[m_links.size()-1]);
+						m_links.pop_back();--i;
+					}
+				}
+			}
+			else if (!SameSign(ifn->Eval(a->m_x),ifn->Eval(b->m_x)))
+			{
+				btSwap(m_links[i],m_links[m_links.size()-1]);
+				m_links.pop_back();--i;
+			}
+		}
+	}
+
 	m_bUpdateRtCst=true;
+	return true;
 }
 
 //
@@ -2051,6 +2159,40 @@ btScalar			btSoftBody::RayFromToCaster::rayFromToTriangle(	const btVector3& rayF
 	return(-1);
 }
 
+void				btSoftBody::pointersToIndices(btAlignedObjectArray<int> &indices)
+{
+#define	PTR2IDX(_p_,_b_)	((_p_)-(_b_))
+	btSoftBody::Node*	base=m_nodes.size() ? &m_nodes[0] : 0;
+	int i,ni;
+	int *idx;
+
+	indices.resize(m_links.size()*2+m_faces.size()*3+m_anchors.size()+m_notes.size()*4, 0);
+	idx = &indices[0];
+	for(i=0,ni=m_links.size();i<ni;++i)
+	{
+		*idx++ = PTR2IDX(m_links[i].m_n[0],base);
+		*idx++ = PTR2IDX(m_links[i].m_n[1],base);
+	}
+	for(i=0,ni=m_faces.size();i<ni;++i)
+	{
+		*idx++ = PTR2IDX(m_faces[i].m_n[0],base);
+		*idx++ = PTR2IDX(m_faces[i].m_n[1],base);
+		*idx++ = PTR2IDX(m_faces[i].m_n[2],base);
+	}
+	for(i=0,ni=m_anchors.size();i<ni;++i)
+	{
+		*idx++ = PTR2IDX(m_anchors[i].m_node,base);
+	}
+	for(i=0,ni=m_notes.size();i<ni;++i)
+	{
+		for(int j=0;j<m_notes[i].m_rank;++j)
+		{
+			*idx++ = PTR2IDX(m_notes[i].m_nodes[j],base);
+		}
+	}
+#undef	PTR2IDX
+}
+
 //
 void				btSoftBody::pointersToIndices()
 {
@@ -2092,6 +2234,51 @@ void				btSoftBody::pointersToIndices()
 		}
 	}
 #undef	PTR2IDX
+}
+
+
+void				btSoftBody::indicesToPointers(btAlignedObjectArray<int> &indices)
+{
+#define	IDX2PTR(_p_,_b_)	(&(_b_)[_p_])
+	btSoftBody::Node*	base=m_nodes.size() ? &m_nodes[0]:0;
+	int i,ni;
+	int *idx;
+
+	idx = &indices[0];
+	for(i=0,ni=m_nodes.size();i<ni;++i)
+	{
+		if(m_nodes[i].m_leaf)
+		{
+			m_nodes[i].m_leaf->data=&m_nodes[i];
+		}
+	}
+	for(i=0,ni=m_links.size();i<ni;++i)
+	{
+		m_links[i].m_n[0]=IDX2PTR(*idx++,base);
+		m_links[i].m_n[1]=IDX2PTR(*idx++,base);
+	}
+	for(i=0,ni=m_faces.size();i<ni;++i)
+	{
+		m_faces[i].m_n[0]=IDX2PTR(*idx++,base);
+		m_faces[i].m_n[1]=IDX2PTR(*idx++,base);
+		m_faces[i].m_n[2]=IDX2PTR(*idx++,base);
+		if(m_faces[i].m_leaf)
+		{
+			m_faces[i].m_leaf->data=&m_faces[i];
+		}
+	}
+	for(i=0,ni=m_anchors.size();i<ni;++i)
+	{
+		m_anchors[i].m_node=IDX2PTR(*idx++,base);
+	}
+	for(i=0,ni=m_notes.size();i<ni;++i)
+	{
+		for(int j=0;j<m_notes[i].m_rank;++j)
+		{
+			m_notes[i].m_nodes[j]=IDX2PTR(*idx++,base);
+		}
+	}
+#undef	IDX2PTR
 }
 
 //

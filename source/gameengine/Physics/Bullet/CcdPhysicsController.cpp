@@ -451,7 +451,6 @@ bool CcdPhysicsController::CreateSoftbody()
 			//for each material
 			for (int m = 0; m < rasMesh->NumMaterials(); m++) {
 				mmat = rasMesh->GetMeshMaterial(m);
-
 				slot = mmat->m_baseslot;
 				RAS_IDisplayArray *array = slot->GetDisplayArray();
 
@@ -1063,6 +1062,44 @@ void CcdPhysicsController::RestoreDynamics()
 	}
 }
 
+bool CcdPhysicsController::Refine(PHY_IRefineCut& cut, float accuracy, PHY_IRefineSelect *select, PHY_IRefineCallback *cb)
+{
+	btSoftBody *body = GetSoftBody();
+
+	if (body) {
+		struct	CutFn : public btSoftBody::ImplicitFn
+		{
+			CutFn(PHY_IRefineCut& cut) : mCut(cut) {}
+			btScalar Eval(const btVector3& p) { return mCut.Cut(p[0], p[1], p[2]); }
+			PHY_IRefineCut& mCut;
+		} myCut(cut);
+
+		struct SelectFn : public btSoftBody::SelectFn
+		{
+			SelectFn(PHY_IRefineSelect *sel) : mSel(sel) {}
+			bool Eval(const btVector3& p) { return (mSel) ? mSel->Select(p[0], p[1], p[2]) : true; }
+			PHY_IRefineSelect* mSel;
+		} mySel(select);
+
+		if (cb)
+		{
+			struct NewNodeFn : public btSoftBody::NewNodeCallbackFn
+			{
+				void Signal(int newnode, int node0, int node1, btScalar t)
+				{
+					mCb->NewNode(newnode, node0, node1, t);
+				}
+				PHY_IRefineCallback* mCb;
+			} newnode;
+			newnode.mCb = cb;
+			return body->refine(&myCut, accuracy, true, &mySel, &newnode);
+		}
+		else
+			return body->refine(&myCut, accuracy, true, &mySel);
+	}
+	return false;
+}
+
 void CcdPhysicsController::GetPosition(MT_Vector3&   pos) const
 {
 	const btTransform& xform = m_object->getWorldTransform();
@@ -1419,6 +1456,28 @@ void CcdPhysicsController::SetNewClientInfo(void *clientinfo)
 		SG_Callbacks& callbacks = KX_GameObject::GetClientObject((KX_ClientObjectInfo *)clientinfo)->GetSGNode()->GetCallBackFunctions();
 		callbacks.m_updatefunc = KX_GameObject::SynchronizeTransformFunc;
 	}
+
+	if (GetSoftBody() && m_shapeInfo) {
+		// soft body will use only private vertex array so that we can change its structure after cutting
+		// without relying on base mesh slot. Copy the only information that is missing: soft body index.
+		RAS_MeshObject *rasMesh = m_shapeInfo->GetMesh();
+		RAS_MeshMaterial *mmat;
+
+		for (int m = 0; m < rasMesh->NumMaterials(); m++) {
+			mmat = rasMesh->GetMeshMaterial(m);
+			RAS_IDisplayArray *baseArray = mmat->m_baseslot->GetDisplayArray();
+			RAS_IDisplayArray *array = mmat->m_slots[clientinfo]->GetDisplayArray();
+
+			if (array != baseArray && array->GetVertexCount() == baseArray->GetVertexCount()) {
+				for (unsigned int i = 0, size = array->GetVertexCount(); i < size; ++i) {
+					RAS_TexVertInfo& baseVertexInfo = baseArray->GetVertexInfo(i);
+					RAS_TexVertInfo& vertexInfo = array->GetVertexInfo(i);
+					vertexInfo.setSoftBodyIndex(baseVertexInfo.getSoftBodyIndex());
+				}
+			}
+		}
+	}
+
 }
 
 void CcdPhysicsController::UpdateDeactivation(float timeStep)

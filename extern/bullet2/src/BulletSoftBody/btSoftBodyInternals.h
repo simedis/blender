@@ -435,8 +435,8 @@ static inline btScalar				ImplicitSolve(	btSoftBody::ImplicitFn* fn,
 		btSwap(span[0],span[1]);
 		btSwap(values[0],values[1]);
 	}
-	if(values[0]>-accuracy) return(-1);
-	if(values[1]<+accuracy) return(-1);
+	if(values[0]>-accuracy) return((values[0]<+accuracy)?span[0]:-1);
+	if(values[1]<+accuracy) return((values[1]>-accuracy)?span[1]:-1);
 	for(int i=0;i<maxiterations;++i)
 	{
 		const btScalar	t=Lerp(span[0],span[1],values[0]/(values[0]-values[1]));

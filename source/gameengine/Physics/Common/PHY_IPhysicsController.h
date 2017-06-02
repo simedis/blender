@@ -39,11 +39,66 @@ class PHY_IMotionState;
 class PHY_IPhysicsEnvironment;
 
 class MT_Vector3;
-class MT_Vector3;
 class MT_Matrix3x3;
 
 class KX_GameObject;
 class RAS_MeshObject;
+
+/**
+ * PHY_IRefineCallback class is used as callback in the Refine function
+ */
+class PHY_IRefineCallback
+{
+public:
+	PHY_IRefineCallback() {}
+
+	// Called by the Refine function when new nodes are created.
+	// The function should update the graphic mesh in consequence.
+    // 	 newnode is the index of the new node in the softbody structure
+    //   node0 is the existing node index that it is copied from
+    //   node1 is the second existing node index that it is copied from, or -1 if none
+    //   t is the interpolation factor between node0 (t=0.f) and node 1 (t=1.f), only if node1 is used
+    // All index in softbody numbering plan (the callee must convert to graphic vertex index)
+	virtual void NewNode(int newnode, int node0, int node1, float t) = 0;
+	// If success is true, the nodes that have been added are confirmed
+	// and the indices are updated from the new softbody faces
+	// The object is also deleted on return
+	virtual void Finalize(bool success) = 0;
+protected:
+	// destructor private because the object must be deleted through the Finalize function
+	virtual ~PHY_IRefineCallback() {}
+};
+
+/**
+ * The PHY_IRefineCut class is used to define the cut surface in the Refine function
+ */
+class PHY_IRefineCut
+{
+public:
+	PHY_IRefineCut() {}
+	virtual ~PHY_IRefineCut() {}
+
+	// This function defines the cut surface, it returns 0 and x,y,z is on the cut surface
+	// For points not on the cut serface, the return value should behave line a signed distance
+	// to the cut surface:
+	// if should return >0 on one side, <0 on the other side, it should be derivable
+	// and the gradient should not be 0 close to the cut surface.
+	virtual float Cut(float x, float y, float z) = 0;
+};
+
+/**
+ * The PHY_IRefineSelect class is used to optionaly limit the cut surface to a zone
+ */
+class PHY_IRefineSelect
+{
+public:
+	PHY_IRefineSelect() {}
+	virtual ~PHY_IRefineSelect() {}
+
+	// only called for x,y,z that are on the cut function (Cut(x,y,z) ~= 0 at accuracy)
+	// it should return true if the point is in the cut zone, false otherwise
+	virtual bool Select(float x, float y, float z) = 0;
+};
 
 /**
  * PHY_IPhysicsController is the abstract simplified Interface to a physical object.
@@ -102,6 +157,8 @@ public:
 	virtual void RestorePhysics() = 0;
 	virtual void SuspendDynamics(bool ghost = false) = 0;
 	virtual void RestoreDynamics() = 0;
+	// return true when the cut was effective
+	virtual bool Refine(PHY_IRefineCut& cut, float accuracy, PHY_IRefineSelect *select, PHY_IRefineCallback *cb) = 0;
 
 	virtual void SetActive(bool active) = 0;
 

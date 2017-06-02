@@ -42,6 +42,7 @@
 
 class RAS_MeshObject;
 class RAS_IPolyMaterial;
+class PHY_IRefineCallback;
 
 class KX_SoftBodyDeformer : public RAS_Deformer
 {
@@ -91,6 +92,7 @@ public:
 	{
 		return false;
 	}
+	virtual PHY_IRefineCallback* GetRefineCallback();
 };
 
 #endif

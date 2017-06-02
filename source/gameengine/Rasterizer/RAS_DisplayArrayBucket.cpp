@@ -165,6 +165,7 @@ void RAS_DisplayArrayBucket::UpdateActiveMeshSlots(RAS_Rasterizer *rasty)
 	// Reset values to default.
 	m_useVao = true;
 	bool arrayModified = false;
+	bool indexModified = false;
 
 	RAS_IPolyMaterial *material = m_bucket->GetPolyMaterial();
 
@@ -181,13 +182,19 @@ void RAS_DisplayArrayBucket::UpdateActiveMeshSlots(RAS_Rasterizer *rasty)
 		}
 	}
 
-	if (m_displayArray && m_displayArray->GetModifiedFlag() & RAS_IDisplayArray::MESH_MODIFIED) {
-		arrayModified = true;
+	if (m_displayArray) {
+		if (m_displayArray->GetModifiedFlag() & RAS_IDisplayArray::MESH_MODIFIED)
+			arrayModified = true;
+		if (m_displayArray->GetModifiedFlag() & RAS_IDisplayArray::INDEX_MODIFIED)
+			indexModified = true;
 	}
 
 	// Set the storage info modified if the mesh is modified.
-	if (arrayModified && m_storageInfo) {
-		m_storageInfo->SetDataModified(rasty->GetDrawingMode(), RAS_IStorageInfo::VERTEX_DATA);
+	if (m_storageInfo) {
+		if (arrayModified)
+			m_storageInfo->SetDataModified(rasty->GetDrawingMode(), RAS_IStorageInfo::VERTEX_DATA);
+		if (indexModified)
+			m_storageInfo->SetDataModified(rasty->GetDrawingMode(), RAS_IStorageInfo::INDEX_DATA);
 	}
 }
 

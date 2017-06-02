@@ -687,6 +687,7 @@ public:
 	virtual void RestorePhysics();
 	virtual void SuspendDynamics(bool ghost);
 	virtual void RestoreDynamics();
+	virtual bool Refine(PHY_IRefineCut& cut, float accuracy, PHY_IRefineSelect *select, PHY_IRefineCallback *cb);
 
 	// Shape control
 	virtual void AddCompoundChild(PHY_IPhysicsController *child);

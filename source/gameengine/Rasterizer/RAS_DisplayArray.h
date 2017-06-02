@@ -119,6 +119,18 @@ public:
 		return m_vertexes.size();
 	}
 
+	virtual void SetVertexCount(unsigned int newcount)
+	{
+		if (newcount < m_vertexes.size())
+		{
+			m_vertexes.resize(newcount);
+		}
+		if (newcount < m_vertexInfos.size())
+		{
+			m_vertexInfos.resize(newcount);
+		}
+	}
+
 	virtual RAS_ITexVert *CreateVertex(
 				const MT_Vector3& xyz,
 				const MT_Vector2 * const uvs,

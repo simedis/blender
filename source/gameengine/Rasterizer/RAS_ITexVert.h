@@ -63,6 +63,7 @@ private:
 
 public:
 	RAS_TexVertInfo(unsigned int origindex, bool flat);
+	RAS_TexVertInfo();
 	~RAS_TexVertInfo();
 
 	inline const unsigned int getOrigIndex() const

@@ -1011,6 +1011,7 @@ public:
 	KX_PYMETHOD_NOARGS(KX_GameObject,RestorePhysics);
 	KX_PYMETHOD_VARARGS(KX_GameObject,SuspendDynamics);
 	KX_PYMETHOD_NOARGS(KX_GameObject,RestoreDynamics);
+	KX_PYMETHOD_VARARGS(KX_GameObject,Refine);
 	KX_PYMETHOD_NOARGS(KX_GameObject,EnableRigidBody);
 	KX_PYMETHOD_NOARGS(KX_GameObject,DisableRigidBody);
 	KX_PYMETHOD_VARARGS(KX_GameObject,ApplyImpulse);

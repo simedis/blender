@@ -129,10 +129,19 @@ public:
 	}
 
 	virtual unsigned int GetVertexCount() const = 0;
+	// this function drops vertices at the end of the vertex array
+	// It is a dangerous function that must only be called if the caller knows what's it is doing
+	// Currently used by the softbody refine process when the refine was reverted and all the new vertices dropped
+	virtual void SetVertexCount(unsigned int newcount) = 0;
 
 	inline unsigned int GetIndexCount() const
 	{
 		return m_indices.size();
+	}
+	// same remark as above
+	inline void SetIndexCount(unsigned int newcount)
+	{
+		m_indices.resize(newcount);
 	}
 
 	virtual RAS_ITexVert *CreateVertex(
@@ -164,6 +173,7 @@ public:
 		UVS_MODIFIED = 1 << 2, // Vertex UVs modified.
 		COLORS_MODIFIED = 1 << 3, // Vertex colors modified.
 		TANGENT_MODIFIED = 1 << 4, // Vertex tangent modified.
+		INDEX_MODIFIED = 1 << 8,  // index array modified
 		AABB_MODIFIED = POSITION_MODIFIED,
 		MESH_MODIFIED = POSITION_MODIFIED | NORMAL_MODIFIED | UVS_MODIFIED |
 						COLORS_MODIFIED | TANGENT_MODIFIED

@@ -94,7 +94,12 @@ void VBO::SetDataModified(RAS_Rasterizer::DrawType drawmode, DataType dataType)
 void VBO::UpdateData()
 {
 	glBindBufferARB(GL_ARRAY_BUFFER_ARB, m_vbo_id);
-	glBufferSubDataARB(GL_ARRAY_BUFFER_ARB, 0, m_stride * m_size, m_data->GetVertexPointer());
+	if (m_data->GetVertexCount() > m_size) {
+		m_size = m_data->GetVertexCount();
+		glBufferDataARB(GL_ARRAY_BUFFER_ARB, m_stride * m_size, m_data->GetVertexPointer(), GL_DYNAMIC_DRAW_ARB);
+	} else {
+		glBufferSubDataARB(GL_ARRAY_BUFFER_ARB, 0, m_stride * m_size, m_data->GetVertexPointer());
+	}
 	glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
 }
 
@@ -105,9 +110,12 @@ void VBO::UpdateIndices()
 	if (!m_bound) {
 		glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, m_ibo);
 	}
-
-	glBufferSubDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0, m_indices * sizeof(GLuint), m_data->GetIndexPointer());
-
+	if (m_data->GetIndexCount() > m_indices) {
+		m_indices = m_data->GetIndexCount();
+		glBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, m_indices * sizeof(GLuint), m_data->GetIndexPointer(), GL_DYNAMIC_DRAW_ARB);
+	} else {
+		glBufferSubDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0, m_indices * sizeof(GLuint), m_data->GetIndexPointer());
+	}
 	if (!m_bound) {
 		glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, 0);
 	}

@@ -47,6 +47,7 @@ class RAS_MeshObject;
 class RAS_IPolyMaterial;
 class RAS_MeshMaterial;
 class SCA_IObject;
+class PHY_IRefineCallback;
 
 class RAS_Deformer
 {
@@ -119,6 +120,10 @@ public:
 		return nullptr;
 	}
 	virtual class SCA_IObject* GetParent()
+	{
+		return NULL;
+	}
+	virtual PHY_IRefineCallback* GetRefineCallback()
 	{
 		return NULL;
 	}

@@ -1973,6 +1973,7 @@ PyMethodDef KX_GameObject::Methods[] = {
 	{"endObject",(PyCFunction) KX_GameObject::sPyEndObject, METH_NOARGS},
 	{"reinstancePhysicsMesh", (PyCFunction)KX_GameObject::sPyReinstancePhysicsMesh,METH_VARARGS},
 	{"replacePhysicsShape", (PyCFunction)KX_GameObject::sPyReplacePhysicsShape, METH_O},
+	{"refine", (PyCFunction)KX_GameObject::sPyRefine,METH_VARARGS},
 
 	KX_PYMETHODTABLE(KX_GameObject, rayCastTo),
 	KX_PYMETHODTABLE(KX_GameObject, rayCast),
@@ -2927,6 +2928,7 @@ int KX_GameObject::pyattr_set_worldTransform(PyObjectPlus *self_v, const KX_PYAT
 	self->NodeSetGlobalOrientation(orientation);
 
 	self->NodeSetWorldScale(MT_Vector3(size));
+	self->NodeUpdateGS(0.f);
 
 	return PY_SET_ATTR_SUCCESS;
 }
@@ -3660,6 +3662,121 @@ PyObject *KX_GameObject::PyRestoreDynamics()
 		GetPhysicsController()->RestoreDynamics();
 	Py_RETURN_NONE;
 }
+
+class KX_RefineCut : public PHY_IRefineCut
+{
+public:
+	KX_RefineCut(MT_Vector3& n, float t) { a=n.x(); b=n.y(); c=n.z(); d=t; }
+	virtual float Cut(float x, float y, float z)
+	{
+		return a*x+b*y+c*z+d;
+	}
+
+private:
+	float a, b, c, d;
+};
+
+class KX_RefineSelect : public PHY_IRefineSelect
+{
+public:
+	KX_RefineSelect() : nplanes(0) {}
+	void AddPlane(MT_Vector3& n, float t)
+	{
+		if (nplanes < 4) {
+			planes[nplanes][0] = n.x();
+			planes[nplanes][1] = n.y();
+			planes[nplanes][2] = n.z();
+			planes[nplanes][3] = t;
+			nplanes++;
+		}
+	}
+	virtual bool Select(float x, float y, float z)
+	{
+		int i;
+		float *plane;
+		for (i=0; i<nplanes; i++)
+		{
+			plane = planes[i];
+			if (plane[0]*x+plane[1]*y+plane[2]*z+plane[3] < 0)
+				return false;
+		}
+		return true;
+	}
+
+private:
+	float planes[4][4];
+	int nplanes;
+};
+
+PyObject *KX_GameObject::PyRefine(PyObject *args)
+{
+	SCA_LogicManager *logicmgr = GetScene()->GetLogicManager();
+	KX_GameObject *cutobj;
+	PyObject *value;
+	float accuracy = 0.05f;
+	RAS_MeshObject *mesh;
+	MT_Vector3 abc, normal;
+	bool res;
+	int polycount;
+
+	if (!PyArg_ParseTuple(args,"O|f:refine", &value, &accuracy))
+		return nullptr;
+
+	if (!ConvertPythonToGameObject(logicmgr, value, &cutobj, false, "gameOb.refine(obj): KX_GameObject")) {
+		return nullptr;
+	}
+
+	// must be a mesh object
+	if (cutobj->GetMeshCount() < 1) {
+		PyErr_SetString(PyExc_TypeError, "gameOb.refine(obj): KX_GameObject, expected a mesh object type");
+		return nullptr;
+	}
+	mesh = cutobj->GetMesh(0);
+	polycount = mesh->NumPolygons();
+	if (polycount != 1) {
+		PyErr_SetString(PyExc_TypeError, "gameOb.refine(obj): KX_GameObject, expected a mesh object with a single polygon");
+		return nullptr;
+	}
+	// must be planar object
+	MT_Transform transform(cutobj->GetOpenGLMatrix());
+	RAS_Polygon *poly = mesh->GetPolygon(0);
+	MT_Vector3 v0 = transform(MT_Vector3(poly->GetVertex(0)->getXYZ()));
+	MT_Vector3 v1 = transform(MT_Vector3(poly->GetVertex(1)->getXYZ()));
+	MT_Vector3 v2 = transform(MT_Vector3(poly->GetVertex(2)->getXYZ()));
+	MT_Vector3 v3 = v0;
+	// important to normalize the normal: the cut plane equation should yield accurate distance values.
+	normal = (v1-v0).cross(v2-v1).normalized();
+	KX_RefineCut cutPlane(normal, -normal.dot(v0));
+	KX_RefineSelect cutZone;
+
+	switch (poly->VertexCount()) {
+	case 4:
+		v3 = transform(MT_Vector3(poly->GetVertex(3)->getXYZ()));
+		abc = normal.cross(v0-v3);
+		cutZone.AddPlane(abc,-abc.dot(v3));
+		// walkthrough
+	case 3:
+		abc = normal.cross(v3-v2);
+		cutZone.AddPlane(abc,-abc.dot(v2));
+		abc = normal.cross(v2-v1);
+		cutZone.AddPlane(abc,-abc.dot(v1));
+		abc = normal.cross(v1-v0);
+		cutZone.AddPlane(abc,-abc.dot(v0));
+		break;
+	}
+
+	if (GetPhysicsController()) {
+		PHY_IRefineCallback* cb = NULL;
+		RAS_Deformer* deformer = GetDeformer();
+		if (deformer)
+			cb = deformer->GetRefineCallback();
+		res = GetPhysicsController()->Refine(cutPlane, accuracy, &cutZone, cb);
+		if (cb)
+			cb->Finalize(res);
+	}
+	Py_RETURN_NONE;
+}
+
 
 
 PyObject *KX_GameObject::PyAlignAxisToVect(PyObject *args)

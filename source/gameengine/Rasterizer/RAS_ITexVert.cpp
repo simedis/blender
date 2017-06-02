@@ -48,6 +48,13 @@ RAS_TexVertInfo::RAS_TexVertInfo(unsigned int origindex, bool flat)
 	m_flag = (flat) ? FLAT : 0;
 }
 
+RAS_TexVertInfo::RAS_TexVertInfo()
+	:m_origindex(0),
+	m_softBodyIndex(-1)
+{
+	m_flag = 0;
+}
+
 RAS_TexVertInfo::~RAS_TexVertInfo()
 {
 }
