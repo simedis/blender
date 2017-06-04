@@ -289,6 +289,7 @@ void			btSoftBody::appendLink(	Node* node0,
 		l.m_n[0]		=	node0;
 		l.m_n[1]		=	node1;
 		l.m_rl			=	(l.m_n[0]->m_x-l.m_n[1]->m_x).length();
+		l.m_c1			=   l.m_rl*l.m_rl;
 		m_bUpdateRtCst=true;
 	}
 }
@@ -798,6 +799,7 @@ void			btSoftBody::transform(const btTransform& trs)
 	}
 	updateNormals();
 	updateBounds();
+	resetLinkRestLengths();
 	updateConstants();
 	m_initialWorldTransform = trs;
 }
@@ -837,6 +839,7 @@ void			btSoftBody::scale(const btVector3& scl)
 	}
 	updateNormals();
 	updateBounds();
+	resetLinkRestLengths();
 	updateConstants();
 }
 
@@ -908,7 +911,7 @@ void			btSoftBody::setPose(bool bvolume,bool bframe)
 		m_pose.m_aqq[2]+=mq.z()*q;
 	}
 	m_pose.m_aqq=m_pose.m_aqq.inverse();
-	
+	resetLinkRestLengths();
 	updateConstants();
 }
 
@@ -1387,6 +1390,9 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 	const Node*			nbase = &m_nodes[0];
 	int					ncount = m_nodes.size();
 	btSymMatrix<int>	edges(ncount,-2);
+	btSymMatrix<int>	links(ncount,-1);	// lookup in old links
+	btAlignedObjectArray<int> imlinks;	// index of modified links
+
 	int                 ocount = ncount;
 	int i,j,k,ni;
 	tNodeArray			snodes;		// saved Nodes
@@ -1403,13 +1409,19 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 		slinks.copyFromArray(m_links);
 		sfaces.copyFromArray(m_faces);
 	}
-	/* Fill edges		*/ 
+	imlinks.reserve(100);
+	/* Fill edges		*/
 	for(i=0;i<m_links.size();++i)
 	{
 		Link&	l=m_links[i];
 		if (!l.m_bbending)
+		{
 			edges(int(l.m_n[0]-nbase),int(l.m_n[1]-nbase))=-1;
+			links(int(l.m_n[0]-nbase),int(l.m_n[1]-nbase))=i;
+		}
 	}
+	// that should not be necessary: all faces have corresponding links
+	/*
 	for(i=0;i<m_faces.size();++i)
 	{	
 		Face&	f=m_faces[i];
@@ -1417,6 +1429,7 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 		edges(int(f.m_n[1]-nbase),int(f.m_n[2]-nbase))=-1;
 		edges(int(f.m_n[2]-nbase),int(f.m_n[0]-nbase))=-1;
 	}
+	*/
 	/* Intersect		*/ 
 	for(i=0;i<ncount;++i)
 	{
@@ -1500,13 +1513,21 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 			const int ni=edges(idx[0],idx[1]);
 			if(ni>0)
 			{
+				btScalar t = btSqrt((feat.m_n[0]->m_x-m_nodes[ni].m_x).length2()/(feat.m_n[0]->m_x-feat.m_n[1]->m_x).length2());
 				appendLink(i);
-				Link*		pft[]={	&m_links[i],
-					&m_links[m_links.size()-1]};			
+				Link*		pft[]={	&m_links[i], &m_links[m_links.size()-1]};
+				// put new node in second position to simplify search in imlinks
 				pft[0]->m_n[0]=&m_nodes[idx[0]];
 				pft[0]->m_n[1]=&m_nodes[ni];
-				pft[1]->m_n[0]=&m_nodes[ni];
-				pft[1]->m_n[1]=&m_nodes[idx[1]];
+				pft[0]->m_rl *= t;
+				pft[0]->m_c1 = pft[0]->m_rl*pft[0]->m_rl;
+				pft[1]->m_n[0]=&m_nodes[idx[1]];
+				pft[1]->m_n[1]=&m_nodes[ni];
+				pft[1]->m_rl *= (1-t);
+				pft[1]->m_c1 = pft[1]->m_rl*pft[1]->m_rl;
+				// modified links go to imlinks
+				imlinks.push_back(i);
+				imlinks.push_back(m_links.size()-1);
 			}
 		}
 	}
@@ -1530,13 +1551,68 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 					const int	l=(k+1)%3;
 					Face*		pft[]={	&m_faces[i],
 						&m_faces[m_faces.size()-1]};
-					pft[0]->m_n[0]=&m_nodes[idx[l]];
-					pft[0]->m_n[1]=&m_nodes[idx[j]];
-					pft[0]->m_n[2]=&m_nodes[ni];
-					pft[1]->m_n[0]=&m_nodes[ni];
-					pft[1]->m_n[1]=&m_nodes[idx[k]];
-					pft[1]->m_n[2]=&m_nodes[idx[l]];
-					appendLink(ni,idx[l],pft[0]->m_material);
+					Node*		pn[]={ &m_nodes[idx[l]], &m_nodes[idx[j]], &m_nodes[idx[k]], &m_nodes[ni] };
+					pft[0]->m_n[0]=pn[0];
+					pft[0]->m_n[1]=pn[1];
+					pft[0]->m_n[2]=pn[3];
+					pft[1]->m_n[0]=pn[3];
+					pft[1]->m_n[1]=pn[2];
+					pft[1]->m_n[2]=pn[0];
+					// put new node in second position to simplify search in modified links
+					appendLink(idx[l],ni,pft[0]->m_material);
+					// compute new rest length based on old ones
+					const int nc = links(idx[j],idx[k]);
+					// should always be true
+					if (nc>=0)
+					{
+						int na=-1, nb=-1;
+						if (idx[l]<ncount)
+						{
+							// easy case: the other 2 edges are old links for which we have a lookup table
+							na=links(idx[l],idx[k]);
+							nb=links(idx[l],idx[j]);
+						}
+						else
+						{
+							// long case: must scan the modified links to find them
+							for (int n=0, nm=imlinks.size(); n<nm; n++)
+							{
+								const int mi = imlinks[n];
+								const Link* ml = &m_links[mi];
+								// we are sure that the new node is in second position
+								// because modified links are created that way
+								if (ml->m_n[1] == pn[0])
+								{
+									if (ml->m_n[0] == pn[1])
+									{
+										nb = mi;
+										if (na>=0)
+											break;
+									}
+									else if (ml->m_n[0] == pn[2])
+									{
+										na = mi;
+										if (nb>=0)
+											break;
+									}
+								}
+							}
+						}
+						// should always be true
+						if (na>=0 && nb>=0)
+						{
+							Link* nl = &m_links[m_links.size()-1];
+							btScalar t = btSqrt((pn[1]->m_x-pn[3]->m_x).length2()/(pn[1]->m_x-pn[2]->m_x).length2());
+							btScalar a = m_links[na].m_rl;
+							btScalar b = m_links[nb].m_rl;
+							btScalar c = m_links[nc].m_rl;
+							nl->m_c1 = (1-t)*(b*b-t*c*c)+t*a*a;
+							nl->m_rl = btSqrt(nl->m_c1);
+						}
+					}
+					// only keep in imlinks the links that joint at least one old node
+					if (idx[l]<ncount)
+						imlinks.push_back(m_links.size()-1);
 					--i;break;
 				}
 				else if (ni == -3)
@@ -2646,7 +2722,6 @@ void				btSoftBody::updateLinkConstants()
 
 void				btSoftBody::updateConstants()
 {
-	resetLinkRestLengths();
 	updateLinkConstants();
 	updateArea();
 }
