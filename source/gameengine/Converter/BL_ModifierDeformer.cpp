@@ -271,7 +271,7 @@ bool BL_ModifierDeformer::UpdateInternal(bool shape_applied)
 {
 	bool bShapeUpdate = BL_ShapeDeformer::UpdateInternal(shape_applied);
 
-	if (bShapeUpdate || LatticeUpdated()) {
+	if (bShapeUpdate || LatticeUpdated() || m_dm == nullptr) {
 		// static derived mesh are not updated
 		if (m_dm == nullptr || m_bDynamic) {
 			// Set to true if it's the first time Update() function is called.
