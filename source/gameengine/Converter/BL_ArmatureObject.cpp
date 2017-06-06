@@ -452,16 +452,8 @@ void BL_ArmatureObject::ApplyPose()
 		// update ourself
 		UpdateBlenderObjectMatrix(m_objArma);
 		BKE_pose_where_is(m_scene, m_objArma);
-		/*
 		// restore ourself
 		memcpy(m_objArma->obmat, m_obmat, sizeof(m_obmat));
-		// restore active targets
-		for (CListValue::iterator<BL_ArmatureConstraint> it = m_controlledConstraints->GetBegin(), end = m_controlledConstraints->GetEnd();
-			 it != end; ++it)
-		{
-			(*it)->RestoreTarget();
-		}
-		*/
 		m_lastapplyframe = m_lastFrameAction;
 	}
 }
