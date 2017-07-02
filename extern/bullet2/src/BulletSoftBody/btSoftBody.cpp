@@ -1394,7 +1394,7 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 	btAlignedObjectArray<int> imlinks;	// index of modified links
 
 	int                 ocount = ncount;
-	int i,j,k,ni;
+	int i,j,k,l,f,ni;
 	tNodeArray			snodes;		// saved Nodes
 	tLinkArray			slinks;		// saved Links
 	tFaceArray			sfaces;		// saved Faces
@@ -1445,8 +1445,6 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 					const btVector3	x=Lerp(a.m_x,b.m_x,t);
 					if (sfn && !sfn->Eval(x))
 					{
-						// remember that this end should have been cut but was not by the selection function
-						edges(i,j)=-3;
 						continue;
 					}
 					const btVector3	v=Lerp(a.m_v,b.m_v,t);
@@ -1478,23 +1476,7 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 					if (nfn)
 						nfn->Signal(ni, i, j, t);
 					edges(i,j)=ni;
-					m_nodes[edges(i,j)].m_v=v;
-				}
-				else if (sfn)
-				{
-					// link not cut but it could be touching, still a valid case for the selection function
-					// t is strictly equal to 0 if node a is touching the cut function, 1 if node b is touching
-					if (t == 0.f)
-					{
-						if (sfn && !sfn->Eval(a.m_x))
-							edges(i,j)=-3;
-					}
-					else if (t == 1.f)
-					{
-						if (sfn && !sfn->Eval(b.m_x))
-							edges(i,j)=-3;
-					}
-					// TODO: if an edge is entirely on the cut function ?
+					m_nodes[ni].m_v=v;
 				}
 			}
 		}
@@ -1532,8 +1514,6 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 		}
 	}
 	/* Refine faces		*/ 
-	btAlignedObjectArray<int>	cnodes;
-	cnodes.resize(m_nodes.size(),0);
 	for(i=0;i<m_faces.size();++i)
 	{
 		const Face&	feat=m_faces[i];
@@ -1615,137 +1595,346 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 						imlinks.push_back(m_links.size()-1);
 					--i;break;
 				}
-				else if (ni == -3)
-				{
-					// one edge of this face should have been cut but was not
-					// by the select function => the 3rd node is potentially
-					// the end of a cut line, remember this
-					cnodes[idx[(k+1)%3]] = 1;
-				}
 			}
 		}
 	}
 	/* Cut				*/ 
 	if(cut)
 	{	
-		int newlinks = 0;
+		// new algorithm
+		// these constant are used in cnodes and
+#define M_LEFT		0x01		// node/link/face is on the left of the cut line (on the negative side of the cut function)
+#define M_RIGHT		0x02		// node/link/face is on the right of the cut line
+#define M_CUT		0x04		// node/link is on the cut line
+#define M_MANIFOLD	0x08		// node is manifold
+#define M_BUSY		0x10		// node is pre-tagged already, skip to next
+		btAlignedObjectArray<int>	cnodes;
+		cnodes.resize(m_nodes.size(),0);
+		edges.resize(0,0);
+		edges.resize(m_links.size(),0);
+		btAlignedObjectArray<int>	cfaces;
+		cfaces.resize(m_faces.size(),0);
+		imlinks.resizeNoInitialize(0);
+		// count the number of links and nodes added
+		int nchg = 0;
+		int tag, ftag, otag, ncut, size, cn;
 		const int pcount=ncount;
 		ncount=m_nodes.size();
-		/* Nodes		*/ 
+		btScalar side;
+		nbase=&m_nodes[0];
+		// quick lookup when ncut=1 to find links, index=cut node index, value=index in ldx
+		static int sl1[] = {1,0,2};
+		static int sl2[] = {2,1,0};
+		// quick lookup whe ncut=2, index=j,ldx index, value=node index
+		// to find the node on each end of the cut line when ldx is one of the other link
+		static int sn1[2][3] = {{2,1,0}, {1,0,2}};
+		/* Nodes		*/
 		for(i=0;i<ncount;++i)
 		{
 			const btVector3	x=m_nodes[i].m_x;
-			if((i>=pcount)||(btFabs(ifn->Eval(x))<accuracy && (!sfn || sfn->Eval(x))))
+			if(i>=pcount)
 			{
-				if (cnodes[i] == 1)
+				cnodes[i] |= M_CUT;
+			}
+			else
+			{
+				side = ifn->Eval(x);
+				if (btFabs(side)<accuracy)
 				{
-					// end cut node should not be duplicated: the face attached to them
-					// have not been cut, remember that this node belongs to a cut line
-					// but is not duplicated.
-					cnodes[i] = -1;
+					if (!sfn || sfn->Eval(x))
+					{
+						cnodes[i] |= M_CUT;
+					}
 				}
 				else
 				{
-					const btVector3	v=m_nodes[i].m_v;
-					btScalar		m=getMass(i);
-					if(m>0) { m*=0.5f;m_nodes[i].m_im/=0.5f; }
-					appendNode(x,m);
-					cnodes[i]=m_nodes.size()-1;
-					m_nodes[cnodes[i]].m_v=v;
-					if (nfn)
-						nfn->Signal(cnodes[i], i);
-
+					cnodes[i] |= (side < 0) ? M_LEFT : M_RIGHT;
 				}
 			}
+		}
+		/* faces */
+		for(i=0,ni=m_faces.size();i<ni;++i)
+		{
+			const Face&	feat=m_faces[i];
+			const int idx[]={int(feat.m_n[0]-nbase),
+				int(feat.m_n[1]-nbase),
+				int(feat.m_n[2]-nbase)};
+			for (j=ncut=0; j<3; j++) {
+				tag = cnodes[idx[j]];
+				if (tag & M_CUT)
+				{
+					ncut++;
+					// algorithm to compute the link index in case ncut=2 (see ldx)
+					l = (k+j)%3;
+					k = j;
+				} else
+					// remember the tag of the last node (case ncut=2)
+					ftag = tag;
+			}
+			if (ncut == 0)
+				// uninteresting face, it wont be cut or reassigned
+				continue;
+
+			// the order of node is chosen such that the l formula above gives the index
+			// in ldx that has the link aligned with the cut line. Only when ncut=2
+			int* ldx[] = {&edges(idx[1],idx[2]),
+			        &edges(idx[0],idx[1]),
+			        &edges(idx[2],idx[0])};
+			switch (ncut)
+			{
+			case 3:
+				// face is degenerated, delete it
+				btSwap(m_faces[i],m_faces[m_faces.size()-1]);
+				m_faces.pop_back();--i;--ni;
+				// links are on the cut line but don't increment their face counter
+				(*ldx[0]) |= M_CUT;
+				(*ldx[1]) |= M_CUT;
+				(*ldx[2]) |= M_CUT;
+				break;
+			case 2:
+				// face is aligned on the cut line, face tag is given by 3r node
+				cfaces[i] = ftag;
+				// mark the link on the cut line
+				(*ldx[l]) |= (M_CUT|ftag);
+				otag = (ftag^(M_LEFT|M_RIGHT));
+				for (j=0; j<2;j++)
+				{
+					// increment to get adjacent links
+					l=(l+1)%3;
+					// derive index of cut node attached to it
+					k=sn1[j][l];
+					if ((*ldx[l]) & otag)
+					{
+						// this link is already tagged with the other side
+						// => the node is manifold
+						cnodes[idx[k]] |= M_MANIFOLD;
+						// no need to tag link: manifold nodes are never duplicated
+					}
+					else
+					{
+						cnodes[idx[k]] |= ftag;
+						(*ldx[l]) |= ftag;
+					}
+				}
+				break;
+			case 1:
+				// complicated case: face touching by one node inherit their tag from adjacent faces.
+				// find the index in ldx for the 2 link touching the cut line using quick lookup
+				j = sl1[k];
+				l = sl2[k];
+				switch (((*ldx[j])|(*ldx[l])) & (M_LEFT|M_RIGHT))
+				{
+				case M_LEFT:
+					ftag = M_LEFT;
+					break;
+				case M_RIGHT:
+					ftag = M_RIGHT;
+					break;
+				case 0:
+					// complicated case, cannot resolve now.
+					// store k in high bits for facility
+					imlinks.push_back(i|(k<<24));
+					continue;
+				case M_LEFT|M_RIGHT:
+					// special case: both sides of the cut line are joining => the node is manifold
+					cnodes[idx[k]] |= M_MANIFOLD;
+					// no need to process further: manifold nodes are never duplicated
+					continue;
+				}
+				// the face, node and link can be tagged
+				cfaces[i] = ftag;
+				(*ldx[j]) |= ftag;
+				(*ldx[l]) |= ftag;
+				cnodes[idx[k]] |= ftag;
+				break;
+			}
+		}
+		// unallocated faces needs to be allocated, iterate until there is no change
+#define ST_REDUCE	0
+#define ST_ASSIGN	1
+		int state;
+		int pass;
+		// indexed by state
+		const int nextState[] = {ST_ASSIGN, ST_REDUCE};
+		for (pass=0, state = ST_REDUCE; pass<4; )
+		{
+			if ((size = imlinks.size()) == 0)
+				break;
+			for (f=0, ni=imlinks.size(); f<ni; ++f)
+			{
+				i = imlinks[f];
+				k = i>>24;
+				i &= 0xFFFFFF;
+				const Face&	feat=m_faces[i];
+				const int idx[]={int(feat.m_n[0]-nbase),
+					int(feat.m_n[1]-nbase),
+					int(feat.m_n[2]-nbase)};
+				int* ldx[] = {&edges(idx[1],idx[2]),
+						&edges(idx[0],idx[1]),
+						&edges(idx[2],idx[0])};
+				int& ndx = cnodes[idx[k]];
+				j = sl1[k];
+				l = sl2[k];
+				switch (state)
+				{
+				case ST_REDUCE:
+					switch (((*ldx[j])|(*ldx[l])) & (M_LEFT|M_RIGHT))
+					{
+					case M_LEFT:
+						ftag = M_LEFT;
+						break;
+					case M_RIGHT:
+						ftag = M_RIGHT;
+						break;
+					case 0:
+						// cannot resolve now, skip
+						continue;
+					case M_LEFT|M_RIGHT:
+						// special case: both sides of the cut line are joining => the node is manifold
+						cnodes[idx[k]] |= M_MANIFOLD;
+						// no need to tag, manifold nodes are never duplicated
+						ftag = 0;
+						break;
+					}
+					// the face and link can be tagged
+					// no need to increment link/face count or tag node: it has been done already
+					if (ftag)
+					{
+						cfaces[i] = ftag;
+						(*ldx[j]) |= ftag;
+						(*ldx[l]) |= ftag;
+					}
+					break;
+				case ST_ASSIGN:
+					if (pass == 1)
+					{
+						// the faces that are left are not connected to any cut link and form island
+						if (ndx & M_BUSY)
+							continue;
+						if (ndx & M_LEFT)
+						{
+							// if the node is already attached to a left group, this face does not belong to it
+							// => at least 2 islands. Mark it right too to force the cut
+							ndx |= M_RIGHT;
+							// no need to tag faces and links: right islands are left untouched
+						}
+						else
+						{
+							// left unassigned is possible in 2 cases:
+							// - only a right group is attached and this face does not below to it -> start a left group with it
+							// - no group at all => the node is solitary and we can assigned a left group of our choice
+							// and mark it busy to skip this check if another face is attached to it => we need another reduce pass first
+							ndx |= M_LEFT|M_BUSY;
+							cfaces[i] = M_LEFT;
+							(*ldx[j]) |= M_LEFT;
+							(*ldx[l]) |= M_LEFT;
+						}
+					}
+					else
+					{
+						// here all the remaining faces are necessarily on additional islands with left island already assigned
+						// on previous pass => tag a right island on the node to force a split
+						ndx |= M_RIGHT;
+						// no need to tag faces and links: right islands are left untouched
+						// nor even remove the face, this is the last pass
+						continue;
+					}
+					break;
+				}
+				// the face is tagged, can remove it
+				btSwap(imlinks[f],imlinks[ni-1]);
+				imlinks.pop_back();--f;--ni;
+			}
+			// for reduce, continue until not more reduction
+			if (state != ST_REDUCE || size == ni)
+			{
+				// no more than 4 pass:
+				// - reduction of islands attached to cut links
+				// - assignment of isolated island to left
+				// - reduction of isolated left islands
+				// - assignment on remaining isolated island to right
+				++pass;
+				state = nextState[state];
+			}
+		}
+		// at this point all nodes of the cut line are assigned to either left, right or both side
+		// non-manifold and both side nodes are connected to at least 2 island => needs duplicated
+		for(i=0;i<ncount;++i)
+		{
+			if ((cnodes[i] & (M_CUT|M_LEFT|M_RIGHT|M_MANIFOLD)) == (M_CUT|M_LEFT|M_RIGHT))
+			{
+				const btVector3	x=m_nodes[i].m_x;
+				const btVector3	v=m_nodes[i].m_v;
+				btScalar		m=getMass(i);
+				if(m>0) { m*=0.5f;m_nodes[i].m_im/=0.5f; }
+				appendNode(x,m);
+				cnodes[i]=m_nodes.size()-1;
+				m_nodes[cnodes[i]].m_v=v;
+				if (nfn)
+					nfn->Signal(cnodes[i], i);
+				++nchg;
+			}
 			else
+			{
 				cnodes[i] = 0;
+			}
 		}
 		nbase=&m_nodes[0];
 		/* Links		*/ 
 		for(i=0,ni=m_links.size();i<ni;++i)
 		{
 			Link&		feat=m_links[i];
-			int	todetach=-1;
 			const int id[]={int(feat.m_n[0]-nbase), int(feat.m_n[1]-nbase)};
-			if(cnodes[id[0]]&&cnodes[id[1]])
+			switch (edges(id[0],id[1]) & (M_CUT|M_LEFT|M_RIGHT))
 			{
-				if (cnodes[id[0]] < 0 && cnodes[id[1]] < 0)
-					// special case: this segment joints 2 end node of a cut line,
-					// => the cut is only 2 nodes long, not enough to open it
-					// => don't duplicate the link.
-					continue;
+			case (M_CUT|M_LEFT|M_RIGHT):
+				// these links must be duplicated but only if at least one node is duplicated
+				if (cnodes[id[0]] == 0 && cnodes[id[1]] == 0)
+					break;
 				appendLink(i);
-				todetach=m_links.size()-1;
-				++newlinks;
-			}
-			else
-			{
-				if(((ifn->Eval(m_nodes[id[0]].m_x)<accuracy)&&
-					(ifn->Eval(m_nodes[id[1]].m_x)<accuracy)))
-					todetach=i;
-			}
-			if(todetach>=0)
-			{
-				Link&	l=m_links[todetach];
-				for(int j=0;j<2;++j)
-				{
-					int cn=cnodes[int(l.m_n[j]-nbase)];
-					if(cn>0) l.m_n[j]=&m_nodes[cn];
-				}			
+				++nchg;
+				// the new link will be attached to the old nodes,
+				// the old link will be relinked
+				// because appenLink may have reassigned the array, update the reference
+				feat=m_links[i];
+				// walkthrough
+			case (M_CUT|M_LEFT):
+			case (M_LEFT):
+				// left link only are not duplicated but relinked
+				if ((cn = cnodes[id[0]]) > 0)
+					feat.m_n[0] = &m_nodes[cn];
+				if ((cn = cnodes[id[1]]) > 0)
+					feat.m_n[1] = &m_nodes[cn];
+				break;
+			case M_CUT:
+				// special case of a link not attached to any faces, suppress
+				// this may happen due to degenerated face removal
+				btSwap(m_links[i],m_links[ni-1]);
+				m_links.pop_back();--i;--ni;
+				break;
 			}
 		}
-		/* Faces		*/ 
+		// faces
 		for(i=0,ni=m_faces.size();i<ni;++i)
 		{
-			Node**			n=	m_faces[i].m_n;
-			if(	(ifn->Eval(n[0]->m_x)<accuracy)&&
-				(ifn->Eval(n[1]->m_x)<accuracy)&&
-				(ifn->Eval(n[2]->m_x)<accuracy))
+			if (cfaces[i] == M_LEFT)
 			{
-				for(int j=0;j<3;++j)
-				{
-					int cn=cnodes[int(n[j]-nbase)];
-					if(cn>0) n[j]=&m_nodes[cn];
-				}
+				Node** n = m_faces[i].m_n;
+				if ((cn = cnodes[int(n[0]-nbase)]) > 0)
+					n[0] = &m_nodes[cn];
+				if ((cn = cnodes[int(n[1]-nbase)]) > 0)
+					n[1] = &m_nodes[cn];
+				if ((cn = cnodes[int(n[2]-nbase)]) > 0)
+					n[2] = &m_nodes[cn];
 			}
 		}
-		/* Clean orphans	*/ 
-		int							nnodes=m_nodes.size();
-		if (ocount == nnodes)
+		// this algorithm does not create orphan, no need to clean
+		// but some nodes might be left detached => would be nice to reuse the space
+		if (nchg == 0)
 		{
-			// no nodes where created, the refine function did nothing, just return
-			return false;
-		}
-		btAlignedObjectArray<int>	ranks;
-		ranks.resize(nnodes,0);
-		for(i=0,ni=m_links.size();i<ni;++i)
-		{
-			for(int j=0;j<2;++j) ranks[int(m_links[i].m_n[j]-nbase)]++;
-		}
-		for(i=0,ni=m_faces.size();i<ni;++i)
-		{
-			for(int j=0;j<3;++j) ranks[int(m_faces[i].m_n[j]-nbase)]++;
-		}
-		for(i=0;i<m_links.size();++i)
-		{
-			const int	id[]={	int(m_links[i].m_n[0]-nbase),
-				int(m_links[i].m_n[1]-nbase)};
-			const bool	sg[]={	ranks[id[0]]==1,
-				ranks[id[1]]==1};
-			if(sg[0]||sg[1])
-			{
-				--newlinks;
-				--ranks[id[0]];
-				--ranks[id[1]];
-				btSwap(m_links[i],m_links[m_links.size()-1]);
-				m_links.pop_back();--i;
-			}
-		}
-		if (newlinks <= 0)
-		{
-			// in absence of new cut links, cancel the entire cut
+			// no actual cut occurred, restore mesh
 			// 1. remove extra nodes
-			for (i=ocount; i<nnodes; ++i)
+			for (i=ocount; i<ncount; ++i)
 			{
 				m_ndbvt.remove(m_nodes[i].m_leaf);
 			}
@@ -1757,30 +1946,6 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 			m_bUpdateRtCst = false;
 			return false;
 		}
-#if 0	
-		btAlignedObjectArray<int>	todelete;
-		for(i=nnodes-1;i>=0;--i)
-		{
-			if(!ranks[i]) todelete.push_back(i);
-		}	
-		if(todelete.size())
-		{		
-			btAlignedObjectArray<int>&	map=ranks;
-			for(int i=0;i<nnodes;++i) map[i]=i;
-			PointersToIndices(this);
-			for(int i=0,ni=todelete.size();i<ni;++i)
-			{
-				int		j=todelete[i];
-				int&	a=map[j];
-				int&	b=map[--nnodes];
-				m_ndbvt.remove(m_nodes[a].m_leaf);m_nodes[a].m_leaf=0;
-				btSwap(m_nodes[a],m_nodes[b]);
-				j=a;a=b;b=j;			
-			}
-			IndicesToPointers(this,&map[0]);
-			m_nodes.resize(nnodes);
-		}
-#endif
 	}
 
 	/* handle bending links	at the very last */
