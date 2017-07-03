@@ -1387,14 +1387,14 @@ int				btSoftBody::generateClusters(int k,int maxiterations)
 //
 bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* sfn, NewNodeCallbackFn* nfn)
 {
-	const Node*			nbase = &m_nodes[0];
+	const Node*			nbase;
 	int					ncount = m_nodes.size();
 	btSymMatrix<int>	edges(ncount,-2);
 	btSymMatrix<int>	links(ncount,-1);	// lookup in old links
 	btAlignedObjectArray<int> imlinks;	// index of modified links
 
 	int                 ocount = ncount;
-	int i,j,k,l,f,ni;
+	int i,j,k,l,f,ni,nk;
 	tNodeArray			snodes;		// saved Nodes
 	tLinkArray			slinks;		// saved Links
 	tFaceArray			sfaces;		// saved Faces
@@ -1410,74 +1410,68 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 		sfaces.copyFromArray(m_faces);
 	}
 	imlinks.reserve(100);
-	/* Fill edges		*/
-	for(i=0;i<m_links.size();++i)
-	{
-		Link&	l=m_links[i];
-		if (!l.m_bbending)
-		{
-			edges(int(l.m_n[0]-nbase),int(l.m_n[1]-nbase))=-1;
-			links(int(l.m_n[0]-nbase),int(l.m_n[1]-nbase))=i;
-		}
-	}
 	// that should not be necessary: all faces have corresponding links
 	/*
 	for(i=0;i<m_faces.size();++i)
-	{	
+	{
 		Face&	f=m_faces[i];
 		edges(int(f.m_n[0]-nbase),int(f.m_n[1]-nbase))=-1;
 		edges(int(f.m_n[1]-nbase),int(f.m_n[2]-nbase))=-1;
 		edges(int(f.m_n[2]-nbase),int(f.m_n[0]-nbase))=-1;
 	}
 	*/
-	/* Intersect		*/ 
-	for(i=0;i<ncount;++i)
+	/* Fill edges and intersect		*/
+	for(k=0, nk=m_links.size(); k<nk; ++k)
 	{
-		for(j=i+1;j<ncount;++j)
+		Link&	l=m_links[k];
+		if (!l.m_bbending)
 		{
-			if(edges(i,j)==-1)
+			Node& a=*l.m_n[0];
+			Node& b=*l.m_n[1];
+			nbase = &m_nodes[0];
+			i = int(&a-nbase);
+			j = int(&b-nbase);
+
+			edges(i,j)=-1;
+			links(i,j)=k;
+			const btScalar	t= ImplicitSolve(ifn,a.m_x,b.m_x,accuracy);
+			if(t>0.f && t<1.f)
 			{
-				Node&			a=m_nodes[i];
-				Node&			b=m_nodes[j];
-				const btScalar	t= ImplicitSolve(ifn,a.m_x,b.m_x,accuracy);
-				if(t>0.f && t<1.f)
+				const btVector3	x=Lerp(a.m_x,b.m_x,t);
+				if (sfn && !sfn->Eval(x))
 				{
-					const btVector3	x=Lerp(a.m_x,b.m_x,t);
-					if (sfn && !sfn->Eval(x))
+					continue;
+				}
+				const btVector3	v=Lerp(a.m_v,b.m_v,t);
+				btScalar		m=0;
+				if(a.m_im>0)
+				{
+					if(b.m_im>0)
 					{
-						continue;
-					}
-					const btVector3	v=Lerp(a.m_v,b.m_v,t);
-					btScalar		m=0;
-					if(a.m_im>0)
-					{
-						if(b.m_im>0)
-						{
-							const btScalar	ma=1/a.m_im;
-							const btScalar	mb=1/b.m_im;
-							const btScalar	mc=Lerp(ma,mb,t);
-							const btScalar	f=(ma+mb)/(ma+mb+mc);
-							a.m_im=1/(ma*f);
-							b.m_im=1/(mb*f);
-							m=mc*f;
-						}
-						else
-						{ a.m_im/=0.5f;m=1/a.m_im; }
+						const btScalar	ma=1/a.m_im;
+						const btScalar	mb=1/b.m_im;
+						const btScalar	mc=Lerp(ma,mb,t);
+						const btScalar	f=(ma+mb)/(ma+mb+mc);
+						a.m_im=1/(ma*f);
+						b.m_im=1/(mb*f);
+						m=mc*f;
 					}
 					else
-					{
-						if(b.m_im>0)
-						{ b.m_im/=0.5f;m=1/b.m_im; }
-						else
-							m=0;
-					}
-					appendNode(x,m);
-					ni = m_nodes.size()-1;
-					if (nfn)
-						nfn->Signal(ni, i, j, t);
-					edges(i,j)=ni;
-					m_nodes[ni].m_v=v;
+					{ a.m_im/=0.5f;m=1/a.m_im; }
 				}
+				else
+				{
+					if(b.m_im>0)
+					{ b.m_im/=0.5f;m=1/b.m_im; }
+					else
+						m=0;
+				}
+				appendNode(x,m);
+				ni = m_nodes.size()-1;
+				if (nfn)
+					nfn->Signal(ni, i, j, t);
+				edges(i,j)=ni;
+				m_nodes[ni].m_v=v;
 			}
 		}
 	}
@@ -1608,18 +1602,18 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 #define M_CUT		0x04		// node/link is on the cut line
 #define M_MANIFOLD	0x08		// node is manifold
 #define M_BUSY		0x10		// node is pre-tagged already, skip to next
+		const int pcount=ncount;
+		ncount=m_nodes.size();
 		btAlignedObjectArray<int>	cnodes;
-		cnodes.resize(m_nodes.size(),0);
-		edges.resize(0,0);
-		edges.resize(m_links.size(),0);
+		cnodes.resize(ncount,0);
 		btAlignedObjectArray<int>	cfaces;
 		cfaces.resize(m_faces.size(),0);
+		edges.resize(0,0);
+		edges.resize(ncount,0);
 		imlinks.resizeNoInitialize(0);
 		// count the number of links and nodes added
 		int nchg = 0;
 		int tag, ftag, otag, ncut, size, cn;
-		const int pcount=ncount;
-		ncount=m_nodes.size();
 		btScalar side;
 		nbase=&m_nodes[0];
 		// quick lookup when ncut=1 to find links, index=cut node index, value=index in ldx
@@ -1690,6 +1684,7 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 				(*ldx[0]) |= M_CUT;
 				(*ldx[1]) |= M_CUT;
 				(*ldx[2]) |= M_CUT;
+				nchg++;
 				break;
 			case 2:
 				// face is aligned on the cut line, face tag is given by 3r node
@@ -1884,6 +1879,9 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 		for(i=0,ni=m_links.size();i<ni;++i)
 		{
 			Link&		feat=m_links[i];
+			if (feat.m_bbending)
+				continue;
+
 			const int id[]={int(feat.m_n[0]-nbase), int(feat.m_n[1]-nbase)};
 			switch (edges(id[0],id[1]) & (M_CUT|M_LEFT|M_RIGHT))
 			{
@@ -1911,6 +1909,7 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 				// this may happen due to degenerated face removal
 				btSwap(m_links[i],m_links[ni-1]);
 				m_links.pop_back();--i;--ni;
+				nchg++;
 				break;
 			}
 		}
