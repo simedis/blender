@@ -771,10 +771,11 @@ void KX_GameObject::UpdateBuckets()
 	if (m_pSGNode->IsDirty()) {
 		GetOpenGLMatrix();
 	}
-
-	m_meshUser->SetColor(m_objectColor);
-	m_meshUser->SetFrontFace(!m_bIsNegativeScaling);
-	m_meshUser->ActivateMeshSlots();
+	if (m_meshUser) {
+		m_meshUser->SetColor(m_objectColor);
+		m_meshUser->SetFrontFace(!m_bIsNegativeScaling);
+		m_meshUser->ActivateMeshSlots();
+	}
 }
 
 void KX_GameObject::RemoveMeshes()
