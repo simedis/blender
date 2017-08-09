@@ -107,7 +107,7 @@ public:
 private:
 	struct CameraRenderData
 	{
-		CameraRenderData(KX_Camera *rendercam, KX_Camera *cullingcam, const RAS_Rect& area, const RAS_Rect& viewport, RAS_Rasterizer::StereoEye eye);
+		CameraRenderData(KX_Camera *rendercam, KX_Camera *cullingcam, const RAS_Rect& area, const RAS_Rect& viewport, RAS_Rasterizer::StereoEye eye, bool isRenderCamTemp);
 		CameraRenderData(const CameraRenderData& other);
 		~CameraRenderData();
 

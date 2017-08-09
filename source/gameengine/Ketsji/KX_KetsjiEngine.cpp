@@ -88,14 +88,17 @@
 #endif
 
 KX_KetsjiEngine::CameraRenderData::CameraRenderData(KX_Camera *rendercam, KX_Camera *cullingcam, const RAS_Rect& area, const RAS_Rect& viewport,
-															  RAS_Rasterizer::StereoEye eye)
+															  RAS_Rasterizer::StereoEye eye, bool isRenderCamTemp)
 	:m_renderCamera(rendercam),
 	m_cullingCamera(cullingcam),
 	m_area(area),
 	m_viewport(viewport),
 	m_eye(eye)
 {
-	m_renderCamera->AddRef();
+	// Do not add a reference if the render camera is temporary (stereo mode uses temp camera)
+	// In that case, the Release in the destructor will also release the camera
+	if (!isRenderCamTemp)
+		m_renderCamera->AddRef();
 }
 
 KX_KetsjiEngine::CameraRenderData::CameraRenderData(const CameraRenderData& other)
@@ -580,11 +583,7 @@ KX_KetsjiEngine::CameraRenderData KX_KetsjiEngine::GetCameraRenderData(KX_Scene 
 	rendercam->SetModelviewMatrix(viewmat);
 	rendercam->SetProjectionMatrix(projmat);
 
-	if (usestereo) {
-		rendercam->Release();
-	}
-
-	return CameraRenderData(rendercam, cullingcam, area, viewport, eye);
+	return CameraRenderData(rendercam, cullingcam, area, viewport, eye, usestereo);
 }
 
 bool KX_KetsjiEngine::GetFrameRenderData(std::vector<FrameRenderData>& frameDataList)
