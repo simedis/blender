@@ -1466,13 +1466,19 @@ void CcdPhysicsController::SetNewClientInfo(void *clientinfo)
 		for (int m = 0; m < rasMesh->NumMaterials(); m++) {
 			mmat = rasMesh->GetMeshMaterial(m);
 			RAS_IDisplayArray *baseArray = mmat->m_baseslot->GetDisplayArray();
-			RAS_IDisplayArray *array = mmat->m_slots[clientinfo]->GetDisplayArray();
+			RAS_MeshSlot *mslot = mmat->m_slots[clientinfo];
+			// there are no mesh slots if the soft body is in an inactive layer
+			// the mesh slot will be created during instanciation
+			if (mslot)
+			{
+				RAS_IDisplayArray *array = mslot->GetDisplayArray();
 
-			if (array != baseArray && array->GetVertexCount() == baseArray->GetVertexCount()) {
-				for (unsigned int i = 0, size = array->GetVertexCount(); i < size; ++i) {
-					RAS_TexVertInfo& baseVertexInfo = baseArray->GetVertexInfo(i);
-					RAS_TexVertInfo& vertexInfo = array->GetVertexInfo(i);
-					vertexInfo.setSoftBodyIndex(baseVertexInfo.getSoftBodyIndex());
+				if (array != baseArray && array->GetVertexCount() == baseArray->GetVertexCount()) {
+					for (unsigned int i = 0, size = array->GetVertexCount(); i < size; ++i) {
+						RAS_TexVertInfo& baseVertexInfo = baseArray->GetVertexInfo(i);
+						RAS_TexVertInfo& vertexInfo = array->GetVertexInfo(i);
+						vertexInfo.setSoftBodyIndex(baseVertexInfo.getSoftBodyIndex());
+					}
 				}
 			}
 		}
