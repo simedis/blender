@@ -25,7 +25,7 @@
  * ***** END GPL LICENSE BLOCK *****
  */
 
-/** \file KX_BlenderConverter.h
+/** \file BL_BlenderConverter.h
  *  \ingroup bgeconv
  */
 
@@ -39,12 +39,12 @@
 #  include "KX_BlenderMaterial.h"
 #  include "RAS_MeshObject.h"
 
-#  include "KX_BlenderScalarInterpolator.h"
+#  include "BL_BlenderScalarInterpolator.h"
 #endif
 
 #include "CM_Thread.h"
 
-class KX_BlenderSceneConverter;
+class BL_BlenderSceneConverter;
 class KX_KetsjiEngine;
 class KX_LibLoadStatus;
 class KX_BlenderMaterial;
@@ -66,7 +66,7 @@ struct TaskPool;
 template<class Value>
 using UniquePtrList = std::vector<std::unique_ptr<Value> >;
 
-class KX_BlenderConverter
+class BL_BlenderConverter
 {
 private:
 	class SceneSlot
@@ -79,11 +79,11 @@ private:
 		std::map<bAction *, BL_InterpolatorList *> m_actionToInterp;
 
 		SceneSlot();
-		SceneSlot(const KX_BlenderSceneConverter& converter);
+		SceneSlot(const BL_BlenderSceneConverter& converter);
 		~SceneSlot();
 
 		void Merge(SceneSlot& other);
-		void Merge(const KX_BlenderSceneConverter& converter);
+		void Merge(const BL_BlenderSceneConverter& converter);
 	};
 
 	std::map<KX_Scene *, SceneSlot> m_sceneSlots;
@@ -104,8 +104,8 @@ private:
 	bool m_alwaysUseExpandFraming;
 
 public:
-	KX_BlenderConverter(Main *maggie, KX_KetsjiEngine *engine);
-	virtual ~KX_BlenderConverter();
+	BL_BlenderConverter(Main *maggie, KX_KetsjiEngine *engine);
+	virtual ~BL_BlenderConverter();
 
 	/** \param Scenename name of the scene to be converted.
 	 * \param destinationscene pass an empty scene, everything goes into this

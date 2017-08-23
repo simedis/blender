@@ -788,7 +788,7 @@ void KX_GameObject::RemoveMeshes()
 		m_meshUser = nullptr;
 	}
 
-	//note: meshes can be shared, and are deleted by KX_BlenderSceneConverter
+	//note: meshes can be shared, and are deleted by BL_BlenderSceneConverter
 
 	m_meshes.clear();
 }

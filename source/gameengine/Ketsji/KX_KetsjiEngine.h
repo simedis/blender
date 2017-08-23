@@ -47,7 +47,7 @@
 
 struct TaskScheduler;
 class KX_ISystem;
-class KX_BlenderConverter;
+class BL_BlenderConverter;
 class KX_NetworkMessageManager;
 class CListValue;
 class RAS_ICanvas;
@@ -141,7 +141,7 @@ private:
 	/// 3D Rasterizer (3D Rendering)
 	RAS_Rasterizer *m_rasterizer;
 	KX_ISystem *m_kxsystem;
-	KX_BlenderConverter *m_converter;
+	BL_BlenderConverter *m_converter;
 	KX_NetworkMessageManager *m_networkMessageManager;
 #ifdef WITH_PYTHON
 	/// \note borrowed from sys.modules["__main__"], don't manage ref's
@@ -311,8 +311,8 @@ public:
 	bool SetPyLogicCallbackList(PyObject *list);
 	void RunLogicCallbacks();
 #endif
-	void SetConverter(KX_BlenderConverter *converter);
-	KX_BlenderConverter *GetConverter()
+	void SetConverter(BL_BlenderConverter *converter);
+	BL_BlenderConverter *GetConverter()
 	{
 		return m_converter;
 	}
