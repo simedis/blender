@@ -2624,6 +2624,12 @@ btCollisionShape *CcdShapeConstructionInfo::CreateBulletShape(btScalar margin, b
 				collisionShape = compoundShape;
 			}
 			break;
+		case PHY_SHAPE_EMPTY:
+		{
+			collisionShape = new btEmptyShape();
+			collisionShape->setMargin(margin);
+			break;
+		}
 	}
 	return collisionShape;
 }

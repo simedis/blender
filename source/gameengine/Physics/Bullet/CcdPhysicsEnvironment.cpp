@@ -3184,6 +3184,12 @@ void CcdPhysicsEnvironment::ConvertObject(KX_BlenderSceneConverter& converter, K
 
 			break;
 		}
+		case OB_BOUND_EMPTY:
+		{
+			shapeInfo->m_shapeType = PHY_SHAPE_EMPTY;
+			bm = shapeInfo->CreateBulletShape(ci.m_margin);
+			break;
+		}
 	}
 
 	if (!bm) {
