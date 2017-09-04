@@ -160,6 +160,14 @@ void KX_BlenderCanvas::ConvertMousePosition(int x, int y, int &r_x, int &r_y, bo
 	r_y = -y + m_area_rect.GetTop() - 1;
 }
 
+void KX_BlenderCanvas::GetScreenPosition(int x, int y, int &s_x, int &s_y)
+{
+	GHOST_Rect bounds;
+	((GHOST_IWindow *)m_win->ghostwin)->getClientBounds(bounds);
+	s_y = bounds.m_b-1-y;
+	s_x = bounds.m_l+x;
+}
+
 float KX_BlenderCanvas::GetMouseNormalizedX(int x)
 {
 	return float(x) / this->GetWidth();

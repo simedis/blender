@@ -90,6 +90,8 @@ public:
 	virtual float GetMouseNormalizedX(int x);
 	virtual float GetMouseNormalizedY(int y);
 
+	virtual void GetScreenPosition(int x, int y, int &s_x, int &s_y);
+
 	virtual RAS_Rect &GetWindowArea();
 
 	virtual void SetViewPort(int x1, int y1, int x2, int y2);

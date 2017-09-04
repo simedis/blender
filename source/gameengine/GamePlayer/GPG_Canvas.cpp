@@ -227,6 +227,23 @@ bool GPG_Canvas::GetSwapInterval(int& intervalOut)
 	return false;
 }
 
+void GPG_Canvas::GetScreenPosition(int x, int y, int &s_x, int &s_y)
+{
+	if (m_window) {
+		GHOST_TInt32 wx = (GHOST_TInt32)x;
+		GHOST_TInt32 wy = (GHOST_TInt32)(GetHeight()-y-1);
+		GHOST_TInt32 cx;
+		GHOST_TInt32 cy;
+		m_window->clientToScreen(wx, wy, cx, cy);
+		s_x = cx;
+		s_y = cy;
+	}
+	else {
+		s_x = x;
+		s_y = y;
+	}
+}
+
 void GPG_Canvas::GetDisplayDimensions(int &width, int &height)
 {
 	unsigned int uiwidth;

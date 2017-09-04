@@ -91,6 +91,7 @@ public:
 	virtual void ConvertMousePosition(int x, int y, int &r_x, int &r_y, bool screen);
 	virtual float GetMouseNormalizedX(int x);
 	virtual float GetMouseNormalizedY(int y);
+	virtual void GetScreenPosition(int x, int y, int &s_x, int &s_y);
 
 	virtual void GetDisplayDimensions(int &width, int &height);
 

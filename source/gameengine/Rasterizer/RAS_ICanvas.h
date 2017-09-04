@@ -101,6 +101,14 @@ public:
 	virtual float GetMouseNormalizedX(int x) = 0;
 	virtual float GetMouseNormalizedY(int y) = 0;
 
+	/** Convert a window coordinate (lower left origin) to screen position top left origin
+	 * \param x The input X coordinate of the pixel relative to window left side
+	 * \param y The input Y coordinate of the pixel relative to window bottom side
+	 * \param s_x The screen X coordinate of the pixel relative to top left corner
+	 * \param s_y The screen Y coordinate of the pixel relative to top left corner
+	 */
+	virtual void GetScreenPosition(int x, int y, int &s_x, int &s_y) = 0;
+
 	/**
 	 * Used to get canvas area within blender.
 	 */
