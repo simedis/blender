@@ -516,16 +516,14 @@ void RAS_Rasterizer::DrawStereoOffScreen(RAS_ICanvas *canvas, RAS_OffScreen *lef
 		GPU_shader_bind(shader);
 
 		OverrideShaderStereoStippleInterface *interface = (OverrideShaderStereoStippleInterface *)GPU_shader_get_interface(shader);
+		unsigned short leftSlot = 0;
 		if (m_stereomode == RAS_STEREO_INTERLACED) {
 			int s_x, s_y;
 			canvas->GetScreenPosition(0,0,s_x, s_y);
-			unsigned short rightSlot = (s_y & 1);
-			leftOffScreen->BindColorTexture(1-rightSlot);
-			rightOffScreen->BindColorTexture(rightSlot);
-		} else {
-			leftOffScreen->BindColorTexture(0);
-			rightOffScreen->BindColorTexture(1);
+			leftSlot = (s_y & 1);
 		}
+		leftOffScreen->BindColorTexture(leftSlot);
+		rightOffScreen->BindColorTexture(1-leftSlot);
 
 		GPU_shader_uniform_int(shader, interface->leftEyeTexLoc, 0);
 		GPU_shader_uniform_int(shader, interface->rightEyeTexLoc, 1);
