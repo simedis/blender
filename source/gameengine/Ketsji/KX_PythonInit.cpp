@@ -158,9 +158,9 @@ extern "C" {
 
 #ifdef WITH_PYTHON
 
-static SCA_PythonKeyboard* gp_PythonKeyboard = nullptr;
-static SCA_PythonMouse* gp_PythonMouse = nullptr;
-static SCA_PythonJoystick* gp_PythonJoysticks[JOYINDEX_MAX] = {nullptr};
+static std::unique_ptr<SCA_PythonKeyboard> gp_PythonKeyboard;
+static std::unique_ptr<SCA_PythonMouse> gp_PythonMouse;
+static std::unique_ptr<SCA_PythonJoystick> gp_PythonJoysticks[JOYINDEX_MAX];
 
 static struct {
 	PyObject *path;
@@ -1465,13 +1465,15 @@ PyMODINIT_FUNC initGameLogicPythonBinding()
 	
 	PyDict_SetItemString(d, "globalDict", item=PyDict_New()); Py_DECREF(item);
 
+	KX_KetsjiEngine *engine = KX_GetActiveEngine();
+
 	// Add keyboard, mouse and joysticks attributes to this module
 	BLI_assert(!gp_PythonKeyboard);
-	gp_PythonKeyboard = new SCA_PythonKeyboard(KX_GetActiveEngine()->GetInputDevice());
+	gp_PythonKeyboard.reset(new SCA_PythonKeyboard(engine->GetInputDevice()));
 	PyDict_SetItemString(d, "keyboard", gp_PythonKeyboard->GetProxy());
 
 	BLI_assert(!gp_PythonMouse);
-	gp_PythonMouse = new SCA_PythonMouse(KX_GetActiveEngine()->GetInputDevice(), KX_GetActiveEngine()->GetCanvas());
+	gp_PythonMouse.reset(new SCA_PythonMouse(engine->GetInputDevice(), engine->GetCanvas()));
 	PyDict_SetItemString(d, "mouse", gp_PythonMouse->GetProxy());
 
 	PyObject *joylist = PyList_New(JOYINDEX_MAX);
@@ -1817,132 +1819,22 @@ PyMODINIT_FUNC initGameLogicPythonBinding()
 	return m;
 }
 
-/**
- * Explanation of
- * 
- * - backupPySysObjects()       : stores sys.path in #gp_sys_backup
- * - initPySysObjects(main)     : initializes the blendfile and library paths
- * - restorePySysObjects()      : restores sys.path from #gp_sys_backup
- * 
- * These exist so the current blend dir "//" can always be used to import modules from.
- * the reason we need a few functions for this is that python is not only used by the game engine
- * so we cant just add to sys.path all the time, it would leave pythons state in a mess.
- * It would also be incorrect since loading blend files for new levels etc would always add to sys.path
- * 
- * To play nice with blenders python, the sys.path is backed up and the current blendfile along
- * with all its lib paths are added to the sys path.
- * When loading a new blendfile, the original sys.path is restored and the new paths are added over the top.
- */
-
-/**
- * So we can have external modules mixed with our blend files.
- */
-static void backupPySysObjects(void)
-{
-	PyObject *sys_path      = PySys_GetObject("path");
-	PyObject *sys_meta_path = PySys_GetObject("meta_path");
-	PyObject *sys_mods      = PySys_GetObject("modules");
-	
-	/* paths */
-	Py_XDECREF(gp_sys_backup.path); /* just in case its set */
-	gp_sys_backup.path = PyList_GetSlice(sys_path, 0, INT_MAX); /* copy the list */
-	
-	/* meta_paths */
-	Py_XDECREF(gp_sys_backup.meta_path); /* just in case its set */
-	gp_sys_backup.meta_path = PyList_GetSlice(sys_meta_path, 0, INT_MAX); /* copy the list */
-
-	/* modules */
-	Py_XDECREF(gp_sys_backup.modules); /* just in case its set */
-	gp_sys_backup.modules = PyDict_Copy(sys_mods); /* copy the dict */
-
-	if (bpy_sys_module_backup) {
-		PyDict_Clear(sys_mods);
-		// Load a clean generated modules dict from the blender begining.
-		PyDict_Update(sys_mods, bpy_sys_module_backup);
-	}
-}
-
-/* for initPySysObjects only,
- * takes a blend path and adds a scripts dir from it
- *
- * "/home/me/foo.blend" -> "/home/me/scripts"
- */
-static void initPySysObjects__append(PyObject *sys_path, const char *filename)
-{
-	PyObject *item;
-	char expanded[FILE_MAX];
-	
-	BLI_split_dir_part(filename, expanded, sizeof(expanded)); /* get the dir part of filename only */
-	BLI_path_abs(expanded, KX_GetMainPath().c_str()); /* filename from lib->filename is (always?) absolute, so this may not be needed but it wont hurt */
-	BLI_cleanup_file(KX_GetMainPath().c_str(), expanded); /* Don't use BLI_cleanup_dir because it adds a slash - BREAKS WIN32 ONLY */
-	item = PyC_UnicodeFromByte(expanded);
-	
-	if (PySequence_Index(sys_path, item) == -1) {
-		PyErr_Clear(); /* PySequence_Index sets a ValueError */
-		PyList_Insert(sys_path, 0, item);
-	}
-	
-	Py_DECREF(item);
-}
-static void initPySysObjects(Main *maggie)
-{
-	PyObject *sys_path      = PySys_GetObject("path");
-	PyObject *sys_meta_path = PySys_GetObject("meta_path");
-	
-	if (gp_sys_backup.path == nullptr) {
-		/* backup */
-		backupPySysObjects();
-	}
-	else {
-		/* get the original sys path when the BGE started */
-		PyList_SetSlice(sys_path, 0, INT_MAX, gp_sys_backup.path);
-		PyList_SetSlice(sys_meta_path, 0, INT_MAX, gp_sys_backup.meta_path);
-	}
-	
-	Library *lib= (Library *)maggie->library.first;
-	
-	while (lib) {
-		/* lib->name wont work in some cases (on win32),
-		 * even when expanding with KX_GetMainPath(), using lib->filename is less trouble */
-		initPySysObjects__append(sys_path, lib->filepath);
-		lib= (Library *)lib->id.next;
-	}
-	
-	initPySysObjects__append(sys_path, KX_GetMainPath().c_str());
-}
-
-static void restorePySysObjects(void)
-{
-	if (gp_sys_backup.path == nullptr) {
-		return;
-	}
-
-	/* will never fail */
-	PyObject *sys_path      = PySys_GetObject("path");
-	PyObject *sys_meta_path = PySys_GetObject("meta_path");
-	PyObject *sys_mods      = PySys_GetObject("modules");
-
-	/* paths */
-	PyList_SetSlice(sys_path, 0, INT_MAX, gp_sys_backup.path);
-	Py_DECREF(gp_sys_backup.path);
-	gp_sys_backup.path = nullptr;
-
-	/* meta_path */
-	PyList_SetSlice(sys_meta_path, 0, INT_MAX, gp_sys_backup.meta_path);
-	Py_DECREF(gp_sys_backup.meta_path);
-	gp_sys_backup.meta_path = nullptr;
-	
-	/* modules */
-	PyDict_Clear(sys_mods);
-	PyDict_Update(sys_mods, gp_sys_backup.modules);
-	Py_DECREF(gp_sys_backup.modules);
-	gp_sys_backup.modules = nullptr;
-}
-
 void appendPythonPath(const std::string& path)
 {
-	PyObject *sys_path = PySys_GetObject("path");
-	initPySysObjects__append(sys_path, path.c_str());
+	char expanded[FILE_MAX];
+	// Get the dir part of filename only.
+	BLI_split_dir_part(path.c_str(), expanded, sizeof(expanded));
+	// Filename from lib->filename is (always?) absolute, so this may not be needed but it wont hurt.
+	BLI_path_abs(expanded, KX_GetMainPath().c_str());
+	// Don't use BLI_cleanup_dir because it adds a slash - BREAKS WIN32 ONLY.
+	BLI_cleanup_file(KX_GetMainPath().c_str(), expanded);
+
+	PyObject *syspath = PySys_GetObject("path");
+	PyObject *item = PyC_UnicodeFromByte(expanded);
+	if (PySequence_Contains(syspath, item) == -1) {
+		PyList_Insert(syspath, 0, item);
+	}
+	Py_DECREF(item);
 }
 
 void addImportMain(struct Main *maggie)
@@ -2012,67 +1904,46 @@ static struct _inittab bge_internal_modules[] = {
  * Python is not initialized.
  * see bpy_interface.c's BPY_python_start() which shares the same functionality in blender.
  */
-PyObject *initGamePlayerPythonScripting(Main *maggie, int argc, char** argv)
+void initPlayerPython(int argc, char** argv)
 {
-	/* Yet another gotcha in the py api
-	 * Cant run PySys_SetArgv more than once because this adds the
-	 * binary dir to the sys.path each time.
-	 * Id have thought python being totally restarted would make this ok but
-	 * somehow it remembers the sys.path - Campbell
-	 */
-	static bool first_time = true;
 	const char * const py_path_bundle = BKE_appdir_folder_id(BLENDER_SYSTEM_PYTHON, nullptr);
 
-	/* not essential but nice to set our name */
-	static wchar_t program_path_wchar[FILE_MAX]; /* python holds a reference */
+	// Not essential but nice to set our name, not that python holds a reference to program path string.
+	static wchar_t program_path_wchar[FILE_MAX];
 	BLI_strncpy_wchar_from_utf8(program_path_wchar, BKE_appdir_program_path(), ARRAY_SIZE(program_path_wchar));
 	Py_SetProgramName(program_path_wchar);
 
-	/* Update, Py3.3 resolves attempting to parse non-existing header */
-#if 0
-	/* Python 3.2 now looks for '2.xx/python/include/python3.2d/pyconfig.h' to
-	 * parse from the 'sysconfig' module which is used by 'site',
-	 * so for now disable site. alternatively we could copy the file. */
-	if (py_path_bundle != nullptr) {
-		Py_NoSiteFlag = 1; /* inhibits the automatic importing of 'site' */
-	}
-#endif
-
 	Py_FrozenFlag = 1;
 
-	/* must run before python initializes */
+	// Must run before python initializes.
 	PyImport_ExtendInittab(bge_internal_modules);
 
-	/* find local python installation */
+	// Find local python installation.
 	PyC_SetHomePath(py_path_bundle);
 
 	Py_Initialize();
-	
-	if (argv && first_time) { /* browser plugins don't currently set this */
-		// Until python support ascii again, we use our own.
-		// PySys_SetArgv(argc, argv);
-		int i;
-		PyObject *py_argv= PyList_New(argc);
 
-		for (i=0; i<argc; i++)
-			PyList_SET_ITEM(py_argv, i, PyC_UnicodeFromByte(argv[i]));
-
-		PySys_SetObject("argv", py_argv);
-		Py_DECREF(py_argv);
+	// Until python support ascii again, we use our own.
+	PyObject *py_argv = PyList_New(argc);
+	for (unsigned short i = 0; i < argc; ++i) {
+		PyList_SET_ITEM(py_argv, i, PyC_UnicodeFromByte(argv[i]));
 	}
+	PySys_SetObject("argv", py_argv);
+	Py_DECREF(py_argv);
 
-	/* Initialize thread support (also acquires lock) */
+	// Initialize thread support (also acquires lock).
 	PyEval_InitThreads();
 
 	bpy_import_init(PyEval_GetBuiltins());
 
+#if 0
 	bpy_import_main_set(maggie);
 
 	initPySysObjects(maggie);
 
 	/* mathutils types are used by the BGE even if we don't import them */
 	{
-		PyObject *mod = PyImport_ImportModuleLevel("mathutils", nullptr, nullptr, nullptr, 0);
+		PyObject *mod = PyImport_ImportModuleLevel("mathutils", nullptr, nullptr, nullptr, 0); // TODO ??
 		Py_DECREF(mod);
 	}
 
@@ -2089,103 +1960,95 @@ PyObject *initGamePlayerPythonScripting(Main *maggie, int argc, char** argv)
 	first_time = false;
 	
 	PyObjectPlus::ClearDeprecationWarning();
-
-	return PyC_DefaultNameSpace(nullptr);
+#endif
 }
 
-void exitGamePlayerPythonScripting()
+void exitPlayerPython()
 {
-	/* Clean up the Python mouse and keyboard */
-	delete gp_PythonKeyboard;
-	gp_PythonKeyboard = nullptr;
+	Py_Finalize();
+}
 
-	delete gp_PythonMouse;
-	gp_PythonMouse = nullptr;
+void initGamePython(Main *main, PyObject *pyGlobalDict, PyObject **gameLogic)
+{
+	bpy_import_main_set(main);
 
-	for (int i=0; i<JOYINDEX_MAX; ++i) {
-		if (gp_PythonJoysticks[i]) {
-			delete gp_PythonJoysticks[i];
-			gp_PythonJoysticks[i] = nullptr;
-		}
+	for (Library *lib = (Library *)main->library.first; lib; lib = (Library *)lib->id.next) {
+		appendPythonPath(lib->filepath);
 	}
 
-	/* since python restarts we cant let the python backup of the sys.path hang around in a global pointer */
-	restorePySysObjects(); /* get back the original sys.path and clear the backup */
-	
-	Py_Finalize();
-	bpy_import_main_set(nullptr);
-	PyObjectPlus::ClearDeprecationWarning();
-}
-
-
-
-/**
- * Python is already initialized.
- */
-PyObject *initGamePythonScripting(Main *maggie)
-{
-	/* no need to Py_SetProgramName, it was already taken care of in BPY_python_start */
-
-	bpy_import_main_set(maggie);
-
-	initPySysObjects(maggie);
+	appendPythonPath(KX_GetMainPath().c_str());
 
 #ifdef WITH_AUDASPACE
-	/* accessing a SoundActuator's sound results in a crash if aud is not initialized... */
+	// Accessing a SoundActuator's sound results in a crash if aud is not initialized.
 	{
-		PyObject *mod= PyImport_ImportModuleLevel("aud", nullptr, nullptr, nullptr, 0);
+		PyObject *mod = PyImport_ImportModuleLevel("aud", nullptr, nullptr, nullptr, 0); // TODO: reproduce the bug?
 		Py_DECREF(mod);
 	}
 #endif
 
-	PyDict_SetItemString(PyImport_GetModuleDict(), "bge", initBGE());
+	PyObject *modules = PyImport_GetModuleDict();
+	PyDict_SetItemString(modules, "bge", initBGE());
+
+	*gameLogic = PyDict_GetItemString(modules, "GameLogic");
+	PyDict_SetItemString(PyModule_GetDict(*gameLogic), "globalDict", pyGlobalDict);
+
+	KX_GetActiveEngine()->SetPyNamespace(PyC_DefaultNameSpace(nullptr));
 
 	PyObjectPlus::NullDeprecationWarning();
-
-	return PyC_DefaultNameSpace(nullptr);
 }
 
-void exitGamePythonScripting()
+void exitGamePython()
 {
-	/* Clean up the Python mouse and keyboard */
-	delete gp_PythonKeyboard;
-	gp_PythonKeyboard = nullptr;
-
-	delete gp_PythonMouse;
-	gp_PythonMouse = nullptr;
-
-	for (int i=0; i<JOYINDEX_MAX; ++i) {
-		if (gp_PythonJoysticks[i]) {
-			delete gp_PythonJoysticks[i];
-			gp_PythonJoysticks[i] = nullptr;
-		}
+	// Clean up the Python mouse and keyboard.
+	gp_PythonKeyboard.reset(nullptr);
+	gp_PythonMouse.reset(nullptr);
+	for (unsigned short i = 0; i < JOYINDEX_MAX; ++i) {
+		gp_PythonJoysticks[i].reset(nullptr);
 	}
 
-	restorePySysObjects(); /* get back the original sys.path and clear the backup */
 	bpy_import_main_set(nullptr);
 	PyObjectPlus::ClearDeprecationWarning();
 }
 
-/* similar to the above functions except it sets up the namespace
- * and other more general things */
-void setupGamePython(KX_KetsjiEngine* ketsjiengine, Main *blenderdata,
-                     PyObject *pyGlobalDict, PyObject **gameLogic, int argc, char** argv)
+void initBlenderPython()
 {
-	PyObject *modules, *dictionaryobject;
+	// Paths backup.
+	PyObject *path = PySys_GetObject("path");
+	gp_sys_backup.path = PySequence_List(path);
 
-	if (argv) /* player only */
-		dictionaryobject= initGamePlayerPythonScripting(blenderdata, argc, argv);
-	else
-		dictionaryobject= initGamePythonScripting(blenderdata);
+	// Meta paths backup.
+	PyObject *metaPath = PySys_GetObject("meta_path");
+	gp_sys_backup.meta_path = PySequence_List(metaPath);
 
-	ketsjiengine->SetPyNamespace(dictionaryobject);
+	// Modules backup.
+	PyObject *mods = PySys_GetObject("modules");
+	gp_sys_backup.modules = PyDict_Copy(mods);
 
-	modules = PyImport_GetModuleDict();
+	PyDict_Clear(mods);
+	// Load a clean generated modules dict from the blender beginning.
+	PyDict_Update(mods, bpy_sys_module_backup);
+}
 
-	*gameLogic = PyDict_GetItemString(modules, "GameLogic");
-	/* is set in initGameLogicPythonBinding so only set here if we want it to persist between scenes */
-	if (pyGlobalDict)
-		PyDict_SetItemString(PyModule_GetDict(*gameLogic), "globalDict", pyGlobalDict); // Same as importing the module.z
+void exitBlenderPython()
+{
+	// Restore paths.
+	PyObject *path = PySys_GetObject("path");
+	PyList_SetSlice(path, 0, INT_MAX, gp_sys_backup.path);
+	Py_DECREF(gp_sys_backup.path);
+	gp_sys_backup.path = nullptr;
+
+	// Restore meta paths.
+	PyObject *metaPath = PySys_GetObject("meta_path");
+	PyList_SetSlice(metaPath, 0, INT_MAX, gp_sys_backup.meta_path);
+	Py_DECREF(gp_sys_backup.meta_path);
+	gp_sys_backup.meta_path = nullptr;
+
+	// Restore modules.
+	PyObject *mods = PySys_GetObject("modules");
+	PyDict_Clear(mods);
+	PyDict_Update(mods, gp_sys_backup.modules);
+	Py_DECREF(gp_sys_backup.modules);
+	gp_sys_backup.modules = nullptr;
 }
 
 void createPythonConsole()
@@ -2216,15 +2079,12 @@ void updatePythonJoysticks(short (&addrem)[JOYINDEX_MAX])
 		if (addrem[i] == 1) {
 			DEV_Joystick *joy = DEV_Joystick::GetInstance(i);
 			if (joy && joy->Connected()) {
-				gp_PythonJoysticks[i] = new SCA_PythonJoystick(joy, i);
+				gp_PythonJoysticks[i].reset(new SCA_PythonJoystick(joy, i));
 				item = gp_PythonJoysticks[i]->GetProxy();
 			}
 		}
 		else if (addrem[i] == 2) {
-			if (gp_PythonJoysticks[i]) {
-				delete gp_PythonJoysticks[i];
-				gp_PythonJoysticks[i] = nullptr;
-			}
+			gp_PythonJoysticks[i].reset(nullptr);
 		}
 
 		PyList_SetItem(pythonJoyList, i, item);
