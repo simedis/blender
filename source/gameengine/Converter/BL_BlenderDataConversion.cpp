@@ -1381,6 +1381,12 @@ static void bl_ConvertBlenderObject_Single(
 
 	BL_ConvertProperties(blenderobject,gameobj,timemgr,kxscene,isInActiveLayer);
 
+	CValue *normals;
+	RAS_Deformer *deformer;
+	if ((normals = gameobj->GetProperty("__NORMALS__")) != NULL &&
+	    (deformer = gameobj->GetDeformer()) != NULL) {
+		deformer->SetRecalcNormal(normals->GetNumber() != 0.0);
+	}
 	gameobj->SetName(blenderobject->id.name + 2);
 
 	// update children/parent hierarchy
