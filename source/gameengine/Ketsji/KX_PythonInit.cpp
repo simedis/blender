@@ -1831,7 +1831,7 @@ void appendPythonPath(const std::string& path)
 
 	PyObject *syspath = PySys_GetObject("path");
 	PyObject *item = PyC_UnicodeFromByte(expanded);
-	if (PySequence_Contains(syspath, item) == -1) {
+	if (PySequence_Contains(syspath, item) == 0) {
 		PyList_Insert(syspath, 0, item);
 	}
 	Py_DECREF(item);
