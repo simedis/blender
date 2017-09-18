@@ -3717,7 +3717,7 @@ PyObject *KX_GameObject::PyRefine(PyObject *args)
 	float accuracy = 0.05f;
 	RAS_MeshObject *mesh;
 	MT_Vector3 abc, normal;
-	bool res;
+	bool res = false;
 	int polycount;
 
 	if (!PyArg_ParseTuple(args,"O|f:refine", &value, &accuracy))
@@ -3775,7 +3775,11 @@ PyObject *KX_GameObject::PyRefine(PyObject *args)
 		if (cb)
 			cb->Finalize(res);
 	}
-	Py_RETURN_NONE;
+
+	if (res)
+        Py_RETURN_TRUE;
+    else
+        Py_RETURN_FALSE;
 }
 
 
