@@ -104,6 +104,12 @@ const RAS_Rasterizer::AttribLayerList BL_BlenderShader::GetAttribLayers(const RA
 
 void BL_BlenderShader::ReloadMaterial()
 {
+	// Force regenerating shader by deleting it.
+	if (m_GPUMat) {
+		GPU_material_free(&m_mat->gpumaterial);
+		GPU_material_free(&m_mat->gpumaterialinstancing);
+	}
+
 	m_GPUMat = (m_mat) ? GPU_material_from_blender(m_blenderScene, m_mat, false, UseInstancing()) : nullptr;
 }
 
