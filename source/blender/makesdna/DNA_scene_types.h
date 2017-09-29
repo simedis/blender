@@ -848,11 +848,13 @@ typedef struct GameData {
 	short mode;
 	short occlusionRes;		/* resolution of occlusion Z buffer in pixel */
 	short physicsEngine;
+	short solverType;
 	short exitkey;
 	short pythonkeys[4];
 	short vsync; /* Controls vsync: off, on, or adaptive (if supported) */
 	short obstacleSimulation;
 	short ticrate, maxlogicstep, physubstep, maxphystep;
+	short pad5;
 	float timeScale;
 	float levelHeight;
 	float deactivationtime, lineardeactthreshold, angulardeactthreshold;
@@ -866,8 +868,6 @@ typedef struct GameData {
 	/* Scene LoD */
 	short lodflag, pad2;
 	int scehysteresis;
-	int pad3;
-
 } GameData;
 
 #define STEREO_NOSTEREO		1
@@ -943,6 +943,14 @@ enum {
 #define GAME_HDR_NONE		0
 #define GAME_HDR_HALF_FLOAT	1
 #define GAME_HDR_FULL_FLOAT	2
+
+/* GameData.solverType */
+enum {
+	GAME_SOLVER_SEQUENTIAL = 0,
+	GAME_SOLVER_NNCG,
+	GAME_SOLVER_MLCP_DANTZIG,
+	GAME_SOLVER_MLCP_LEMKE,
+};
 
 /* UV Paint */
 #define UV_SCULPT_LOCK_BORDERS				1
