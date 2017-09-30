@@ -27,17 +27,13 @@
 #include "KX_LibLoadStatus.h"
 #include "PIL_time.h"
 
-KX_LibLoadStatus::KX_LibLoadStatus(class BL_BlenderConverter* kx_converter,
-				class KX_KetsjiEngine* kx_engine,
-				class KX_Scene* merge_scene,
-				const std::string& path) :
-			m_converter(kx_converter),
-			m_engine(kx_engine),
-			m_mergescene(merge_scene),
-			m_data(nullptr),
-			m_libname(path),
-			m_progress(0.0f),
-			m_finished(false)
+KX_LibLoadStatus::KX_LibLoadStatus(BL_BlenderConverter *converter, KX_KetsjiEngine *engine, KX_Scene *merge_scene, const std::string& path)
+	:m_converter(converter),
+	m_engine(engine),
+	m_mergescene(merge_scene),
+	m_libname(path),
+	m_progress(0.0f),
+	m_finished(false)
 #ifdef WITH_PYTHON
 			,
 			m_finish_cb(nullptr),
@@ -109,14 +105,24 @@ class KX_Scene *KX_LibLoadStatus::GetMergeScene()
 	return m_mergescene;
 }
 
-void KX_LibLoadStatus::SetData(void *data)
+const std::vector<Scene *>& KX_LibLoadStatus::GetBlenderScenes() const
 {
-	m_data = data;
+	return m_blenderScenes;
 }
 
-void *KX_LibLoadStatus::GetData()
+void KX_LibLoadStatus::SetBlenderScenes(const std::vector<Scene *>& scenes)
 {
-	return m_data;
+	m_blenderScenes = scenes;
+}
+
+const std::vector<BL_BlenderSceneConverter>& KX_LibLoadStatus::GetSceneConverters() const
+{
+	return m_sceneConvertes;
+}
+
+void KX_LibLoadStatus::AddSceneConverter(BL_BlenderSceneConverter&& converter)
+{
+	m_sceneConvertes.push_back(std::move(converter));
 }
 
 void KX_LibLoadStatus::SetProgress(float progress)

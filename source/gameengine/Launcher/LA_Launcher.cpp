@@ -43,6 +43,7 @@
 #include "KX_PyConstraintBinding.h"
 
 #include "BL_BlenderConverter.h"
+#include "BL_BlenderSceneConverter.h"
 #include "BL_BlenderDataConversion.h"
 
 #include "KX_NetworkMessageManager.h"
@@ -278,11 +279,7 @@ void LA_Launcher::InitEngine()
 	m_converter = new BL_BlenderConverter(m_maggie, m_ketsjiEngine);
 	m_ketsjiEngine->SetConverter(m_converter);
 
-	m_kxStartScene = new KX_Scene(m_inputDevice,
-		m_startSceneName,
-		m_startScene,
-		m_canvas,
-		m_networkMessageManager);
+	m_kxStartScene = m_ketsjiEngine->CreateScene(m_startScene);
 
 	KX_SetActiveScene(m_kxStartScene);
 
@@ -301,7 +298,9 @@ void LA_Launcher::InitEngine()
 
 	m_converter->SetAlwaysUseExpandFraming(GetUseAlwaysExpandFraming());
 
-	m_converter->ConvertScene(m_kxStartScene, m_rasterizer, m_canvas, false);
+	// Convert scene data.
+	m_ketsjiEngine->ConvertScene(m_kxStartScene);
+
 	m_ketsjiEngine->AddScene(m_kxStartScene);
 	m_kxStartScene->Release();
 

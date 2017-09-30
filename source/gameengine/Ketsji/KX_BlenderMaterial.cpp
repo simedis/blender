@@ -45,19 +45,13 @@
 #include "DNA_meshdata_types.h"
 #include "DNA_scene_types.h"
 
-KX_BlenderMaterial::KX_BlenderMaterial(
-		KX_Scene *scene,
-		Material *mat,
-		const std::string& name,
-		GameSettings *game,
-		int lightlayer)
-	:RAS_IPolyMaterial(name, game),
+KX_BlenderMaterial::KX_BlenderMaterial(Material *mat, const std::string& name, int lightlayer)
+	:RAS_IPolyMaterial(name, &mat->game),
 	m_material(mat),
 	m_shader(nullptr),
 	m_blenderShader(nullptr),
-	m_scene(scene),
+	m_scene(nullptr),
 	m_userDefBlend(false),
-	m_constructed(false),
 	m_lightLayer(lightlayer)
 {
 	// Save material data to restore on exit
@@ -99,6 +93,9 @@ KX_BlenderMaterial::KX_BlenderMaterial(
 	m_flag |= ((mat->mode & MA_ONLYCAST) != 0) ? RAS_ONLYSHADOW : 0;
 	m_flag |= ((m_material->shade_flag & MA_OBCOLOR) != 0) ? RAS_OBJECTCOLOR : 0;
 
+	m_blendFunc[0] = 0;
+	m_blendFunc[1] = 0;
+
 	InitTextures();
 }
 
@@ -119,11 +116,19 @@ KX_BlenderMaterial::~KX_BlenderMaterial()
 	m_material->amb = m_savedData.ambient;
 	m_material->spectra = m_savedData.specularalpha;
 
-	// cleanup work
-	if (m_constructed) {
-		// clean only if material was actually used
-		OnExit();
+	if (m_shader) {
+		delete m_shader;
+		m_shader = nullptr;
 	}
+	if (m_blenderShader) {
+		delete m_blenderShader;
+		m_blenderShader = nullptr;
+	}
+
+	/* used to call with 'm_material->tface' but this can be a freed array,
+	 * see: [#30493], so just call with nullptr, this is best since it clears
+	 * the 'lastface' pointer in GPU too - campbell */
+	GPU_set_tpage(nullptr, 1, m_alphablend);
 }
 
 void KX_BlenderMaterial::GetRGBAColor(unsigned char *rgba) const
@@ -177,41 +182,24 @@ void KX_BlenderMaterial::InitTextures()
 	}
 }
 
-void KX_BlenderMaterial::OnConstruction()
+void KX_BlenderMaterial::InitScene(KX_Scene *scene)
 {
-	if (m_constructed) {
-		// when material are reused between objects
-		return;
+	m_scene = scene;
+
+	if (!m_blenderShader) {
+		m_blenderShader = new BL_BlenderShader(m_scene, m_material, m_lightLayer);
 	}
 
-	SetBlenderGLSLShader();
-
-	m_blendFunc[0] = 0;
-	m_blendFunc[1] = 0;
-	m_constructed = true;
+	if (!m_blenderShader->Ok()) {
+		delete m_blenderShader;
+		m_blenderShader = nullptr;
+	}
 }
 
 void KX_BlenderMaterial::EndFrame(RAS_Rasterizer *rasty)
 {
 	rasty->SetAlphaBlend(GPU_BLEND_SOLID);
 	RAS_Texture::DesactiveTextures();
-}
-
-void KX_BlenderMaterial::OnExit()
-{
-	if (m_shader) {
-		delete m_shader;
-		m_shader = nullptr;
-	}
-	if (m_blenderShader) {
-		delete m_blenderShader;
-		m_blenderShader = nullptr;
-	}
-
-	/* used to call with 'm_material->tface' but this can be a freed array,
-	 * see: [#30493], so just call with nullptr, this is best since it clears
-	 * the 'lastface' pointer in GPU too - campbell */
-	GPU_set_tpage(nullptr, 1, m_alphablend);
 }
 
 
@@ -457,22 +445,6 @@ const RAS_Rasterizer::AttribLayerList KX_BlenderMaterial::GetAttribLayers(const 
 
 	static const RAS_Rasterizer::AttribLayerList attribLayers;
 	return attribLayers;
-}
-
-void KX_BlenderMaterial::ReplaceScene(KX_Scene *scene)
-{
-	OnConstruction();
-}
-
-void KX_BlenderMaterial::SetBlenderGLSLShader()
-{
-	if (!m_blenderShader)
-		m_blenderShader = new BL_BlenderShader(m_scene, m_material, m_lightLayer);
-
-	if (!m_blenderShader->Ok()) {
-		delete m_blenderShader;
-		m_blenderShader = nullptr;
-	}
 }
 
 std::string KX_BlenderMaterial::GetName()

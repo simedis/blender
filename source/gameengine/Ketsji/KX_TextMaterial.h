@@ -53,8 +53,6 @@ public:
 						   MT_Scalar emit, MT_Scalar ambient, MT_Scalar alpha, MT_Scalar specalpha);
 
 	virtual const RAS_Rasterizer::AttribLayerList GetAttribLayers(const RAS_MeshObject::LayersInfo& layersInfo) const;
-
-	virtual void OnConstruction();
 };
 
 /// Global text material instance pointer used to create or find a material bucket in the bucket manager.
