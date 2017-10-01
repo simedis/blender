@@ -386,6 +386,15 @@ void RAS_BucketManager::ReleaseDisplayLists(RAS_IPolyMaterial *mat)
 	}
 }
 
+void RAS_BucketManager::GenerateAttribLayers()
+{
+	for (RAS_MaterialBucket *bucket : m_buckets[ALL_BUCKET]) {
+		for (RAS_DisplayArrayBucket *arrayBucket : bucket->GetDisplayArrayBucketList()) {
+			arrayBucket->GenerateAttribLayers();
+		}
+	}
+}
+
 void RAS_BucketManager::ReleaseMaterials(RAS_IPolyMaterial *mat)
 {
 	BucketList& buckets = m_buckets[ALL_BUCKET];

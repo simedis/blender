@@ -100,6 +100,12 @@ public:
 	RAS_MaterialBucket *FindBucket(RAS_IPolyMaterial *material, bool &bucketCreated);
 
 	void ReleaseDisplayLists(RAS_IPolyMaterial *material = nullptr);
+	/** Generate meshes to materials attribute layers. Must be called when all
+	 * the materials owned by the bucket manager contain valid shader.
+	 * \note Generate attribute layers only for display array bucket with
+	 * empty layers list only.
+	 */
+	void GenerateAttribLayers();
 	void ReleaseMaterials(RAS_IPolyMaterial *material = nullptr);
 
 	// freeing scenes only
@@ -107,10 +113,11 @@ public:
 
 	// for merging
 	void MergeBucketManager(RAS_BucketManager *other, SCA_IScene *scene);
-	BucketList& GetBuckets()
-	{
-		return m_buckets[ALL_BUCKET];
-	}
+
+    BucketList& GetBuckets()
+    {
+        return m_buckets[ALL_BUCKET];
+    }
 
 private:
 	void RenderBasicBuckets(const MT_Transform& cameratrans, RAS_Rasterizer *rasty, BucketType bucketType);
