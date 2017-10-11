@@ -105,6 +105,11 @@ class KX_Scene *KX_LibLoadStatus::GetMergeScene()
 	return m_mergescene;
 }
 
+BL_BlenderConverter::LibLoadOptions KX_LibLoadStatus::GetOptions() const
+{
+	return m_options;
+}
+
 const std::vector<Scene *>& KX_LibLoadStatus::GetBlenderScenes() const
 {
 	return m_blenderScenes;

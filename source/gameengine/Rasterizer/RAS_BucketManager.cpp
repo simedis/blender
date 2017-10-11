@@ -395,13 +395,13 @@ void RAS_BucketManager::GenerateAttribLayers()
 	}
 }
 
-void RAS_BucketManager::ReleaseMaterials(RAS_IPolyMaterial *mat)
+void RAS_BucketManager::ReloadShaders(RAS_IPolyMaterial *mat)
 {
 	BucketList& buckets = m_buckets[ALL_BUCKET];
 	for (BucketList::iterator it = buckets.begin(), end = buckets.end(); it != end; ++it) {
 		RAS_MaterialBucket *bucket = *it;
 		if (mat == nullptr || (mat == bucket->GetPolyMaterial())) {
-			bucket->GetPolyMaterial()->ReleaseMaterial();
+			bucket->GetPolyMaterial()->ReloadShader();
 		}
 	}
 }

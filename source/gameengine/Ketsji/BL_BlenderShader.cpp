@@ -43,15 +43,12 @@
 #include "KX_Scene.h"
 
 BL_BlenderShader::BL_BlenderShader(KX_Scene *scene, struct Material *ma, int lightlayer)
-	:m_mat(ma),
+	:m_blenderScene(scene->GetBlenderScene()),
+	m_mat(ma),
 	m_lightLayer(lightlayer),
+	m_alphaBlend(GPU_BLEND_SOLID),
 	m_GPUMat(nullptr)
 {
-	m_blenderScene = scene->GetBlenderScene();
-	m_alphaBlend = GPU_BLEND_SOLID;
-
-	ReloadMaterial();
-	ParseAttribs();
 }
 
 BL_BlenderShader::~BL_BlenderShader()
@@ -102,7 +99,7 @@ const RAS_Rasterizer::AttribLayerList BL_BlenderShader::GetAttribLayers(const RA
 	return attribLayers;
 }
 
-void BL_BlenderShader::ReloadMaterial()
+void BL_BlenderShader::Reload()
 {
 	// Force regenerating shader by deleting it.
 	if (m_GPUMat) {

@@ -92,7 +92,7 @@ bool KX_TextMaterial::UseInstancing() const
 	return false;
 }
 
-void KX_TextMaterial::ReleaseMaterial()
+void KX_TextMaterial::ReloadShader()
 {
 }
 

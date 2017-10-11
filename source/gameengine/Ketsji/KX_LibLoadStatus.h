@@ -29,6 +29,7 @@
 
 #include "EXP_PyObjectPlus.h"
 #include "BL_BlenderSceneConverter.h"
+#include "BL_BlenderConverter.h"
 
 class BL_BlenderConverter;
 class KX_KetsjiEngine;
@@ -44,6 +45,7 @@ private:
 	std::vector<Scene *> m_blenderScenes;
 	std::vector<BL_BlenderSceneConverter> m_sceneConvertes;
 	std::string m_libname;
+	BL_BlenderConverter::LibLoadOptions m_options;
 
 	float	m_progress;
 	double	m_starttime;
@@ -70,6 +72,7 @@ public:
 	class BL_BlenderConverter *GetConverter();
 	class KX_KetsjiEngine *GetEngine();
 	class KX_Scene *GetMergeScene();
+	BL_BlenderConverter::LibLoadOptions GetOptions() const;
 
 	const std::vector<Scene *>& GetBlenderScenes() const;
 	void SetBlenderScenes(const std::vector<Scene *>& scenes);
