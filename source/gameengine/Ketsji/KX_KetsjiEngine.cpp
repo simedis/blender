@@ -1458,16 +1458,12 @@ void KX_KetsjiEngine::AddScheduledScenes()
 {
 	std::vector<std::string>::iterator scenenameit;
 
-	if (m_addingOverlayScenes.size()) {
-		for (scenenameit = m_addingOverlayScenes.begin();
-		     scenenameit != m_addingOverlayScenes.end();
-		     scenenameit++)
-		{
-			std::string scenename = *scenenameit;
+	if (!m_addingOverlayScenes.empty()) {
+		for (const std::string& scenename : m_addingOverlayScenes) {
 			KX_Scene *tmpscene = CreateScene(scenename);
-			ConvertScene(tmpscene);
 
 			if (tmpscene) {
+				ConvertScene(tmpscene);
 				m_scenes->Add(tmpscene->AddRef());
 				PostProcessScene(tmpscene);
 				tmpscene->Release();
@@ -1479,16 +1475,12 @@ void KX_KetsjiEngine::AddScheduledScenes()
 		m_addingOverlayScenes.clear();
 	}
 
-	if (m_addingBackgroundScenes.size()) {
-		for (scenenameit = m_addingBackgroundScenes.begin();
-		     scenenameit != m_addingBackgroundScenes.end();
-		     scenenameit++)
-		{
-			std::string scenename = *scenenameit;
+	if (!m_addingBackgroundScenes.empty()) {
+		for (const std::string& scenename : m_addingBackgroundScenes) {
 			KX_Scene *tmpscene = CreateScene(scenename);
-			ConvertScene(tmpscene);
 
 			if (tmpscene) {
+				ConvertScene(tmpscene);
 				m_scenes->Insert(0, tmpscene->AddRef());
 				PostProcessScene(tmpscene);
 				tmpscene->Release();
