@@ -658,7 +658,7 @@ static PyObject *gLibLoad(PyObject *, PyObject *args, PyObject *kwds)
 		"reload_materials", nullptr};
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|y*iiIiOi:LibLoad", const_cast<char**>(kwlist),
-									&path, &group, &py_buffer, &load_actions, &verbose, &load_scripts, &async,
+									&path, &group, &py_buffer, &load_actions, &verbose, &load_scripts, &async, &kx_scene,
 									&reloadAllMats))
 	{
 		return nullptr;
