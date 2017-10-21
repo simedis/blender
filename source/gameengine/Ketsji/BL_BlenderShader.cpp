@@ -108,6 +108,8 @@ void BL_BlenderShader::Reload()
 	}
 
 	m_GPUMat = (m_mat) ? GPU_material_from_blender(m_blenderScene, m_mat, false, UseInstancing()) : nullptr;
+
+	ParseAttribs();
 }
 
 void BL_BlenderShader::SetProg(bool enable, double time, RAS_Rasterizer *rasty)
