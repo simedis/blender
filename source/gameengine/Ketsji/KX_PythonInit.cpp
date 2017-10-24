@@ -654,7 +654,7 @@ static PyObject *gLibLoad(PyObject *, PyObject *args, PyObject *kwds)
 	short options=0;
 	int load_actions=0, verbose=0, load_scripts=1, async=0, reloadAllMats = 0;
 
-	static const char *kwlist[] = {"path", "group", "buffer", "load_actions", "verbose", "load_scripts", "async",
+	static const char *kwlist[] = {"path", "group", "buffer", "load_actions", "verbose", "load_scripts", "async", "scene",
 		"reload_materials", nullptr};
 	
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|y*iiIiOi:LibLoad", const_cast<char**>(kwlist),
