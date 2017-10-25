@@ -101,6 +101,7 @@ public:
 
 	KX_PYMETHOD_DOC(KX_BlenderMaterial, getShader);
 	KX_PYMETHOD_DOC(KX_BlenderMaterial, getTextureBindcode);
+	KX_PYMETHOD_DOC(KX_BlenderMaterial, reloadShader);
 
 	KX_PYMETHOD_DOC(KX_BlenderMaterial, setBlending);
 
