@@ -88,6 +88,7 @@ void	btSoftBody::initDefaults()
 	m_cfg.diterations	=	0;
 	m_cfg.citerations	=	4;
 	m_cfg.collisions	=	fCollision::Default;
+	m_cfg.numclusters   =   0;
 	m_pose.m_bvolume	=	false;
 	m_pose.m_bframe		=	false;
 	m_pose.m_volume		=	0;
@@ -1977,6 +1978,10 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 	}
 
 	m_bUpdateRtCst=true;
+	if (m_clusters.size() > 1)
+	{
+		generateClusters(m_cfg.numclusters);
+	}
 	return true;
 }
 

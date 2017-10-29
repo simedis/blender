@@ -606,6 +606,7 @@ public:
 		int						diterations;	// Drift solver iterations
 		int						citerations;	// Cluster solver iterations
 		int						collisions;		// Collisions flags
+		int						numclusters;	// Number of clusters
 		tVSolverArray			m_vsequence;	// Velocity solvers sequence
 		tPSolverArray			m_psequence;	// Position solvers sequence
 		tPSolverArray			m_dsequence;	// Drift solvers sequence
