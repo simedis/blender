@@ -315,7 +315,7 @@ void BL_BlenderConverter::MergeAsyncLoads()
 			KX_Scene *scene = converter.GetScene();
 			MergeScene(mergeScene, scene);
 			// Finalize material and mesh conversion.
-			InitSceneShaders(converter, mergeScene, (libload->GetOptions() & LIB_LOAD_RELOAD_MATERIALS));
+			InitSceneShaders(converter, mergeScene, (libload->GetOptions() & LIB_LOAD_COMPILE_SHADERS));
 			delete scene;
 		}
 
@@ -522,7 +522,7 @@ KX_LibLoadStatus *BL_BlenderConverter::LinkBlendFile(BlendHandle *bpy_openlib, c
 				MergeScene(scene_merge, other);
 
 				// Finalize material and mesh conversion.
-				InitSceneShaders(sceneConverter, scene_merge, (options & LIB_LOAD_RELOAD_MATERIALS));
+				InitSceneShaders(sceneConverter, scene_merge, (options & LIB_LOAD_COMPILE_SHADERS));
 
 				delete other;
 			}

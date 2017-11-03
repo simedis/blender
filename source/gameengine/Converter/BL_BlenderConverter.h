@@ -78,7 +78,7 @@ public:
 		LIB_LOAD_VERBOSE = (1 << 1),
 		LIB_LOAD_LOAD_SCRIPTS = (1 << 2),
 		LIB_LOAD_ASYNC = (1 << 3),
-		LIB_LOAD_RELOAD_MATERIALS = (1 << 4)
+		LIB_LOAD_COMPILE_SHADERS = (1 << 4)
 	};
 
 private:

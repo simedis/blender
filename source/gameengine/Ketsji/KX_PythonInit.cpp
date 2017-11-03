@@ -652,14 +652,14 @@ static PyObject *gLibLoad(PyObject *, PyObject *args, PyObject *kwds)
 	KX_LibLoadStatus *status = nullptr;
 
 	short options=0;
-	int load_actions=0, verbose=0, load_scripts=1, async=0, reloadAllMats = 0;
+	int load_actions=0, verbose=0, load_scripts=1, async=0, compile_shaders = 0;
 
 	static const char *kwlist[] = {"path", "group", "buffer", "load_actions", "verbose", "load_scripts", "async", "scene",
-		"reload_materials", nullptr};
+		"compile_shaders", nullptr};
 
 	if (!PyArg_ParseTupleAndKeywords(args, kwds, "ss|y*iiIiOi:LibLoad", const_cast<char**>(kwlist),
 									&path, &group, &py_buffer, &load_actions, &verbose, &load_scripts, &async, &kx_scene,
-									&reloadAllMats))
+									&compile_shaders))
 	{
 		return nullptr;
 	}
@@ -673,8 +673,8 @@ static PyObject *gLibLoad(PyObject *, PyObject *args, PyObject *kwds)
 		options |= BL_BlenderConverter::LIB_LOAD_LOAD_SCRIPTS;
 	if (async != 0)
 		options |= BL_BlenderConverter::LIB_LOAD_ASYNC;
-	if (reloadAllMats) {
-		options |= BL_BlenderConverter::LIB_LOAD_RELOAD_MATERIALS;
+	if (compile_shaders) {
+		options |= BL_BlenderConverter::LIB_LOAD_COMPILE_SHADERS;
 	}
 
 	BL_BlenderConverter *converter = KX_GetActiveEngine()->GetConverter();
