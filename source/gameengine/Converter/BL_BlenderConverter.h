@@ -78,7 +78,7 @@ public:
 		LIB_LOAD_VERBOSE = (1 << 1),
 		LIB_LOAD_LOAD_SCRIPTS = (1 << 2),
 		LIB_LOAD_ASYNC = (1 << 3),
-		LIB_LOAD_RELOAD_ALL_MATERIALS = (1 << 4)
+		LIB_LOAD_COMPILE_SHADERS = (1 << 4)
 	};
 
 private:
@@ -128,9 +128,9 @@ public:
 	 * merging.
 	 * \param converter The scene convert to finalize.
 	 * \param mergeScene The scene used to generate shaders.
-	 * \param reloadAllMat Reload all the material of the final scene.
+	 * \param reloadMats Reload all the material of the final scene. If disabled, no shaders will be compiled
 	 */
-	void InitSceneShaders(const BL_BlenderSceneConverter& converter, KX_Scene *mergeScene, bool reloadAllMat);
+	void InitSceneShaders(const BL_BlenderSceneConverter& converter, KX_Scene *mergeScene, bool reloadMats);
 
 	/** This function removes all entities stored in the converter for that scene
 	 * It should be used instead of direct delete scene

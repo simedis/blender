@@ -563,6 +563,7 @@ PyMethodDef KX_BlenderMaterial::Methods[] =
 {
 	KX_PYMETHODTABLE(KX_BlenderMaterial, getShader),
 	KX_PYMETHODTABLE( KX_BlenderMaterial, getTextureBindcode),
+	KX_PYMETHODTABLE( KX_BlenderMaterial, reloadShader),
 	KX_PYMETHODTABLE(KX_BlenderMaterial, setBlending),
 	{nullptr, nullptr} //Sentinel
 };
@@ -940,6 +941,12 @@ KX_PYMETHODDEF_DOC(KX_BlenderMaterial, setBlending, "setBlending(bge.logic.src, 
 		Py_RETURN_NONE;
 	}
 	return nullptr;
+}
+
+KX_PYMETHODDEF_DOC(KX_BlenderMaterial, reloadShader, "reloadShader(bge.logic.src, bge.logic.dest)")
+{
+	ReloadShader();
+	Py_RETURN_NONE;
 }
 
 KX_PYMETHODDEF_DOC(KX_BlenderMaterial, getTextureBindcode, "getTextureBindcode(texslot)")
