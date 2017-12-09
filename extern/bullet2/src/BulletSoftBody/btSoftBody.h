@@ -181,15 +181,17 @@ public:
 		virtual bool	Eval(const btVector3& x)=0;
 	};
 
-	struct NewNodeCallbackFn
+	struct NodeCallbackFn
 	{
-		virtual ~NewNodeCallbackFn() {}
+		virtual ~NodeCallbackFn() {}
 		// called when a new node is created, to give a chance to the callee to prepare app-side node data
 		// newnode : index of node being created
 		// node0   : index of first node from which it is created
 		// node1   : index of second node from which it is created, or -1 if none
 		// t       : interpolation factor from node0 to node1 where newnode is created, only if node1 != -1
-		virtual void Signal(int newnode, int node0, int node1=-1, btScalar t=0.f) = 0;
+		virtual void NewNode(int newnode, int node0, int node1=-1, btScalar t=0.f) = 0;
+		// called when the refine function detects a node that ends the cut line, the index of the node is signalled
+		virtual void EndNode(int node) = 0;
 	};
 
 	//
@@ -874,7 +876,7 @@ public:
 	///otherwise an approximation will be used (better performance)
 	int					generateClusters(int k,int maxiterations=8192);
 	/* Refine																*/ 
-	bool				refine(ImplicitFn* ifn,btScalar accurary,bool cut, SelectFn* sfn=NULL, NewNodeCallbackFn* nfn=NULL);
+	bool				refine(ImplicitFn* ifn,btScalar accurary,bool cut, SelectFn* sfn=NULL, NodeCallbackFn* nfn=NULL);
 	/* CutLink																*/ 
 	bool				cutLink(int node0,int node1,btScalar position);
 	bool				cutLink(const Node* node0,const Node* node1,btScalar position);

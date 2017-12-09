@@ -1975,6 +1975,7 @@ PyMethodDef KX_GameObject::Methods[] = {
 	{"reinstancePhysicsMesh", (PyCFunction)KX_GameObject::sPyReinstancePhysicsMesh,METH_VARARGS},
 	{"replacePhysicsShape", (PyCFunction)KX_GameObject::sPyReplacePhysicsShape, METH_O},
 	{"refine", (PyCFunction)KX_GameObject::sPyRefine,METH_VARARGS},
+    {"getPhysicsNodePosition", (PyCFunction)KX_GameObject::sPyGetPhysicsNodePosition,METH_O},
 
 	KX_PYMETHODTABLE(KX_GameObject, rayCastTo),
 	KX_PYMETHODTABLE(KX_GameObject, rayCast),
@@ -3713,12 +3714,14 @@ PyObject *KX_GameObject::PyRefine(PyObject *args)
 {
 	SCA_LogicManager *logicmgr = GetScene()->GetLogicManager();
 	KX_GameObject *cutobj;
-	PyObject *value;
+	PyObject *value, *ret;
 	float accuracy = 0.05f;
 	RAS_MeshObject *mesh;
 	MT_Vector3 abc, normal;
 	bool res = false;
 	int polycount;
+
+	ret = nullptr;
 
 	if (!PyArg_ParseTuple(args,"O|f:refine", &value, &accuracy))
 		return nullptr;
@@ -3772,17 +3775,47 @@ PyObject *KX_GameObject::PyRefine(PyObject *args)
 		if (deformer)
 			cb = deformer->GetRefineCallback();
 		res = GetPhysicsController()->Refine(cutPlane, accuracy, &cutZone, cb);
-		if (cb)
+		if (cb) {
+			int *nodes = NULL;
+			int count = cb->GetEndNodes(&nodes);
+			if (res && count) {
+				ret = PyTuple_New(count);
+				while (count) {
+					count--;
+					PyTuple_SET_ITEM(ret, count, PyLong_FromLong(nodes[count]));
+				}
+			}
 			cb->Finalize(res);
+		}
 	}
 
+	if (ret)
+		return ret;
 	if (res)
         Py_RETURN_TRUE;
     else
         Py_RETURN_FALSE;
 }
 
+PyObject *KX_GameObject::PyGetPhysicsNodePosition(PyObject *value)
+{
+	RAS_Deformer* deformer = GetDeformer();
+	int idx = PyLong_AsLong(value);
+	float vec[3];
 
+	if (!deformer || !deformer->GetNodePosition(idx, vec))
+		Py_RETURN_FALSE;
+
+#ifdef USE_MATHUTILS
+	return Vector_CreatePyObject(vec, 3, nullptr);
+#else
+	PyObject *list = PyList_New(3);
+	PyList_SET_ITEM(list, 0, PyFloat_FromDouble(vec[0]));
+	PyList_SET_ITEM(list, 1, PyFloat_FromDouble(vec[1]));
+	PyList_SET_ITEM(list, 2, PyFloat_FromDouble(vec[2]));
+	return list;
+#endif
+}
 
 PyObject *KX_GameObject::PyAlignAxisToVect(PyObject *args)
 {

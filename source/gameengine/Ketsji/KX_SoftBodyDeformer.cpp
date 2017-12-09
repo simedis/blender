@@ -181,6 +181,7 @@ public:
 		m_uvsize = array->GetVertexUvSize();
 		m_rgbsize = array->GetVertexColorSize();
 		m_vertexnb = m_array->GetVertexCount();
+		m_endNodes.reserve(8);
 	}
 
 	virtual void NewNode(int newnode, int node0, int node1, float t)
@@ -245,6 +246,19 @@ public:
 		}
 	}
 
+	void EndNode(int endnode)
+	{
+		m_endNodes.push_back(endnode);
+	}
+
+	int GetEndNodes(int **nodes)
+	{
+		if (nodes == NULL || m_endNodes.size() == 0)
+			return 0;
+		*nodes = &m_endNodes[0];
+		return m_endNodes.size();
+	}
+
 	virtual void Finalize(bool success)
 	{
 		if (success)
@@ -284,6 +298,7 @@ protected:
 	RAS_IDisplayArray *m_array;
 	btSoftBody *m_softBody;
 	std::vector<int> *m_soft2vertex;
+	btAlignedObjectArray<int> m_endNodes;
 	int m_uvsize;
 	int m_rgbsize;
 	unsigned int m_vertexnb;
@@ -354,6 +369,27 @@ PHY_IRefineCallback* KX_SoftBodyDeformer::GetRefineCallback()
 		delete soft2vertex;
 	// soft2vertex will be deleted when cb is finalized
 	return cb;
+}
+
+bool KX_SoftBodyDeformer::GetNodePosition(int idx, float pos[3])
+{
+	CcdPhysicsController *ctrl = (CcdPhysicsController *)m_gameobj->GetPhysicsController();
+	if (!ctrl)
+		return false;
+
+	btSoftBody *softBody = ctrl->GetSoftBody();
+	if (!softBody)
+		return false;
+
+	if (idx < 0 ||  idx >= softBody->m_nodes.size())
+		return false;
+
+	const btVector3& x=softBody->m_nodes[idx].m_x;
+	pos[0] = x.getX();
+	pos[1] = x.getY();
+	pos[2] = x.getZ();
+
+	return true;
 }
 
 

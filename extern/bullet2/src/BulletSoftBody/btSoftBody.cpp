@@ -1386,7 +1386,7 @@ int				btSoftBody::generateClusters(int k,int maxiterations)
 }
 
 //
-bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* sfn, NewNodeCallbackFn* nfn)
+bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* sfn, NodeCallbackFn* nfn)
 {
 	const Node*			nbase;
 	int					ncount = m_nodes.size();
@@ -1470,7 +1470,7 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 				appendNode(x,m);
 				ni = m_nodes.size()-1;
 				if (nfn)
-					nfn->Signal(ni, i, j, t);
+					nfn->NewNode(ni, i, j, t);
 				edges(i,j)=ni;
 				m_nodes[ni].m_v=v;
 			}
@@ -1654,7 +1654,7 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 			const int idx[]={int(feat.m_n[0]-nbase),
 				int(feat.m_n[1]-nbase),
 				int(feat.m_n[2]-nbase)};
-			for (j=ncut=0; j<3; j++) {
+			for (j=ncut=k=0; j<3; j++) {
 				tag = cnodes[idx[j]];
 				if (tag & M_CUT)
 				{
@@ -1867,11 +1867,14 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 				cnodes[i]=m_nodes.size()-1;
 				m_nodes[cnodes[i]].m_v=v;
 				if (nfn)
-					nfn->Signal(cnodes[i], i);
+					nfn->NewNode(cnodes[i], i);
 				++nchg;
 			}
 			else
 			{
+				if (nfn && (cnodes[i] & M_MANIFOLD))
+					// this is one of the end point of the cut, remember it
+					nfn->EndNode(i);
 				cnodes[i] = 0;
 			}
 		}

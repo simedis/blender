@@ -127,6 +127,10 @@ public:
 	{
 		return NULL;
 	}
+	virtual bool GetNodePosition(int node, float pos[3])
+	{
+		return false;
+	}
 
 	/**
 	 * UnlinkObject(...)

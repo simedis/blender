@@ -52,6 +52,19 @@ class PHY_IRefineCallback
 public:
 	PHY_IRefineCallback() {}
 
+	// After the refine function, you can call this function to get the list of end nodes produced by the cut
+	// nodes is initialized to an array of end nodes indices
+	// the return value is the number of elements in the array, can be 0
+	// Note: the nodes array is held internally in the callback object, it doesn't need to be deleted
+	// but it cannot be used after the finalize function is called
+	virtual int GetEndNodes(int **nodes) = 0;
+	// If success is true, the nodes that have been added are confirmed
+	// and the indices are updated from the new softbody faces.
+	// The object is also deleted on return
+	virtual void Finalize(bool success) = 0;
+
+	// Below are internal functions that must be provided by the implementor
+
 	// Called by the Refine function when new nodes are created.
 	// The function should update the graphic mesh in consequence.
     // 	 newnode is the index of the new node in the softbody structure
@@ -60,10 +73,14 @@ public:
     //   t is the interpolation factor between node0 (t=0.f) and node 1 (t=1.f), only if node1 is used
     // All index in softbody numbering plan (the callee must convert to graphic vertex index)
 	virtual void NewNode(int newnode, int node0, int node1, float t) = 0;
-	// If success is true, the nodes that have been added are confirmed
-	// and the indices are updated from the new softbody faces
-	// The object is also deleted on return
-	virtual void Finalize(bool success) = 0;
+	// Called by the Refine function when an end node of a cut is detected.
+	// The function should store the index in an array
+	// An end node is by definition a node that is on the cut line but is not duplicated.
+	// You won't get end node if there are no select zone or if the cut is complete
+	// Note that this function may be still called although the refine produce no cut in the end
+	// This is the case for example if the cut results in only 2 end nodes
+	virtual void EndNode(int endnode) = 0;
+
 protected:
 	// destructor private because the object must be deleted through the Finalize function
 	virtual ~PHY_IRefineCallback() {}

@@ -1084,16 +1084,20 @@ bool CcdPhysicsController::Refine(PHY_IRefineCut& cut, float accuracy, PHY_IRefi
 
 		if (cb)
 		{
-			struct NewNodeFn : public btSoftBody::NewNodeCallbackFn
+			struct NodeFn : public btSoftBody::NodeCallbackFn
 			{
-				void Signal(int newnode, int node0, int node1, btScalar t)
+				void NewNode(int newnode, int node0, int node1, btScalar t)
 				{
 					mCb->NewNode(newnode, node0, node1, t);
 				}
+				void EndNode(int endnode)
+				{
+					mCb->EndNode(endnode);
+				}
 				PHY_IRefineCallback* mCb;
-			} newnode;
-			newnode.mCb = cb;
-			return body->refine(&myCut, accuracy, true, &mySel, &newnode);
+			} nodecb;
+			nodecb.mCb = cb;
+			return body->refine(&myCut, accuracy, true, &mySel, &nodecb);
 		}
 		else
 			return body->refine(&myCut, accuracy, true, &mySel);

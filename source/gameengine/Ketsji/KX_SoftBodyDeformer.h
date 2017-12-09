@@ -93,6 +93,7 @@ public:
 		return false;
 	}
 	virtual PHY_IRefineCallback* GetRefineCallback();
+	virtual bool GetNodePosition(int idx, float pos[3]);
 };
 
 #endif
