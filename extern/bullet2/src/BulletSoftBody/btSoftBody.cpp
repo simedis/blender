@@ -386,6 +386,32 @@ void			btSoftBody::appendAnchor(int node,btRigidBody* body, const btVector3& loc
 	m_anchors.push_back(a);
 }
 
+void			btSoftBody::removeAnchors(btRigidBody* body, bool reenableCollision)
+{
+	int i, ni;
+	for(i=0,ni=m_anchors.size();i<ni;++i)
+	{
+		Anchor&			a=m_anchors[i];
+		if (a.m_body == body)
+		{
+			if (i != ni-1)
+				m_anchors.swap(i, ni-1);
+			m_anchors.pop_back(); --ni;	--i;
+		}
+	}
+	if (reenableCollision)
+	{
+		i = m_collisionDisabledObjects.findLinearSearch(body);
+		ni = m_collisionDisabledObjects.size();
+		if (i < ni)
+		{
+			m_collisionDisabledObjects.swap(i, ni-1);
+			m_collisionDisabledObjects.pop_back();
+		}
+	}
+}
+
+
 //
 void			btSoftBody::appendLinearJoint(const LJoint::Specs& specs,Cluster* body0,Body body1)
 {

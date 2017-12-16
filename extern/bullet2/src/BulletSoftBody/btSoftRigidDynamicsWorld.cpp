@@ -149,10 +149,23 @@ void	btSoftRigidDynamicsWorld::removeSoftBody(btSoftBody* body)
 void	btSoftRigidDynamicsWorld::removeCollisionObject(btCollisionObject* collisionObject)
 {
 	btSoftBody* body = btSoftBody::upcast(collisionObject);
+	btRigidBody* rigidBody = btRigidBody::upcast(collisionObject);
 	if (body)
 		removeSoftBody(body);
+	else if (rigidBody)
+	{
+		int i, ni;
+		for (i=0, ni=m_softBodies.size(); i<ni; ++i)
+		{
+			body = m_softBodies[i];
+			// use true to ensure that the rigidbody is also removed from m_collisionDisabledObjects
+			body->removeAnchors(rigidBody, true);
+			// TBD: there are other places where a rigidbody is referenced (joints)
+		}
+		removeRigidBody(rigidBody);
+	}
 	else
-		btDiscreteDynamicsWorld::removeCollisionObject(collisionObject);
+		btCollisionWorld::removeCollisionObject(collisionObject);
 }
 
 void	btSoftRigidDynamicsWorld::debugDrawWorld()

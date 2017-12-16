@@ -577,7 +577,8 @@ bool CcdPhysicsEnvironment::RemoveCcdPhysicsController(CcdPhysicsController *ctr
 			btTypedConstraint *con = ctrl->getCcdConstraintRef(i);
 			RemoveConstraint(con);
 		}
-		m_dynamicsWorld->removeRigidBody(ctrl->GetRigidBody());
+		// use the generic remove to clear the softbody anchors if any
+		m_dynamicsWorld->removeCollisionObject(ctrl->GetRigidBody());
 
 		// Handle potential vehicle constraints
 		int numVehicles = m_wrapperVehicles.size();
@@ -618,18 +619,19 @@ void CcdPhysicsEnvironment::UpdateCcdPhysicsController(CcdPhysicsController *ctr
 	if (obj)
 	{
 		btVector3 inertia(0.0,0.0,0.0);
-		m_dynamicsWorld->removeCollisionObject(obj);
 		obj->setCollisionFlags(newCollisionFlags);
 		if (body) {
+			m_dynamicsWorld->removeRigidBody(body);
 			if (newMass)
 				body->getCollisionShape()->calculateLocalInertia(newMass, inertia);
 			body->setMassProps(newMass, inertia);
 			m_dynamicsWorld->addRigidBody(body, newCollisionGroup, newCollisionMask);
 		}
 		else if (softBody) {
-			m_dynamicsWorld->addSoftBody(softBody);
+			; // TBD: process change in mass
 		}
 		else {
+			m_dynamicsWorld->removeCollisionObject(obj);
 			m_dynamicsWorld->addCollisionObject(obj, newCollisionGroup, newCollisionMask);
 		}
 	}
