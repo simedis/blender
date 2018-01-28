@@ -1604,10 +1604,7 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 						{
 							Link* nl = &m_links[m_links.size()-1];
 							btScalar t = btSqrt((pn[1]->m_x-pn[3]->m_x).length2()/(pn[1]->m_x-pn[2]->m_x).length2());
-							btScalar a = m_links[na].m_rl;
-							btScalar b = m_links[nb].m_rl;
-							btScalar c = m_links[nc].m_rl;
-							nl->m_c1 = (1-t)*(b*b-t*c*c)+t*a*a;
+							nl->m_c1 = (1-t)*(m_links[na].m_c1-t*m_links[nc].m_c1)+t*m_links[nb].m_c1;
 							nl->m_rl = btSqrt(nl->m_c1);
 						}
 					}
