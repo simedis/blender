@@ -1968,6 +1968,7 @@ PyMethodDef KX_GameObject::Methods[] = {
     {"getRecalcNormal",(PyCFunction) KX_GameObject::sPyGetRecalcNormal, METH_NOARGS},
 
 
+	{"isSoftBody", (PyCFunction)KX_GameObject::sPyGetIsSoftBody,METH_NOARGS},
 	{"getPhysicsId", (PyCFunction)KX_GameObject::sPyGetPhysicsId,METH_NOARGS},
 	{"getPropertyNames", (PyCFunction)KX_GameObject::sPyGetPropertyNames,METH_NOARGS},
 	{"replaceMesh",(PyCFunction) KX_GameObject::sPyReplaceMesh, METH_VARARGS},
@@ -3795,6 +3796,15 @@ PyObject *KX_GameObject::PyRefine(PyObject *args)
         Py_RETURN_TRUE;
     else
         Py_RETURN_FALSE;
+}
+
+PyObject *KX_GameObject::PyGetIsSoftBody(){
+	RAS_Deformer* deformer = GetDeformer();
+	if (deformer){
+		Py_RETURN_TRUE;
+	} else {
+		Py_RETURN_FALSE;
+	}
 }
 
 PyObject *KX_GameObject::PyGetPhysicsNodePosition(PyObject *value)
