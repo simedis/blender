@@ -1097,6 +1097,8 @@ int CcdPhysicsEnvironment::CreateUniversalD6Constraint(
 void CcdPhysicsEnvironment::RemoveConstraintById(int constraintId)
 {
 	// For soft body constraints
+	bool found = false;
+
 	if (constraintId == 0)
 		return;
 
@@ -1107,16 +1109,33 @@ void CcdPhysicsEnvironment::RemoveConstraintById(int constraintId)
 		if (constraint->getUserConstraintId() == constraintId)
 		{
 			RemoveConstraint(constraint);
+			found = true;
 			break;
 		}
 	}
 
-	WrapperVehicle *vehicle;
-	if ((vehicle = (WrapperVehicle *)GetVehicleConstraint(constraintId)))
+	if (!found)
 	{
-		m_dynamicsWorld->removeVehicle(vehicle->GetVehicle());
-		m_wrapperVehicles.erase(std::remove(m_wrapperVehicles.begin(), m_wrapperVehicles.end(), vehicle));
-		delete vehicle;
+		WrapperVehicle *vehicle;
+		if ((vehicle = (WrapperVehicle *)GetVehicleConstraint(constraintId)))
+		{
+			m_dynamicsWorld->removeVehicle(vehicle->GetVehicle());
+			m_wrapperVehicles.erase(std::remove(m_wrapperVehicles.begin(), m_wrapperVehicles.end(), vehicle));
+			delete vehicle;
+			found = true;
+		}
+	}
+	if (!found)
+	{
+		btSoftBodyArray& softBodyArray = m_dynamicsWorld->getSoftBodyArray();
+		btSoftBody* softBody;
+		int numSoftBody = softBodyArray.size();
+		for (i = 0; i<numSoftBody; ++i)
+		{
+			softBody = softBodyArray[i];
+			if (softBody && softBody->removeAnchor(constraintId, true))
+				break;
+		}
 	}
 }
 
@@ -2497,13 +2516,15 @@ int CcdPhysicsEnvironment::CreateConstraint(class PHY_IPhysicsController *ctrl0,
 		int node = findClosestNode(sb0, pivotPointSoftWorld);
 		if (node >= 0) {
 			if (rb1) {
-				sb0->appendAnchor(node, rb1, disableCollisionBetweenLinkedBodies);
+				int constraintId = gConstraintUid++;
+				sb0->appendAnchor(node, rb1, disableCollisionBetweenLinkedBodies, constraintId);
+				return constraintId;
 			}
 			else {
 				sb0->setMass(node, 0.0f);
 			}
 		}
-		return 0;//can't remove soft body anchors yet
+		return 0;
 	}
 
 	if (sb1) {
@@ -2511,13 +2532,15 @@ int CcdPhysicsEnvironment::CreateConstraint(class PHY_IPhysicsController *ctrl0,
 		int node = findClosestNode(sb1, pivotPointAWorld);
 		if (node >= 0) {
 			if (rb0) {
-				sb1->appendAnchor(node, rb0, disableCollisionBetweenLinkedBodies);
+				int constraintId = gConstraintUid++;
+				sb1->appendAnchor(node, rb0, disableCollisionBetweenLinkedBodies, constraintId);
+				return constraintId;
 			}
 			else {
 				sb1->setMass(node, 0.0f);
 			}
 		}
-		return 0;//can't remove soft body anchors yet
+		return 0;
 	}
 
 	if (rb0static && rb1static) {

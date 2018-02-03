@@ -360,15 +360,9 @@ void			btSoftBody::appendTetra(int node0,
 
 //
 
-void			btSoftBody::appendAnchor(int node,btRigidBody* body, bool disableCollisionBetweenLinkedBodies,btScalar influence)
+void			btSoftBody::appendAnchor(int node,btRigidBody* body, bool disableCollisionBetweenLinkedBodies, int constraintId, btScalar influence)
 {
-	btVector3 local = body->getWorldTransform().inverse()*m_nodes[node].m_x;
-	appendAnchor(node,body,local,disableCollisionBetweenLinkedBodies,influence);
-}
-
-//
-void			btSoftBody::appendAnchor(int node,btRigidBody* body, const btVector3& localPivot,bool disableCollisionBetweenLinkedBodies,btScalar influence)
-{
+	btVector3 localPivot = body->getWorldTransform().inverse()*m_nodes[node].m_x;
 	if (disableCollisionBetweenLinkedBodies)
 	{
 		if (m_collisionDisabledObjects.findLinearSearch(body)==m_collisionDisabledObjects.size())
@@ -383,7 +377,52 @@ void			btSoftBody::appendAnchor(int node,btRigidBody* body, const btVector3& loc
 	a.m_local			=	localPivot;
 	a.m_node->m_battach	=	1;
 	a.m_influence = influence;
+	a.m_id = constraintId;
 	m_anchors.push_back(a);
+}
+
+bool			btSoftBody::removeAnchor(int constraintId, bool reenableCollision)
+{
+	btRigidBody* body = NULL;
+	int i, ni;
+
+	if (constraintId == 0)
+		return false;
+
+	for(i=0,ni=m_anchors.size();i<ni;++i)
+	{
+		Anchor&			a=m_anchors[i];
+		if 	(a.m_id == constraintId)
+		{
+			body = a.m_body;
+			if (i != ni-1)
+				m_anchors.swap(i, ni-1);
+			m_anchors.pop_back();
+			--ni; --i;
+			break;
+		}
+	}
+	if (body && reenableCollision)
+	{
+		for (;i<ni;++i)
+		{
+			Anchor&			a=m_anchors[i];
+			if (a.m_body == body)
+				break;
+		}
+		if (i == ni)
+		{
+			i = m_collisionDisabledObjects.findLinearSearch(body);
+			ni = m_collisionDisabledObjects.size();
+			if (i < ni)
+			{
+				m_collisionDisabledObjects.swap(i, ni-1);
+				m_collisionDisabledObjects.pop_back();
+			}
+		}
+	}
+
+	return (body) ? true : false;
 }
 
 void			btSoftBody::removeAnchors(btRigidBody* body, bool reenableCollision)
@@ -3881,7 +3920,7 @@ const char*	btSoftBody::serialize(void* dataBuffer, class btSerializer* serializ
 			memPtr->m_c2 = m_anchors[i].m_c2;
 			m_anchors[i].m_local.serializeFloat(memPtr->m_localFrame);
 			memPtr->m_nodeIndex = m_anchors[i].m_node? m_anchors[i].m_node-&m_nodes[0]: -1;
-			
+			memPtr->m_id = m_anchors[i].m_id;
 			memPtr->m_rigidBody = m_anchors[i].m_body? (btRigidBodyData*)  serializer->getUniquePointer((void*)m_anchors[i].m_body): 0;
 			btAssert(memPtr->m_nodeIndex < m_nodes.size());
 		}

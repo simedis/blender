@@ -311,6 +311,7 @@ public:
 		btMatrix3x3				m_c0;			// Impulse matrix
 		btVector3				m_c1;			// Relative anchor
 		btScalar				m_c2;			// ima*dt
+		int						m_id;			// anchor id assigned by caller
 	};
 	/* Note			*/ 
 	struct	Note : Element
@@ -783,8 +784,8 @@ public:
 
 	/* Append anchor														*/ 
 	void				appendAnchor(	int node,
-		btRigidBody* body, bool disableCollisionBetweenLinkedBodies=false,btScalar influence = 1);
-	void				appendAnchor(int node,btRigidBody* body, const btVector3& localPivot,bool disableCollisionBetweenLinkedBodies=false,btScalar influence = 1);
+		btRigidBody* body, bool disableCollisionBetweenLinkedBodies=false, int constraintId = 0, btScalar influence = 1);
+	bool				removeAnchor(int constraintId, bool reenableCollision);
 	void				removeAnchors(btRigidBody* body, bool reenableCollision);
 	/* Append linear joint													*/
 	void				appendLinearJoint(const LJoint::Specs& specs,Cluster* body0,Body body1);

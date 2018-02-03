@@ -77,6 +77,7 @@ struct	SoftRigidAnchorData
 	btRigidBodyData			*m_rigidBody;
 	int						m_nodeIndex;			// Node pointer
 	float					m_c2;			// ima*dt
+	int						m_id;			// constraintId stored by caller
 };
 
 
