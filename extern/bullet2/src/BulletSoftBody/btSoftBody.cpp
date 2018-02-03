@@ -1461,6 +1461,10 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 
 			edges(i,j)=-1;
 			links(i,j)=k;
+			// save original m_c1 in m_c0, needed to compute new link rest length
+			// in case no cut takes place, original data will be restored anyway
+			// and in case a cut takes place, m_c0 will be recalculated in updateConstants()
+			l.m_c0 = l.m_c1;
 			const btScalar	t= ImplicitSolve(ifn,a.m_x,b.m_x,accuracy);
 			if(t>0.f && t<1.f)
 			{
@@ -1566,12 +1570,15 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 					// should always be true
 					if (nc>=0)
 					{
-						int na=-1, nb=-1;
+						// link rest length of the face that is being cut, needed to compute new link rest length
+						// the link being cut, nc, is always an old link => original rest length in m_c0
+						btScalar la = 0.f, lb = 0.f, lc = m_links[nc].m_c0;
 						if (idx[l]<ncount)
 						{
 							// easy case: the other 2 edges are old links for which we have a lookup table
-							na=links(idx[l],idx[k]);
-							nb=links(idx[l],idx[j]);
+							// old link save their original rest length in m_c0
+							la = m_links[links(idx[l],idx[j])].m_c0;
+							lb = m_links[links(idx[l],idx[k])].m_c0;
 						}
 						else
 						{
@@ -1586,31 +1593,40 @@ bool			btSoftBody::refine(ImplicitFn* ifn,btScalar accuracy,bool cut, SelectFn* 
 								{
 									if (ml->m_n[0] == pn[1])
 									{
-										nb = mi;
-										if (na>=0)
+										la = m_links[mi].m_c1;
+										if (lb)
 											break;
 									}
 									else if (ml->m_n[0] == pn[2])
 									{
-										na = mi;
-										if (nb>=0)
+										lb = m_links[mi].m_c1;
+										if (la)
 											break;
 									}
 								}
 							}
 						}
 						// should always be true
-						if (na>=0 && nb>=0)
+						if (la && lb)
 						{
 							Link* nl = &m_links[m_links.size()-1];
 							btScalar t = btSqrt((pn[1]->m_x-pn[3]->m_x).length2()/(pn[1]->m_x-pn[2]->m_x).length2());
-							nl->m_c1 = (1-t)*(m_links[na].m_c1-t*m_links[nc].m_c1)+t*m_links[nb].m_c1;
+							// compute rest length of new link based on rest length of the original face
+							// The formula is:
+							// d^2 = (1-t)(a^2-t*a^2)+t*b^2
+							// where c is the length of the link being cut, t is the cut ratio,
+							//       d is the new link length that joints cut point in c to opposite node,
+							//       a is the length of the link adjacent to t*c,
+							//       b is the length of the link opposite to t*c
+							nl->m_c1 = (1-t)*(la-t*lc)+t*lb;
 							nl->m_rl = btSqrt(nl->m_c1);
 						}
 					}
 					// only keep in imlinks the links that joint at least one old node
+					// because links joining 2 new nodes will never be cut in this refine operation
 					if (idx[l]<ncount)
 						imlinks.push_back(m_links.size()-1);
+					// must check the current face again in case it must be cut again because another side is also on the cut line
 					--i;break;
 				}
 			}
